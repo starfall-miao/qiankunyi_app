@@ -324,7 +324,8 @@ class LiuYaoEngine {
   }
 
   /// 从爻数据构建完整排盘结果
-  static PaipanResult _buildResult(List<YaoModel> yaos, String method) {
+  static PaipanResult _buildResult(List<YaoModel> yaos, String method, [DateTime? dt]) {
+    dt ??= DateTime.now();
     // 从六个爻反推上下卦掩码
     final upperMask = _yaosToMask(yaos.sublist(0, 3).reversed.toList());
     final lowerMask = _yaosToMask(yaos.sublist(3, 6).reversed.toList());
@@ -352,8 +353,8 @@ class LiuYaoEngine {
     }
 
     // 标记世应
-    yaos[shiIdx].isShi = true;
-    yaos[yingIdx].isYing = true;
+    if (shiIdx >= 0 && shiIdx < yaos.length) yaos[shiIdx].isShi = true;
+    if (yingIdx >= 0 && yingIdx < yaos.length) yaos[yingIdx].isYing = true;
 
     // 纳甲装卦
     final naJia = _naJiaRules[gong]!;
@@ -364,6 +365,12 @@ class LiuYaoEngine {
 
     // 六亲排布
     _applyLiuQin(yaos, guaGongWuXing[gong]!);
+
+    // 六神（根据日干）
+    _applyLiuShen(yaos, _dayGanIndex(dt));
+
+    // 旺衰（根据月令）
+    _applyWangShuai(yaos, dt.month);
 
     // 刑冲合害
     _calcRelations(yaos);
@@ -376,9 +383,40 @@ class LiuYaoEngine {
       yingYaoIndex: yingIdx,
     );
 
+    // 变卦：动爻阴阳反转
+    final movingYao = yaos.indexWhere((y) => y.isMoving);
+    GuaModel? bianGua;
+    if (movingYao >= 0) {
+      final bianYaos = yaos.map((y) {
+        if (y.isMoving) {
+          return YaoModel(
+            yinYang: y.yinYang == YaoYinYang.yang ? YaoYinYang.yin : YaoYinYang.yang,
+            position: y.position,
+            isMoving: false,
+            tianGan: y.tianGan,
+            diZhi: y.diZhi,
+            liuQin: y.liuQin,
+            isShi: y.isShi,
+            isYing: y.isYing,
+          );
+        }
+        return YaoModel(
+          yinYang: y.yinYang,
+          position: y.position,
+          tianGan: y.tianGan,
+          diZhi: y.diZhi,
+          liuQin: y.liuQin,
+          isShi: y.isShi,
+          isYing: y.isYing,
+        );
+      }).toList();
+      bianGua = _restoreGua(bianYaos);
+    }
+
     return PaipanResult(
       benGua: gua,
-      paipanTime: DateTime.now(),
+      bianGua: bianGua,
+      paipanTime: dt,
       method: method,
     );
   }
@@ -497,5 +535,160 @@ class LiuYaoEngine {
         }
       }
     }
+  }
+
+  // ──────────── 六神排布 ────────────
+
+  /// 日干索引 → 六神起始位置
+  static const _liuShenStarts = <int, LiuShen>{
+    0: LiuShen.qingLong, // 甲
+    1: LiuShen.qingLong, // 乙
+    2: LiuShen.zhuQue,   // 丙
+    3: LiuShen.zhuQue,   // 丁
+    4: LiuShen.gouChen,  // 戊
+    5: LiuShen.tengShe,  // 己
+    6: LiuShen.baiHu,    // 庚
+    7: LiuShen.baiHu,    // 辛
+    8: LiuShen.xuanWu,   // 壬
+    9: LiuShen.xuanWu,   // 癸
+  };
+
+  /// 六神循环顺序
+  static const _liuShenCycle = [
+    LiuShen.qingLong,
+    LiuShen.zhuQue,
+    LiuShen.gouChen,
+    LiuShen.tengShe,
+    LiuShen.baiHu,
+    LiuShen.xuanWu,
+  ];
+
+  /// 计算排盘时间的日干索引（0甲~9癸）
+  static int _dayGanIndex(DateTime dt) {
+    // 日干支计算：基准点 1900-01-01 为甲子日（日干=0，日支=0）
+    final base = DateTime(1900, 1, 1);
+    final diff = dt.difference(base).inDays;
+    return ((diff % 10) + 10) % 10;
+  }
+
+  /// 应用六神
+  static void _applyLiuShen(List<YaoModel> yaos, int dayGanIdx) {
+    final start = _liuShenStarts[dayGanIdx] ?? LiuShen.qingLong;
+    final startIdx = _liuShenCycle.indexOf(start);
+    for (int i = 0; i < yaos.length; i++) {
+      yaos[i].liuShen = _liuShenCycle[(startIdx + i) % 6];
+    }
+  }
+
+  // ──────────── 旺衰排布 ────────────
+
+  /// 月令五行索引：寅卯=木月(0), 巳午=火月(1), 申酉=金月(2),
+  /// 亥子=水月(3), 辰戌丑未=土月(4)
+  static int _monthWuXing(int month) {
+    if (month >= 2 && month <= 3) return 0; // 寅卯木
+    if (month >= 4 && month <= 5) return 1; // 巳午火
+    if (month >= 7 && month <= 8) return 2; // 申酉金
+    if (month >= 10 && month <= 11) return 3; // 亥子水
+    return 4; // 辰戌丑未土
+  }
+
+  /// 旺衰表：五行 → [旺, 相, 休, 囚, 死]
+  /// 顺序：木火金水土
+  static const _wangShuaiTable = <int, List<WangShuaiLevel>>{
+    0: [ // 木月旺
+      WangShuaiLevel.wang,   // 木旺
+      WangShuaiLevel.xiang,  // 火相
+      WangShuaiLevel.qiu,    // 金囚
+      WangShuaiLevel.xiu,    // 水休
+      WangShuaiLevel.si,     // 土死
+    ],
+    1: [ // 火月旺
+      WangShuaiLevel.si,     // 木死
+      WangShuaiLevel.wang,   // 火旺
+      WangShuaiLevel.xiang,  // 土相
+      WangShuaiLevel.qiu,    // 金囚
+      WangShuaiLevel.xiu,    // 水休
+    ],
+    2: [ // 金月旺
+      WangShuaiLevel.qiu,    // 木囚
+      WangShuaiLevel.si,     // 火死
+      WangShuaiLevel.wang,   // 金旺
+      WangShuaiLevel.xiang,  // 水相
+      WangShuaiLevel.xiu,    // 土休
+    ],
+    3: [ // 水月旺
+      WangShuaiLevel.xiu,    // 木休
+      WangShuaiLevel.qiu,    // 火囚
+      WangShuaiLevel.si,     // 金死
+      WangShuaiLevel.wang,   // 水旺
+      WangShuaiLevel.xiang,  // 土相
+    ],
+    4: [ // 土月旺
+      WangShuaiLevel.xiang,  // 木相
+      WangShuaiLevel.xiu,    // 火休
+      WangShuaiLevel.si,     // 金死
+      WangShuaiLevel.qiu,    // 水囚
+      WangShuaiLevel.wang,   // 土旺
+    ],
+  };
+
+  /// 地支五行索引：0木 1火 2金 3水 4土
+  static const _diZhiWuXingIdx = <int, int>{
+    0: 3, // 子水
+    1: 4, // 丑土
+    2: 0, // 寅木
+    3: 0, // 卯木
+    4: 4, // 辰土
+    5: 1, // 巳火
+    6: 1, // 午火
+    7: 4, // 未土
+    8: 2, // 申金
+    9: 2, // 酉金
+    10: 4, // 戌土
+    11: 3, // 亥水
+  };
+
+  /// 应用旺衰
+  static void _applyWangShuai(List<YaoModel> yaos, int month) {
+    final monthIdx = _monthWuXing(month);
+    final table = _wangShuaiTable[monthIdx]!;
+    for (final yao in yaos) {
+      if (yao.diZhi == null) continue;
+      final dzIdx = _diZhiIndex[yao.diZhi!]!;
+      final wxIdx = _diZhiWuXingIdx[dzIdx]!;
+      yao.wangShuai = table[wxIdx];
+    }
+  }
+
+  // ──────────── 从爻重建卦 ────────────
+
+  /// 从爻列表重建卦（用于变卦）
+  static GuaModel _restoreGua(List<YaoModel> yaos) {
+    final upperMask = _yaosToMask(yaos.sublist(0, 3).reversed.toList());
+    final lowerMask = _yaosToMask(yaos.sublist(3, 6).reversed.toList());
+    for (int u = 0; u < _trigramMasks.length; u++) {
+      if (_trigramMasks[u] != upperMask) continue;
+      for (int l = 0; l < _trigramMasks.length; l++) {
+        if (_trigramMasks[l] != lowerMask) continue;
+        if (u < _hexagramMap.length && l < (_palaceMap[u]?.length ?? 0)) {
+          final name = _hexagramMap[u]![l];
+          final palace = _palaceMap[u]![l]!;
+          return GuaModel(
+            name: name,
+            gong: palace.$1,
+            yaos: yaos,
+            shiYaoIndex: palace.$2,
+            yingYaoIndex: palace.$3,
+          );
+        }
+      }
+    }
+    return GuaModel(
+      name: GuaName.qian,
+      gong: GuaGong.qian,
+      yaos: yaos,
+      shiYaoIndex: 5,
+      yingYaoIndex: 2,
+    );
   }
 }
