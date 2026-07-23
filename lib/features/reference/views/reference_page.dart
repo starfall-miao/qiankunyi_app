@@ -7,6 +7,7 @@ import '../data/reference_data.dart';
 import '../data/xiangyi_data.dart';
 import '../data/qinxing_data.dart';
 import '../data/shensha_dictionary.dart';
+import '../data/dongbian_dictionary.dart';
 
 class ReferencePage extends StatelessWidget {
   const ReferencePage({super.key});
@@ -14,7 +15,7 @@ class ReferencePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 6,
+      length: 7,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('参考资料'),
@@ -27,6 +28,7 @@ class ReferencePage extends StatelessWidget {
               Tab(text: '象意字典'),
               Tab(text: '禽星关系'),
               Tab(text: '神煞象义'),
+              Tab(text: '动变含义'),
             ],
           ),
         ),
@@ -38,6 +40,7 @@ class ReferencePage extends StatelessWidget {
             _XiangYiTab(),
             _QinXingTab(),
             _ShenShaTab(),
+            _DongBianTab(),
           ],
         ),
       ),
@@ -108,6 +111,85 @@ class _GuaCiTabState extends State<_GuaCiTab>
             itemCount: gongData.length,
             separatorBuilder: (_, __) => const Divider(height: 4),
             itemBuilder: (ctx, i) => _buildGuaCard(context, theme, gongData[i], i),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ──────────── 动变含义 Tab ────────────
+
+/// 动变含义词典
+class _DongBianTab extends StatefulWidget {
+  const _DongBianTab();
+  @override
+  State<_DongBianTab> createState() => _DongBianTabState();
+}
+
+class _DongBianTabState extends State<_DongBianTab> {
+  String _filterCat = '全部';
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cats = ['全部', '基础', '动变关系', '动变趋势', '特殊'];
+    var list = dongBianDictionary;
+    if (_filterCat != '全部') {
+      list = list.where((d) => d.category == _filterCat).toList();
+    }
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 40,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            children: cats.map((c) => Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: ChoiceChip(
+                label: Text(c, style: TextStyle(fontSize: 14, fontWeight: _filterCat == c ? FontWeight.bold : FontWeight.normal)),
+                selected: _filterCat == c,
+                onSelected: (_) => setState(() => _filterCat = c),
+              ),
+            )).toList(),
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(12),
+            children: list.map((d) => Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ExpansionTile(
+                leading: CircleAvatar(
+                  radius: 16,
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  child: Text(d.category[0], style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onPrimaryContainer)),
+                ),
+                title: Text(d.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(d.description, style: theme.textTheme.bodySmall),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: d.details.map((detail) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('• ', style: TextStyle(color: theme.colorScheme.primary)),
+                            Expanded(child: Text(detail, style: theme.textTheme.bodySmall)),
+                          ],
+                        ),
+                      )).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            )).toList(),
           ),
         ),
       ],
@@ -478,6 +560,85 @@ class _XiangYiTabState extends State<_XiangYiTab> {
       ],
     );
   }
+}
+
+// ──────────── 动变含义 Tab ────────────
+
+/// 动变含义词典
+class _DongBianTab extends StatefulWidget {
+  const _DongBianTab();
+  @override
+  State<_DongBianTab> createState() => _DongBianTabState();
+}
+
+class _DongBianTabState extends State<_DongBianTab> {
+  String _filterCat = '全部';
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cats = ['全部', '基础', '动变关系', '动变趋势', '特殊'];
+    var list = dongBianDictionary;
+    if (_filterCat != '全部') {
+      list = list.where((d) => d.category == _filterCat).toList();
+    }
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 40,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            children: cats.map((c) => Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: ChoiceChip(
+                label: Text(c, style: TextStyle(fontSize: 14, fontWeight: _filterCat == c ? FontWeight.bold : FontWeight.normal)),
+                selected: _filterCat == c,
+                onSelected: (_) => setState(() => _filterCat = c),
+              ),
+            )).toList(),
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(12),
+            children: list.map((d) => Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ExpansionTile(
+                leading: CircleAvatar(
+                  radius: 16,
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  child: Text(d.category[0], style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onPrimaryContainer)),
+                ),
+                title: Text(d.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(d.description, style: theme.textTheme.bodySmall),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: d.details.map((detail) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('• ', style: TextStyle(color: theme.colorScheme.primary)),
+                            Expanded(child: Text(detail, style: theme.textTheme.bodySmall)),
+                          ],
+                        ),
+                      )).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            )).toList(),
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _buildAllCategories(ThemeData theme, List<String> guaNames) {
     return ListView(
@@ -749,6 +910,85 @@ class _ShenShaTabState extends State<_ShenShaTab> {
                           ),
                         )),
                       ],
+                    ),
+                  ),
+                ],
+              ),
+            )).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ──────────── 动变含义 Tab ────────────
+
+/// 动变含义词典
+class _DongBianTab extends StatefulWidget {
+  const _DongBianTab();
+  @override
+  State<_DongBianTab> createState() => _DongBianTabState();
+}
+
+class _DongBianTabState extends State<_DongBianTab> {
+  String _filterCat = '全部';
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cats = ['全部', '基础', '动变关系', '动变趋势', '特殊'];
+    var list = dongBianDictionary;
+    if (_filterCat != '全部') {
+      list = list.where((d) => d.category == _filterCat).toList();
+    }
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 40,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            children: cats.map((c) => Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: ChoiceChip(
+                label: Text(c, style: TextStyle(fontSize: 14, fontWeight: _filterCat == c ? FontWeight.bold : FontWeight.normal)),
+                selected: _filterCat == c,
+                onSelected: (_) => setState(() => _filterCat = c),
+              ),
+            )).toList(),
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(12),
+            children: list.map((d) => Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ExpansionTile(
+                leading: CircleAvatar(
+                  radius: 16,
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  child: Text(d.category[0], style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onPrimaryContainer)),
+                ),
+                title: Text(d.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(d.description, style: theme.textTheme.bodySmall),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: d.details.map((detail) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('• ', style: TextStyle(color: theme.colorScheme.primary)),
+                            Expanded(child: Text(detail, style: theme.textTheme.bodySmall)),
+                          ],
+                        ),
+                      )).toList(),
                     ),
                   ),
                 ],
