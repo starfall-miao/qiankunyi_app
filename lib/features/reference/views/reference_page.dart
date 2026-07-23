@@ -236,13 +236,9 @@ class _NaYinTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final entries = naYinTable.entries.toList();
-
-    // 按五行分组
-    final grouped = <String, List<MapEntry<String, String>>>{};
-    for (final e in entries) {
-      final wx = _getWuXing(e.value);
-      grouped.putIfAbsent(wx, () => []).add(e);
+    final grouped = <String, List<NaYin>>{};
+    for (final e in naYinTable) {
+      grouped.putIfAbsent(e.wuXing, () => []).add(e);
     }
     final wxOrder = ['金', '木', '水', '火', '土'];
 
@@ -300,25 +296,16 @@ class _NaYinTab extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   alignment: Alignment.center,
-                  child: Text(e.key, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _wxColor2(wx))),
+                  child: Text(e.naYin, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _wxColor2(wx))),
                 ),
-                title: Text(e.value, style: TextStyle(fontWeight: FontWeight.w600, color: _wxColor2(wx))),
-                subtitle: Text('五行属$wx'),
+                title: Text(e.naYin, style: TextStyle(fontWeight: FontWeight.w600, color: _wxColor2(wx))),
+                subtitle: Text('五行属${e.wuXing}'),
                 trailing: const Icon(Icons.chevron_right, size: 18),
               ),
             )),
           ],
       ],
     );
-  }
-
-  String _getWuXing(String naYin) {
-    if (naYin.contains('金')) return '金';
-    if (naYin.contains('木')) return '木';
-    if (naYin.contains('水')) return '水';
-    if (naYin.contains('火')) return '火';
-    if (naYin.contains('土')) return '土';
-    return '其他';
   }
 
   Color _wxColor2(String wx) {

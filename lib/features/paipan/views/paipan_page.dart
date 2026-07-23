@@ -271,7 +271,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
       return;
     }
     try {
-      final result = MeiHuaEngine.fromNumbers(a, b, c);
+      final result = MeihuaEngine.fromNumbers(a, b, c);
       provider.setResult(result);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -283,7 +283,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
   void _meiHuaByTime(PaipanProvider provider) {
     try {
       final now = DateTime.now();
-      final result = MeiHuaEngine.fromDateTime(now);
+      final result = MeihuaEngine.fromDateTime(now);
       provider.setResult(result);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
