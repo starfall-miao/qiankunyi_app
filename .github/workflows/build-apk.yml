@@ -78,11 +78,11 @@ jobs:
           sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
       - run: flutter pub get
       - name: 🏗️ 构建 Linux 桌面版
-        run: flutter build linux --debug
+        run: flutter build linux --release
       - uses: actions/upload-artifact@v4
         with:
-          name: linux-debug
-          path: build/linux/x64/debug/bundle/
+          name: linux-release
+          path: build/linux/x64/release/bundle/
           if-no-files-found: warn
 
   ###########################################################################
@@ -98,12 +98,12 @@ jobs:
           channel: 'stable'
           cache: true
       - run: flutter pub get
-      - name: 🏗️ 构建 Windows 桌面版
-        run: flutter build windows --debug
+      - name: 🏗️ 构建 Windows 桌面版（Release）
+        run: flutter build windows --release
       - uses: actions/upload-artifact@v4
         with:
-          name: windows-debug
-          path: build\windows\x64\runner\Debug\
+          name: windows-release
+          path: build\windows\x64\runner\Release\
           if-no-files-found: warn
 
   ###########################################################################
@@ -141,9 +141,9 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: 🏗️ 构建 macOS 桌面版
-        run: flutter build macos --debug
+        run: flutter build macos --release
       - uses: actions/upload-artifact@v4
         with:
-          name: macos-debug
-          path: build/macos/Build/Products/Debug/
+          name: macos-release
+          path: build/macos/Build/Products/Release/
           if-no-files-found: warn
