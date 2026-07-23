@@ -6,6 +6,7 @@ import 'core/theme/theme_provider.dart';
 import 'features/paipan/views/paipan_page.dart';
 import 'features/cases/views/case_page.dart';
 import 'features/reference/views/reference_page.dart';
+import 'features/settings/settings_page.dart';
 
 /// 乾坤易应用入口 Widget
 class QianKunYiApp extends StatelessWidget {
@@ -43,6 +44,7 @@ class _MainShellState extends State<MainShell> {
     PaipanPage(),
     CasePage(),
     ReferencePage(),
+    SettingsPage(),
   ];
 
   @override
@@ -56,6 +58,7 @@ class _MainShellState extends State<MainShell> {
           NavigationDestination(icon: Icon(Icons.auto_awesome), label: '排盘'),
           NavigationDestination(icon: Icon(Icons.bookmark_outline), label: '卦例'),
           NavigationDestination(icon: Icon(Icons.menu_book_outlined), label: '参考'),
+          NavigationDestination(icon: Icon(Icons.settings_outlined), label: '设置'),
         ],
       ),
     );
