@@ -295,11 +295,30 @@ class LiuYaoEngine {
   /// 由上下卦构建排盘结果
   static PaipanResult _buildFromTrigrams(
       int upperIdx, int lowerIdx, int movingYaoIdx, String method) {
-    final yaos = List.generate(6, (i) => YaoModel(
-      yinYang: YaoYinYang.yang, // 占位，后续setNums时填充
-      position: YaoPosition.values[i],
-      isMoving: i == movingYaoIdx,
-    ));
+    // 八卦爻模式：从初爻到上爻（0~2为下卦/内卦，3~5为上卦/外卦）
+    const triPatterns = [
+      [1, 1, 1], // 0乾
+      [1, 1, 0], // 1兑
+      [1, 0, 1], // 2离
+      [1, 0, 0], // 3震
+      [0, 1, 1], // 4巽
+      [0, 1, 0], // 5坎
+      [0, 0, 1], // 6艮
+      [0, 0, 0], // 7坤
+    ];
+    final lowerPat = triPatterns[lowerIdx];
+    final upperPat = triPatterns[upperIdx];
+    final yinYang = (int v) => v == 1 ? YaoYinYang.yang : YaoYinYang.yin;
+
+    final yaos = List.generate(6, (i) {
+      final isUpper = i >= 3;
+      final pat = isUpper ? upperPat : lowerPat;
+      return YaoModel(
+        yinYang: yinYang(pat[isUpper ? i - 3 : i]),
+        position: YaoPosition.values[i],
+        isMoving: i == movingYaoIdx,
+      );
+    });
 
     return _buildResult(yaos, method);
   }
