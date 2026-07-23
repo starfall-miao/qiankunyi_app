@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../data/reference_data.dart';
 import '../data/xiangyi_data.dart';
 import '../data/qinxing_data.dart';
+import '../data/shensha_dictionary.dart';
 
 class ReferencePage extends StatelessWidget {
   const ReferencePage({super.key});
@@ -13,7 +14,7 @@ class ReferencePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 5,
+      length: 6,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('参考资料'),
@@ -25,6 +26,7 @@ class ReferencePage extends StatelessWidget {
               Tab(text: '二十八星宿'),
               Tab(text: '象意字典'),
               Tab(text: '禽星关系'),
+              Tab(text: '神煞象义'),
             ],
           ),
         ),
@@ -35,6 +37,7 @@ class ReferencePage extends StatelessWidget {
             _XingXiuTab(),
             _XiangYiTab(),
             _QinXingTab(),
+            _ShenShaTab(),
           ],
         ),
       ),
@@ -666,5 +669,93 @@ class _QinXingTab extends StatelessWidget {
           Text(value, style: theme.textTheme.bodyMedium),
         ],
       ),
+    );
+  }
+}
+
+// ──────────── 神煞象义 Tab ────────────
+
+/// 神煞象义词典
+class _ShenShaTab extends StatefulWidget {
+  const _ShenShaTab();
+  @override
+  State<_ShenShaTab> createState() => _ShenShaTabState();
+}
+
+class _ShenShaTabState extends State<_ShenShaTab> {
+  String _filterType = '全部';
+  String? _selectedName;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final types = ['全部', '吉', '凶', '平'];
+    var list = shenShaDictionary;
+    if (_filterType != '全部') {
+      list = list.where((s) => s.type == _filterType).toList();
+    }
+
+    return Column(
+      children: [
+        // 类型过滤
+        SizedBox(
+          height: 40,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            children: types.map((t) => Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: ChoiceChip(
+                label: Text(t, style: TextStyle(fontSize: 14, fontWeight: _filterType == t ? FontWeight.bold : FontWeight.normal)),
+                selected: _filterType == t,
+                onSelected: (_) => setState(() => _filterType = t),
+              ),
+            )).toList(),
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(12),
+            children: list.map((s) => Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ExpansionTile(
+                leading: CircleAvatar(
+                  radius: 16,
+                  backgroundColor: s.type == '吉' ? Colors.green.shade100 : s.type == '凶' ? Colors.red.shade100 : Colors.amber.shade100,
+                  child: Text(s.type, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold,
+                    color: s.type == '吉' ? Colors.green.shade800 : s.type == '凶' ? Colors.red.shade800 : Colors.amber.shade800)),
+                ),
+                title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(s.description, style: theme.textTheme.bodySmall),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('分类：${s.category}', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                        if (s.dayZhi != null) Text('条件：${s.dayZhi}', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                        if (s.useCase != null) Text('适用：${s.useCase}', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                        const SizedBox(height: 8),
+                        ...s.details.map((d) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('• ', style: TextStyle(color: theme.colorScheme.primary)),
+                              Expanded(child: Text(d, style: theme.textTheme.bodySmall)),
+                            ],
+                          ),
+                        )),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )).toList(),
+          ),
+        ),
+      ],
     );
   }
