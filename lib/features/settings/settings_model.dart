@@ -1,4 +1,4 @@
-/// 乾坤易 - 设置状态管理
+// 乾坤易 - 设置状态管理
 
 import 'package:flutter/material.dart';
 
