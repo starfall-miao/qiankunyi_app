@@ -1,5 +1,6 @@
 /// AI 推理服务抽象接口
 /// 为未来接入本地 AI 解卦功能预留架构
+library;
 
 /// 解卦请求
 class AiReadingRequest {

@@ -6,10 +6,6 @@ import '../models/yao_model.dart';
 import '../models/gua_model.dart';
 import '../models/paipan_result.dart';
 
-/// 先天八卦数
-const _xianTianNum = <int>[1, 2, 3, 4, 5, 6, 7, 8];
-// 1乾 2兑 3离 4震 5巽 6坎 7艮 8坤
-
 /// 数字 → 八卦索引（0-7 对应 乾兑离震巽坎艮坤）
 int _numToTrigram(int num) {
   final r = num % 8;
@@ -186,12 +182,10 @@ class MeihuaEngine {
       if (yaos[i].yinYang == YaoYinYang.yang) mask |= (1 << (2 - i));
     }
     // 转换为八卦索引
-    const maskToTri = [7, 6, 5, 4, 3, 2, 1, 0];
-    // 000→7(坤), 001→6(艮), 010→5(坎), 011→4(巽), 100→3(震), 101→2(离), 110→1(兑), 111→0(乾)
     for (int i = 0; i < 8; i++) {
       if (mask == i) return i;
     }
-    // 用查表法
+    // 000→7(坤), 001→6(艮), 010→5(坎), 011→4(巽), 100→3(震), 101→2(离), 110→1(兑), 111→0(乾)
     const map = [7, 6, 5, 4, 3, 2, 1, 0];
     if (mask >= 0 && mask <= 7) return map[mask];
     return 0;

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../app.dart';
 import '../../../core/utils/constants.dart';
+import '../../../core/theme/theme_provider.dart';
 
 /// 排盘主页 - 应用首页
 class PaipanPage extends StatelessWidget {
@@ -16,13 +16,13 @@ class PaipanPage extends StatelessWidget {
         actions: [
           IconButton(
             icon: Icon(
-              context.watch<ThemeModeProvider>().themeMode == ThemeMode.dark
+              context.watch<ThemeProvider>().themeMode == ThemeMode.dark
                   ? Icons.light_mode
                   : Icons.dark_mode,
             ),
             tooltip: '切换主题',
             onPressed: () {
-              context.read<ThemeModeProvider>().toggleTheme();
+              context.read<ThemeProvider>().toggleTheme();
             },
           ),
         ],

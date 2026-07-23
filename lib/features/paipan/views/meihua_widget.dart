@@ -1,5 +1,7 @@
 /// 梅花易数卦象展示组件
 /// 本卦、变卦、互卦三卦并排展示及体用生克
+library;
+
 import 'package:flutter/material.dart';
 import '../models/paipan_result.dart';
 import '../../paipan/views/gua_widget.dart';

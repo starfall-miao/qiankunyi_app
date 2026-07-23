@@ -4,9 +4,7 @@ import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'features/paipan/views/paipan_page.dart';
-import 'features/paipan/providers/paipan_provider.dart';
 import 'features/cases/views/case_page.dart';
-import 'features/cases/providers/case_provider.dart';
 import 'features/reference/views/reference_page.dart';
 
 /// 乾坤易应用入口 Widget
@@ -20,8 +18,8 @@ class QianKunYiApp extends StatelessWidget {
         return MaterialApp(
           title: '乾坤易',
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.light,
-          darkTheme: AppTheme.dark,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
           themeMode: themeProvider.themeMode,
           home: const MainShell(),
         );

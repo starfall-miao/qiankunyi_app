@@ -1,5 +1,7 @@
 /// 卦例管理页面
 /// 展示已保存的卦例列表，支持搜索、删除和详情查看
+library;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/case_provider.dart';

@@ -1,5 +1,7 @@
 /// 六爻卦象渲染组件
 /// Material 3 风格，支持亮/暗主题
+library;
+
 import 'package:flutter/material.dart';
 import '../models/yao_model.dart';
 import '../models/gua_model.dart';
@@ -262,7 +264,7 @@ class GuaWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (shiPos.isNotEmpty)
-          Text('世在${shiPos}爻  应在${yingPos}爻', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+          Text('世在$shiPos爻  应在$yingPos爻', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         const SizedBox(height: 4),
         Wrap(
           spacing: 8,

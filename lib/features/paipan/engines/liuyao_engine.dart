@@ -136,6 +136,9 @@ final _palaceMap = <int, Map<int, (GuaGong, int, int)>>{
   },
 };
 
+/// 八卦三爻掩码表 [乾→坤]（0=乾111→7, 1=兑110→6, ... 7=坤000→0）
+const _trigramMasks = [7, 6, 5, 4, 3, 2, 1, 0];
+
 /// 纳甲规则：{宫: [(天干, 地支) × 6爻]}
 final _naJiaRules = <GuaGong, List<(String, String)>>{
   GuaGong.qian: [
@@ -292,9 +295,6 @@ class LiuYaoEngine {
   /// 由上下卦构建排盘结果
   static PaipanResult _buildFromTrigrams(
       int upperIdx, int lowerIdx, int movingYaoIdx, String method) {
-    final guaName = _hexagramMap[upperIdx]![lowerIdx];
-    final (gong, shiIdx, yingIdx) = _palaceMap[upperIdx]![lowerIdx]!;
-
     final yaos = List.generate(6, (i) => YaoModel(
       yinYang: YaoYinYang.yang, // 占位，后续setNums时填充
       position: YaoPosition.values[i],
@@ -306,8 +306,7 @@ class LiuYaoEngine {
 
   /// 从爻数据构建完整排盘结果
   static PaipanResult _buildResult(List<YaoModel> yaos, String method) {
-    // 确定卦名、宫、世应
-    // 需要从六个爻反推上下卦
+    // 从六个爻反推上下卦掩码
     final upperMask = _yaosToMask(yaos.sublist(0, 3).reversed.toList());
     final lowerMask = _yaosToMask(yaos.sublist(3, 6).reversed.toList());
 
@@ -316,22 +315,21 @@ class LiuYaoEngine {
     var shiIdx = 5;
     var yingIdx = 2;
 
-    // 查找匹配的卦
-    for (final entry in _hexagramMap.entries) {
-      final upper = entry.key;
-      for (final lowerEntry in _palaceMap[upper]?.entries ?? <MapEntry<int, (GuaGong, int, int)>>[]) {
-        final lower = lowerEntry.key;
-        // 计算上下卦掩码
-        if (true) { // 简化处理：用传入的卦名
-          final idx = entry.value.indexOf(guaName);
-          if (idx >= 0) {
-            gong = lowerEntry.value.$1;
-            shiIdx = lowerEntry.value.$2;
-            yingIdx = lowerEntry.value.$3;
-            break;
-          }
+    // 通过掩码查找对应的卦名
+    for (int u = 0; u < _trigramMasks.length; u++) {
+      if (_trigramMasks[u] != upperMask) continue;
+      for (int l = 0; l < _trigramMasks.length; l++) {
+        if (_trigramMasks[l] != lowerMask) continue;
+        if (u < _hexagramMap.length && l < (_palaceMap[u]?.length ?? 0)) {
+          guaName = _hexagramMap[u][l];
+          final palace = _palaceMap[u]![l]!;
+          gong = palace.$1;
+          shiIdx = palace.$2;
+          yingIdx = palace.$3;
         }
+        break;
       }
+      break;
     }
 
     // 标记世应

@@ -1,7 +1,8 @@
 /// 参考资料页面
 /// 展示神煞、纳音、卦辞、星宿等参考信息
+library;
+
 import 'package:flutter/material.dart';
-import '../../paipan/models/gua_model.dart';
 import '../data/reference_data.dart';
 
 class ReferencePage extends StatelessWidget {
@@ -148,7 +149,7 @@ class _XingXiuTab extends StatelessWidget {
                     color: _dirColor(dir),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text('${dir}方七宿', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                  child: Text('$dir方七宿', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ]),
             ),
