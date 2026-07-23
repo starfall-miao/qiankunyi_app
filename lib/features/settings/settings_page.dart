@@ -76,12 +76,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _themeModeTile(ThemeData theme) {
     final tp = context.watch<ThemeProvider>();
-    String label;
-    switch (tp.themeMode) {
-      case ThemeMode.light: label = '亮色'; break;
-      case ThemeMode.dark: label = '暗色'; break;
-      default: label = '跟随系统';
-    }
     return ListTile(
       leading: const Icon(Icons.brightness_6),
       title: const Text('主题模式'),

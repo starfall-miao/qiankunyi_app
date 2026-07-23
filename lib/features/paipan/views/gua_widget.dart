@@ -190,7 +190,7 @@ class GuaWidget extends StatelessWidget {
                 margin: const EdgeInsets.only(right: 4),
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                 decoration: BoxDecoration(
-                  color: _wangShuaiColor(yao.wangShuai!).withOpacity(0.2),
+                  color: _wangShuaiColor(yao.wangShuai!).withAlpha(50),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(

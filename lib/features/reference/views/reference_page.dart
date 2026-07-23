@@ -1,5 +1,5 @@
 /// 参考资料页面
-/// 展示六十四卦（八宫分组）、纳音、星宿等参考信息
+/// 展示六十四卦（八宫分组）、纳音、星宿、象意、禽星、神煞、动变等参考信息
 library;
 
 import 'package:flutter/material.dart';
@@ -57,8 +57,7 @@ class _GuaCiTab extends StatefulWidget {
   State<_GuaCiTab> createState() => _GuaCiTabState();
 }
 
-class _GuaCiTabState extends State<_GuaCiTab>
-    with SingleTickerProviderStateMixin {
+class _GuaCiTabState extends State<_GuaCiTab> {
   final _gongNames = ['乾宫', '兑宫', '离宫', '震宫', '巽宫', '坎宫', '艮宫', '坤宫'];
   String _selectedGong = '乾宫';
 
@@ -83,7 +82,6 @@ class _GuaCiTabState extends State<_GuaCiTab>
 
     return Column(
       children: [
-        // 八宫选择器
         Container(
           height: 48,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -104,92 +102,12 @@ class _GuaCiTabState extends State<_GuaCiTab>
             }).toList(),
           ),
         ),
-        // 当前宫八卦列表
         Expanded(
           child: ListView.separated(
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
             itemCount: gongData.length,
             separatorBuilder: (_, __) => const Divider(height: 4),
             itemBuilder: (ctx, i) => _buildGuaCard(context, theme, gongData[i], i),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ──────────── 动变含义 Tab ────────────
-
-/// 动变含义词典
-class _DongBianTab extends StatefulWidget {
-  const _DongBianTab();
-  @override
-  State<_DongBianTab> createState() => _DongBianTabState();
-}
-
-class _DongBianTabState extends State<_DongBianTab> {
-  String _filterCat = '全部';
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cats = ['全部', '基础', '动变关系', '动变趋势', '特殊'];
-    var list = dongBianDictionary;
-    if (_filterCat != '全部') {
-      list = list.where((d) => d.category == _filterCat).toList();
-    }
-
-    return Column(
-      children: [
-        SizedBox(
-          height: 40,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            children: cats.map((c) => Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: ChoiceChip(
-                label: Text(c, style: TextStyle(fontSize: 14, fontWeight: _filterCat == c ? FontWeight.bold : FontWeight.normal)),
-                selected: _filterCat == c,
-                onSelected: (_) => setState(() => _filterCat = c),
-              ),
-            )).toList(),
-          ),
-        ),
-        const Divider(height: 1),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(12),
-            children: list.map((d) => Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ExpansionTile(
-                leading: CircleAvatar(
-                  radius: 16,
-                  backgroundColor: theme.colorScheme.primaryContainer,
-                  child: Text(d.category[0], style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onPrimaryContainer)),
-                ),
-                title: Text(d.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(d.description, style: theme.textTheme.bodySmall),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: d.details.map((detail) => Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('• ', style: TextStyle(color: theme.colorScheme.primary)),
-                            Expanded(child: Text(detail, style: theme.textTheme.bodySmall)),
-                          ],
-                        ),
-                      )).toList(),
-                    ),
-                  ),
-                ],
-              ),
-            )).toList(),
           ),
         ),
       ],
@@ -203,8 +121,7 @@ class _DongBianTabState extends State<_DongBianTab> {
         title: Row(
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 36, height: 36,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: theme.colorScheme.primaryContainer,
@@ -254,8 +171,7 @@ class _DongBianTabState extends State<_DongBianTab> {
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
+                      spacing: 8, runSpacing: 4,
                       children: [
                         if (gc.fangWei.isNotEmpty) _chip(theme, '方位', gc.fangWei),
                         if (gc.shuZi.isNotEmpty) _chip(theme, '数字', gc.shuZi),
@@ -279,10 +195,7 @@ class _DongBianTabState extends State<_DongBianTab> {
         text: TextSpan(
           style: theme.textTheme.bodyMedium,
           children: [
-            TextSpan(
-              text: '【$label】',
-              style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.w600),
-            ),
+            TextSpan(text: '【$label】', style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.w600)),
             TextSpan(text: content),
           ],
         ),
@@ -336,7 +249,6 @@ class _NaYinTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
-        // 简介
         Card(
           color: theme.colorScheme.primaryContainer,
           child: Padding(
@@ -346,17 +258,14 @@ class _NaYinTab extends StatelessWidget {
                 Icon(Icons.info_outline, color: theme.colorScheme.onPrimaryContainer),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    '纳音五行是中国传统命理学术语，将六十甲子分为三十组，每组配以五行属性，用于命理分析和择吉。',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onPrimaryContainer),
-                  ),
+                  child: Text('纳音五行是中国传统命理学术语，将六十甲子分为三十组，每组配以五行属性，用于命理分析和择吉。',
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onPrimaryContainer)),
                 ),
               ],
             ),
           ),
         ),
         const SizedBox(height: 8),
-        // 按五行分组的纳音列表
         for (final wx in wxOrder)
           if (grouped.containsKey(wx)) ...[
             Padding(
@@ -365,10 +274,7 @@ class _NaYinTab extends StatelessWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _wxColor2(wx),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    decoration: BoxDecoration(color: _wxColor2(wx), borderRadius: BorderRadius.circular(12)),
                     child: Text('$wx 行', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                   ),
                   const SizedBox(width: 8),
@@ -419,8 +325,6 @@ class _XingXiuTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    // 按方向分组
     final grouped = <String, List<XingXiu>>{};
     for (final x in erShiBaXingXiu) {
       grouped.putIfAbsent(x.direction, () => []).add(x);
@@ -439,10 +343,8 @@ class _XingXiuTab extends StatelessWidget {
                 Icon(Icons.stars, color: theme.colorScheme.onPrimaryContainer),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    '二十八星宿是中国古代天文学划分星空的区域，分东、南、西、北四象，每象七宿。',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onPrimaryContainer),
-                  ),
+                  child: Text('二十八星宿是中国古代天文学划分星空的区域，分东、南、西、北四象，每象七宿。',
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onPrimaryContainer)),
                 ),
               ],
             ),
@@ -456,10 +358,7 @@ class _XingXiuTab extends StatelessWidget {
               child: Row(children: [
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _dirColor(dir),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  decoration: BoxDecoration(color: _dirColor(dir), borderRadius: BorderRadius.circular(12)),
                   child: Text('$dir方七宿', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ]),
@@ -491,9 +390,8 @@ class _XingXiuTab extends StatelessWidget {
   }
 }
 
-// ──────────── 象意字典 Tab ────────────
+/// ──────────────── 象意字典 Tab ────────────────
 
-/// 八卦万物类象字典
 class _XiangYiTab extends StatefulWidget {
   const _XiangYiTab();
   @override
@@ -512,7 +410,6 @@ class _XiangYiTabState extends State<_XiangYiTab> {
 
     return Column(
       children: [
-        // 八卦选择器
         SizedBox(
           height: 48,
           child: ListView(
@@ -532,7 +429,6 @@ class _XiangYiTabState extends State<_XiangYiTab> {
           ),
         ),
         const Divider(height: 1),
-        // 分类选择器
         SizedBox(
           height: 40,
           child: ListView(
@@ -551,90 +447,10 @@ class _XiangYiTabState extends State<_XiangYiTab> {
             }).toList(),
           ),
         ),
-        // 内容
         Expanded(
           child: _selectedCategory == null
               ? _buildAllCategories(theme, guaNames)
               : _buildCategoryDetail(theme, _selectedCategory!),
-        ),
-      ],
-    );
-  }
-}
-
-// ──────────── 动变含义 Tab ────────────
-
-/// 动变含义词典
-class _DongBianTab extends StatefulWidget {
-  const _DongBianTab();
-  @override
-  State<_DongBianTab> createState() => _DongBianTabState();
-}
-
-class _DongBianTabState extends State<_DongBianTab> {
-  String _filterCat = '全部';
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cats = ['全部', '基础', '动变关系', '动变趋势', '特殊'];
-    var list = dongBianDictionary;
-    if (_filterCat != '全部') {
-      list = list.where((d) => d.category == _filterCat).toList();
-    }
-
-    return Column(
-      children: [
-        SizedBox(
-          height: 40,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            children: cats.map((c) => Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: ChoiceChip(
-                label: Text(c, style: TextStyle(fontSize: 14, fontWeight: _filterCat == c ? FontWeight.bold : FontWeight.normal)),
-                selected: _filterCat == c,
-                onSelected: (_) => setState(() => _filterCat = c),
-              ),
-            )).toList(),
-          ),
-        ),
-        const Divider(height: 1),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(12),
-            children: list.map((d) => Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ExpansionTile(
-                leading: CircleAvatar(
-                  radius: 16,
-                  backgroundColor: theme.colorScheme.primaryContainer,
-                  child: Text(d.category[0], style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onPrimaryContainer)),
-                ),
-                title: Text(d.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(d.description, style: theme.textTheme.bodySmall),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: d.details.map((detail) => Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('• ', style: TextStyle(color: theme.colorScheme.primary)),
-                            Expanded(child: Text(detail, style: theme.textTheme.bodySmall)),
-                          ],
-                        ),
-                      )).toList(),
-                    ),
-                  ),
-                ],
-              ),
-            )).toList(),
-          ),
         ),
       ],
     );
@@ -697,9 +513,8 @@ class _DongBianTabState extends State<_DongBianTab> {
   }
 }
 
-// ──────────── 禽星关系 Tab ────────────
+/// ──────────────── 禽星关系 Tab ────────────────
 
-/// 二十八宿禽星关系面板
 class _QinXingTab extends StatelessWidget {
   const _QinXingTab();
 
@@ -714,7 +529,6 @@ class _QinXingTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
-        // 图例
         Card(
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -732,7 +546,6 @@ class _QinXingTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        // 四组展示
         ...groups.map((g) => _buildGroup(theme, g, groupColors[g]!)),
       ],
     );
@@ -766,12 +579,12 @@ class _QinXingTab extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: color.withAlpha(38),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
             ),
             child: Row(
               children: [
-                Text('${group}方 ${group == '东' ? '青龙' : group == '南' ? '朱雀' : group == '西' ? '白虎' : '玄武'}七宿',
+                Text('$group方 ${group == '东' ? '青龙' : group == '南' ? '朱雀' : group == '西' ? '白虎' : '玄武'}七宿',
                   style: TextStyle(fontWeight: FontWeight.bold, color: color)),
               ],
             ),
@@ -800,14 +613,10 @@ class _QinXingTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (star.chong != null)
-                  _relChip(theme, '冲', star.chong!, Colors.red.shade100, Colors.red.shade800),
-                if (star.he != null)
-                  _relChip(theme, '合', star.he!, Colors.green.shade100, Colors.green.shade800),
-                if (star.ai.isNotEmpty)
-                  _relChip(theme, '爱', star.ai.join('、'), Colors.blue.shade100, Colors.blue.shade800),
-                if (star.wei.isNotEmpty)
-                  _relChip(theme, '畏', star.wei.join('、'), Colors.orange.shade100, Colors.orange.shade800),
+                if (star.chong != null) _relChip(theme, '冲', star.chong!, Colors.red.shade100, Colors.red.shade800),
+                if (star.he != null) _relChip(theme, '合', star.he!, Colors.green.shade100, Colors.green.shade800),
+                if (star.ai.isNotEmpty) _relChip(theme, '爱', star.ai.join('、'), Colors.blue.shade100, Colors.blue.shade800),
+                if (star.wei.isNotEmpty) _relChip(theme, '畏', star.wei.join('、'), Colors.orange.shade100, Colors.orange.shade800),
               ],
             ),
           ),
@@ -834,9 +643,8 @@ class _QinXingTab extends StatelessWidget {
   }
 }
 
-// ──────────── 神煞象义 Tab ────────────
+/// ──────────────── 神煞象义 Tab ────────────────
 
-/// 神煞象义词典
 class _ShenShaTab extends StatefulWidget {
   const _ShenShaTab();
   @override
@@ -845,7 +653,6 @@ class _ShenShaTab extends StatefulWidget {
 
 class _ShenShaTabState extends State<_ShenShaTab> {
   String _filterType = '全部';
-  String? _selectedName;
 
   @override
   Widget build(BuildContext context) {
@@ -858,7 +665,6 @@ class _ShenShaTabState extends State<_ShenShaTab> {
 
     return Column(
       children: [
-        // 类型过滤
         SizedBox(
           height: 40,
           child: ListView(
@@ -922,9 +728,8 @@ class _ShenShaTabState extends State<_ShenShaTab> {
   }
 }
 
-// ──────────── 动变含义 Tab ────────────
+/// ──────────────── 动变含义 Tab ────────────────
 
-/// 动变含义词典
 class _DongBianTab extends StatefulWidget {
   const _DongBianTab();
   @override
@@ -999,3 +804,4 @@ class _DongBianTabState extends State<_DongBianTab> {
       ],
     );
   }
+}
