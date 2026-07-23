@@ -1,6 +1,5 @@
 /// 动变含义词典
 /// 解释六爻中各种动变关系的含义与象征
-library;
 
 /// 动变含义条目
 class DongBianInfo {

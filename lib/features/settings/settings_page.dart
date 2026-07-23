@@ -1,6 +1,5 @@
 /// 设置页面
 /// 包含主题、字体、排盘规则、显示要素等配置
-library;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';

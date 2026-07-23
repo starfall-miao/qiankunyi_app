@@ -1,5 +1,4 @@
 /// 乾坤易 - 设置状态管理
-library;
 
 import 'package:flutter/material.dart';
 

@@ -1,6 +1,5 @@
 /// 象意字典（万物类象）
 /// 包含八卦、六十四卦的象意映射
-library;
 
 /// 八卦万物类象
 const Map<String, Map<String, List<String>>> baguaXiangYi = {
