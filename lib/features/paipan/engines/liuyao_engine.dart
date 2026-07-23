@@ -321,7 +321,7 @@ class LiuYaoEngine {
       for (int l = 0; l < _trigramMasks.length; l++) {
         if (_trigramMasks[l] != lowerMask) continue;
         if (u < _hexagramMap.length && l < (_palaceMap[u]?.length ?? 0)) {
-          guaName = _hexagramMap[u][l];
+          guaName = _hexagramMap[u]![l];
           final palace = _palaceMap[u]![l]!;
           gong = palace.$1;
           shiIdx = palace.$2;
