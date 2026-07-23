@@ -308,13 +308,13 @@ class LiuYaoEngine {
     ];
     final lowerPat = triPatterns[lowerIdx];
     final upperPat = triPatterns[upperIdx];
-    final yinYang = (int v) => v == 1 ? YaoYinYang.yang : YaoYinYang.yin;
 
     final yaos = List.generate(6, (i) {
       final isUpper = i >= 3;
       final pat = isUpper ? upperPat : lowerPat;
+      final vy = pat[isUpper ? i - 3 : i];
       return YaoModel(
-        yinYang: yinYang(pat[isUpper ? i - 3 : i]),
+        yinYang: vy == 1 ? YaoYinYang.yang : YaoYinYang.yin,
         position: YaoPosition.values[i],
         isMoving: i == movingYaoIdx,
       );
