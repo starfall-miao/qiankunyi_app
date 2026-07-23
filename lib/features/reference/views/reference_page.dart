@@ -4,6 +4,8 @@ library;
 
 import 'package:flutter/material.dart';
 import '../data/reference_data.dart';
+import '../data/xiangyi_data.dart';
+import '../data/qinxing_data.dart';
 
 class ReferencePage extends StatelessWidget {
   const ReferencePage({super.key});
@@ -11,7 +13,7 @@ class ReferencePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 5,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('参考资料'),
@@ -21,6 +23,8 @@ class ReferencePage extends StatelessWidget {
               Tab(text: '六十四卦'),
               Tab(text: '纳音'),
               Tab(text: '二十八星宿'),
+              Tab(text: '象意字典'),
+              Tab(text: '禽星关系'),
             ],
           ),
         ),
@@ -29,6 +33,8 @@ class ReferencePage extends StatelessWidget {
             _GuaCiTab(),
             _NaYinTab(),
             _XingXiuTab(),
+            _XiangYiTab(),
+            _QinXingTab(),
           ],
         ),
       ),
@@ -399,3 +405,266 @@ class _XingXiuTab extends StatelessWidget {
     }
   }
 }
+
+// ──────────── 象意字典 Tab ────────────
+
+/// 八卦万物类象字典
+class _XiangYiTab extends StatefulWidget {
+  const _XiangYiTab();
+  @override
+  State<_XiangYiTab> createState() => _XiangYiTabState();
+}
+
+class _XiangYiTabState extends State<_XiangYiTab> {
+  String _selectedGua = '乾';
+  String? _selectedCategory;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final guaNames = baguaXiangYi.keys.toList();
+    final categories = baguaXiangYi[_selectedGua]!.keys.toList();
+
+    return Column(
+      children: [
+        // 八卦选择器
+        SizedBox(
+          height: 48,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            children: guaNames.map((name) {
+              final sel = name == _selectedGua;
+              return Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: FilterChip(
+                  label: Text(name, style: TextStyle(fontSize: 15, fontWeight: sel ? FontWeight.bold : FontWeight.normal)),
+                  selected: sel,
+                  onSelected: (_) => setState(() { _selectedGua = name; _selectedCategory = null; }),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const Divider(height: 1),
+        // 分类选择器
+        SizedBox(
+          height: 40,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            children: categories.map((cat) {
+              final sel = cat == _selectedCategory;
+              return Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: ChoiceChip(
+                  label: Text(cat, style: TextStyle(fontSize: 13, fontWeight: sel ? FontWeight.bold : FontWeight.normal)),
+                  selected: sel,
+                  onSelected: (_) => setState(() => _selectedCategory = sel ? null : cat),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        // 内容
+        Expanded(
+          child: _selectedCategory == null
+              ? _buildAllCategories(theme, guaNames)
+              : _buildCategoryDetail(theme, _selectedCategory!),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAllCategories(ThemeData theme, List<String> guaNames) {
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: guaNames.map((guaName) {
+        final data = baguaXiangYi[guaName]!;
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(guaName, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+                const Divider(),
+                ...data.entries.map((e) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text('${e.key}: ', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant)),
+                      ...e.value.map((v) => Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: Chip(label: Text(v, style: const TextStyle(fontSize: 12)), materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: VisualDensity.compact),
+                      )),
+                    ],
+                  ),
+                )),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildCategoryDetail(ThemeData theme, String category) {
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: baguaXiangYi.entries.map((e) {
+        final items = e.value[category];
+        if (items == null || items.isEmpty) return const SizedBox.shrink();
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: theme.colorScheme.primaryContainer,
+              child: Text(e.key, style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onPrimaryContainer)),
+            ),
+            title: Text(category),
+            subtitle: Text(items.join('、')),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+// ──────────── 禽星关系 Tab ────────────
+
+/// 二十八宿禽星关系面板
+class _QinXingTab extends StatelessWidget {
+  const _QinXingTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final groups = ['东', '南', '西', '北'];
+    final groupColors = <String, Color>{
+      '东': Colors.green, '南': Colors.red, '西': Colors.orange, '北': Colors.blue,
+    };
+
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        // 图例
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('禽星关系说明', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                _legendRow(theme, '冲', '对立相冲', Colors.red.shade100, Colors.red.shade800),
+                _legendRow(theme, '合', '和谐相合', Colors.green.shade100, Colors.green.shade800),
+                _legendRow(theme, '爱', '亲爱相生', Colors.blue.shade100, Colors.blue.shade800),
+                _legendRow(theme, '畏', '畏惧相克', Colors.orange.shade100, Colors.orange.shade800),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // 四组展示
+        ...groups.map((g) => _buildGroup(theme, g, groupColors[g]!)),
+      ],
+    );
+  }
+
+  Widget _legendRow(ThemeData theme, String label, String desc, Color bg, Color fg) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
+            child: Text(label, style: TextStyle(fontSize: 12, color: fg, fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(width: 8),
+          Text(desc, style: theme.textTheme.bodySmall),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGroup(ThemeData theme, String group, Color color) {
+    final stars = qinXingList.where((x) => x.group == group).toList();
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            ),
+            child: Row(
+              children: [
+                Text('${group}方 ${group == '东' ? '青龙' : group == '南' ? '朱雀' : group == '西' ? '白虎' : '玄武'}七宿',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: color)),
+              ],
+            ),
+          ),
+          ...stars.map((x) => _buildStarCard(theme, x)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStarCard(ThemeData theme, QinXingInfo star) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        leading: CircleAvatar(
+          radius: 18,
+          backgroundColor: theme.colorScheme.primaryContainer,
+          child: Text(star.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.onPrimaryContainer)),
+        ),
+        title: Text('${star.name}宿 · ${star.animal}'),
+        subtitle: Text('五行${star.element}'),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (star.chong != null)
+                  _relChip(theme, '冲', star.chong!, Colors.red.shade100, Colors.red.shade800),
+                if (star.he != null)
+                  _relChip(theme, '合', star.he!, Colors.green.shade100, Colors.green.shade800),
+                if (star.ai.isNotEmpty)
+                  _relChip(theme, '爱', star.ai.join('、'), Colors.blue.shade100, Colors.blue.shade800),
+                if (star.wei.isNotEmpty)
+                  _relChip(theme, '畏', star.wei.join('、'), Colors.orange.shade100, Colors.orange.shade800),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _relChip(ThemeData theme, String label, String value, Color bg, Color fg) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
+            child: Text(label, style: TextStyle(fontSize: 12, color: fg, fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(width: 8),
+          Text(value, style: theme.textTheme.bodyMedium),
+        ],
+      ),
+    );
+  }
