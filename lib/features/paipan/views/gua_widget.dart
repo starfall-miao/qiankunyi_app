@@ -1,7 +1,5 @@
-/// 六爻卦象渲染组件
-/// Material 3 风格，支持亮/暗主题
-library;
-
+/// 六爻卦象渲染组件 — 国风紧凑版
+/// 配色参考 hexagram.qiankunyi.com.cn
 import 'package:flutter/material.dart';
 import '../models/yao_model.dart';
 import '../models/gua_model.dart';
@@ -78,16 +76,25 @@ const _yaoPosCN = <YaoPosition, String>{
   YaoPosition.si: '四', YaoPosition.wu: '五', YaoPosition.shang: '上',
 };
 
-const _liuShenBgColors = <LiuShen, Color>{
-  LiuShen.qingLong: Color(0xFFE8F5E9), // 青绿
-  LiuShen.zhuQue: Color(0xFFFFEBEE),   // 朱红
-  LiuShen.gouChen: Color(0xFFFFF3E0),  // 橙黄
-  LiuShen.tengShe: Color(0xFFF3E5F5),  // 紫
-  LiuShen.baiHu: Color(0xFFECEFF1),    // 白灰
-  LiuShen.xuanWu: Color(0xFFE0E0E0),   // 灰黑
+// 六神背景色 — 传统国风配色
+const _liuShenColors = <LiuShen, Color>{
+  LiuShen.qingLong: Color(0xFF2E7D32), // 青绿
+  LiuShen.zhuQue: Color(0xFFC62828),   // 朱红
+  LiuShen.gouChen: Color(0xFFEF6C00),  // 橙黄
+  LiuShen.tengShe: Color(0xFF7B1FA2),  // 紫
+  LiuShen.baiHu: Color(0xFF78909C),    // 白灰
+  LiuShen.xuanWu: Color(0xFF37474F),   // 灰黑
 };
 
-/// 六爻卦象展示组件
+const _wangShuaiColors = <WangShuaiLevel, Color>{
+  WangShuaiLevel.wang: Color(0xFF1B5E20), // 旺-深绿
+  WangShuaiLevel.xiang: Color(0xFF2E7D32), // 相-绿
+  WangShuaiLevel.xiu: Color(0xFF9E9D24),  // 休-黄绿
+  WangShuaiLevel.qiu: Color(0xFFE65100),  // 囚-橙
+  WangShuaiLevel.si: Color(0xFFB71C1C),   // 死-红
+};
+
+/// 六爻卦象展示组件 — 传统国风紧凑版
 class GuaWidget extends StatelessWidget {
   final GuaModel gua;
   final bool showFooter;
@@ -97,297 +104,368 @@ class GuaWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(theme),
-            const SizedBox(height: 8),
-            ...List.generate(6, (i) => _buildYaoRow(context, i, theme)),
-            if (showFooter) ...[
-              const SizedBox(height: 8),
-              _buildFooter(theme),
-            ],
-          ],
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.brightness == Brightness.dark
+            ? const Color(0xFF2C2C2C)
+            : const Color(0xFFF5F0EB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.brightness == Brightness.dark
+              ? const Color(0xFF444444)
+              : const Color(0xFFE0D5C8),
+          width: 1,
         ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(theme),
+          const Divider(height: 1, thickness: 1),
+          ...List.generate(6, (i) => _buildYaoRow(context, i, theme)),
+          if (showFooter) ...[
+            const Divider(height: 1, thickness: 1),
+            _buildFooter(theme),
+          ],
+        ],
       ),
     );
   }
 
-  /// 头部：卦名 + 宫 + 五行
+  /// 头部：卦名 + 宫五行 + 六冲六合标记
   Widget _buildHeader(ThemeData theme) {
-    return Row(
-      children: [
-        Text(
-          _guaNameCN[gua.name] ?? '未知卦',
-          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(width: 12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            '${_guaGongCN[gua.gong] ?? ''}宫 ${_wuXingCN[gua.wuXing] ?? ''}',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onPrimaryContainer,
+    final textColor = theme.brightness == Brightness.dark
+        ? const Color(0xFFE0D5C8)
+        : const Color(0xFF4A3728);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        children: [
+          Text(
+            _guaNameCN[gua.name] ?? '未知卦',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: textColor,
             ),
           ),
-        ),
-      ],
-    );
-  }
-
-  /// 单行爻渲染（从上到下：上→五→四→三→二→初）
-  Widget _buildYaoRow(BuildContext context, int displayIndex, ThemeData theme) {
-    final yaoIdx = 5 - displayIndex; // 显示顺序反转
-    final yao = gua.yaos[yaoIdx];
-    final lineColor = _getYaoLineColor(yao, theme);
-
-    return InkWell(
-      onTap: () => _showDetail(context, yao, yaoIdx),
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 4),
-        child: Row(
-          children: [
-            // 六神
-            SizedBox(
-              width: 28,
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: yao.liuShen != null ? _liuShenBgColors[yao.liuShen] : null,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  yao.liuShen != null ? _liuShenCN[yao.liuShen]! : '',
-                  style: TextStyle(fontSize: 10, color: Colors.grey.shade700),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            // 世应标记
-            SizedBox(width: 18, child: _buildShiYingMark(yao, theme)),
-            // 爻画
-            SizedBox(width: 52, child: _buildYaoLine(yao, lineColor)),
-            const SizedBox(width: 6),
-            // 干支 + 六亲
-            Expanded(
-              child: Text(
-                _yaoInfo(yao),
-                style: theme.textTheme.bodyMedium,
-              ),
-            ),
-            // 旺衰
-            if (yao.wangShuai != null)
-              Container(
-                margin: const EdgeInsets.only(right: 4),
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                decoration: BoxDecoration(
-                  color: _wangShuaiColor(yao.wangShuai!).withAlpha(50),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  _wangShuaiCN[yao.wangShuai]!,
-                  style: TextStyle(fontSize: 11, color: _wangShuaiColor(yao.wangShuai!), fontWeight: FontWeight.bold),
-                ),
-              ),
-            // 动爻标记
-            if (yao.isMoving)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  '动',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.red.shade700,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-          ],
-        ),
+          const SizedBox(width: 10),
+          _wuXingBadge(theme),
+          const Spacer(),
+          // 六冲/六合简短标记
+          Text(
+            '${_guaGongCN[gua.gong] ?? ''}宫',
+            style: TextStyle(fontSize: 12, color: textColor.withAlpha(150)),
+          ),
+        ],
       ),
     );
   }
 
-  /// 旺衰颜色
-  Color _wangShuaiColor(WangShuaiLevel level) {
-    switch (level) {
-      case WangShuaiLevel.wang: return Colors.green.shade700;
-      case WangShuaiLevel.xiang: return Colors.blue.shade700;
-      case WangShuaiLevel.xiu: return Colors.amber.shade700;
-      case WangShuaiLevel.qiu: return Colors.orange.shade700;
-      case WangShuaiLevel.si: return Colors.red.shade700;
-    }
+  /// 五行标签
+  Widget _wuXingBadge(ThemeData theme) {
+    final wx = gua.wuXing;
+    final color = _wuXingColor(wx);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: color.withAlpha(40),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withAlpha(100)),
+      ),
+      child: Text(
+        _wuXingCN[wx] ?? '',
+        style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600),
+      ),
+    );
   }
 
-  /// 世/应标记
-  Widget? _buildShiYingMark(YaoModel yao, ThemeData theme) {
+  /// 单行爻渲染（上→五→四→三→二→初）
+  Widget _buildYaoRow(BuildContext context, int displayIndex, ThemeData theme) {
+    final yaoIdx = 5 - displayIndex;
+    final yao = gua.yaos[yaoIdx];
+    final isDark = theme.brightness == Brightness.dark;
+    final textColor = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
+    final rowBg = displayIndex.isEven
+        ? (isDark ? Colors.white.withAlpha(8) : Colors.white.withAlpha(120))
+        : Colors.transparent;
+
+    return Container(
+      decoration: BoxDecoration(color: rowBg),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Row(
+        children: [
+          // 六神（窄竖条）
+          _buildLiuShenTag(yao, theme),
+          const SizedBox(width: 4),
+          // 世应标记
+          SizedBox(width: 18, child: _buildShiYingMark(yao, theme)),
+          // 爻画
+          SizedBox(width: 40, child: _buildYaoLine(yao, theme)),
+          const SizedBox(width: 6),
+          // 天干地支
+          Text(
+            _tianGanCN[yao.tianGan] ?? '',
+            style: TextStyle(fontSize: 13, color: textColor.withAlpha(200)),
+          ),
+          const SizedBox(width: 2),
+          Text(
+            _diZhiCN[yao.diZhi] ?? '',
+            style: TextStyle(fontSize: 13, color: textColor),
+          ),
+          const SizedBox(width: 2),
+          // 五行小标记
+          if (yao.diZhi != null)
+            _diZhiWuXingBadge(yao.diZhi!, theme),
+          const SizedBox(width: 4),
+          // 六亲
+          if (yao.liuQin != LiuQin.none)
+            _liuQinBadge(yao, theme),
+          // 旺衰
+          if (yao.wangShuai != null) ...[
+            const SizedBox(width: 4),
+            _wangShuaiBadge(yao.wangShuai!, theme),
+          ],
+          const Spacer(),
+          // 刑冲合害标记
+          _buildSpecialMarks(yao, theme),
+          // 动爻标记
+          if (yao.isMoving)
+            Padding(
+              padding: const EdgeInsets.only(left: 4),
+              child: Icon(Icons.bolt, size: 14, color: Colors.orange.shade700),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 六神标签 — 窄色条
+  Widget _buildLiuShenTag(YaoModel yao, ThemeData theme) {
+    if (yao.liuShen == null) return const SizedBox(width: 28);
+    final color = _liuShenColors[yao.liuShen]!;
+    return Container(
+      width: 28,
+      padding: const EdgeInsets.symmetric(vertical: 1),
+      decoration: BoxDecoration(
+        color: color.withAlpha(30),
+        borderRadius: BorderRadius.circular(3),
+        border: Border(left: BorderSide(color: color, width: 2)),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        _liuShenCN[yao.liuShen]!.substring(0, 1),
+        style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  /// 世应标记
+  Widget _buildShiYingMark(YaoModel yao, ThemeData theme) {
     if (yao.isShi) {
       return Container(
-        alignment: Alignment.center,
-        padding: const EdgeInsets.all(1),
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
         decoration: BoxDecoration(
-          color: Colors.blue.shade100,
-          shape: BoxShape.circle,
+          color: const Color(0xFFD32F2F).withAlpha(30),
+          borderRadius: BorderRadius.circular(3),
         ),
-        child: Text('世', style: TextStyle(fontSize: 10, color: Colors.blue.shade800, fontWeight: FontWeight.bold)),
+        child: const Text('世', style: TextStyle(fontSize: 11, color: Color(0xFFD32F2F), fontWeight: FontWeight.bold)),
       );
     }
     if (yao.isYing) {
       return Container(
-        alignment: Alignment.center,
-        padding: const EdgeInsets.all(1),
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
         decoration: BoxDecoration(
-          color: Colors.green.shade100,
-          shape: BoxShape.circle,
+          color: const Color(0xFF1976D2).withAlpha(30),
+          borderRadius: BorderRadius.circular(3),
         ),
-        child: Text('应', style: TextStyle(fontSize: 10, color: Colors.green.shade800, fontWeight: FontWeight.bold)),
+        child: const Text('应', style: TextStyle(fontSize: 11, color: Color(0xFF1976D2), fontWeight: FontWeight.bold)),
       );
     }
     return const SizedBox.shrink();
   }
 
-  /// 绘制爻画
-  Widget _buildYaoLine(YaoModel yao, Color color) {
-    const lineH = 4.0;
-    const totalH = 20.0;
-    const yaoW = 44.0;
+  /// 爻画 — 阴阳爻
+  Widget _buildYaoLine(YaoModel yao, ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+    final lineColor = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
+    final movingColor = Colors.orange.shade700;
 
-    return SizedBox(
-      height: totalH,
-      width: yaoW,
-      child: Center(
-        child: yao.yinYang == YaoYinYang.yang
-            ? Container(height: lineH, width: yaoW, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)))
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(height: lineH, width: yaoW * 0.38, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
-                  const SizedBox(width: 8),
-                  Container(height: lineH, width: yaoW * 0.38, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
-                ],
+    if (yao.yinYang == YaoYinYang.yang) {
+      // 阳爻 ————
+      final color = yao.isMoving ? movingColor : lineColor;
+      return Container(
+        height: 4,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(2),
+        ),
+        margin: const EdgeInsets.symmetric(vertical: 6),
+      );
+    } else {
+      // 阴爻 — —
+      final color = yao.isMoving ? movingColor : lineColor;
+      return Row(
+        children: [
+          Expanded(
+            child: Container(
+              height: 4,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(2),
               ),
+              margin: const EdgeInsets.symmetric(vertical: 6),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Container(
+              height: 4,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              margin: const EdgeInsets.symmetric(vertical: 6),
+            ),
+          ),
+        ],
+      );
+    }
+  }
+
+  /// 地支五行小标记
+  Widget _diZhiWuXingBadge(DiZhi dz, ThemeData theme) {
+    final wx = _diZhiWuXing(dz);
+    final color = _wuXingColor(wx);
+    return Text(
+      _wuXingCN[wx] ?? '',
+      style: TextStyle(fontSize: 10, color: color.withAlpha(180)),
+    );
+  }
+
+  /// 六亲标签
+  Widget _liuQinBadge(YaoModel yao, ThemeData theme) {
+    final color = _liuQinTextColor(yao.liuQin);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25),
+        borderRadius: BorderRadius.circular(3),
+        border: Border.all(color: color.withAlpha(60)),
+      ),
+      child: Text(
+        _liuQinCN[yao.liuQin] ?? '',
+        style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500),
       ),
     );
   }
 
-  /// 爻线颜色（根据刑冲合害）
-  Color _getYaoLineColor(YaoModel yao, ThemeData theme) {
-    if (yao.isChong) return Colors.red.shade600;
-    if (yao.isXing) return Colors.orange.shade600;
-    if (yao.isHe) return Colors.green.shade600;
-    if (yao.isHai) return Colors.grey.shade500;
-    return theme.brightness == Brightness.dark ? Colors.white70 : Colors.black87;
-  }
-
-  /// 爻的信息文字
-  String _yaoInfo(YaoModel yao) {
-    final gan = yao.tianGan != null ? _tianGanCN[yao.tianGan] ?? '' : '';
-    final zhi = yao.diZhi != null ? _diZhiCN[yao.diZhi] ?? '' : '';
-    final liuQin = _liuQinCN[yao.liuQin] ?? '';
-    final parts = <String>[];
-    if (gan.isNotEmpty) parts.add('$gan$zhi');
-    if (liuQin.isNotEmpty) parts.add(liuQin);
-    return parts.join('  ');
-  }
-
-  /// 底部：世应 + 刑冲合害说明
-  Widget _buildFooter(ThemeData theme) {
-    String shiPos = '';
-    String yingPos = '';
-    for (int i = 0; i < 6; i++) {
-      if (gua.yaos[i].isShi) shiPos = _yaoPosCN[YaoPosition.values[i]] ?? '';
-      if (gua.yaos[i].isYing) yingPos = _yaoPosCN[YaoPosition.values[i]] ?? '';
-    }
-    final hasXing = gua.yaos.any((y) => y.isXing);
-    final hasChong = gua.yaos.any((y) => y.isChong);
-    final hasHe = gua.yaos.any((y) => y.isHe);
-    final hasHai = gua.yaos.any((y) => y.isHai);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (shiPos.isNotEmpty)
-          Text('世在$shiPos爻  应在$yingPos爻', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-        const SizedBox(height: 4),
-        Wrap(
-          spacing: 8,
-          children: [
-            if (hasChong) _chip('冲', Colors.red.shade100, Colors.red.shade800),
-            if (hasHe) _chip('合', Colors.green.shade100, Colors.green.shade800),
-            if (hasXing) _chip('刑', Colors.orange.shade100, Colors.orange.shade800),
-            if (hasHai) _chip('害', Colors.grey.shade200, Colors.grey.shade700),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _chip(String label, Color bg, Color fg) {
+  /// 旺衰徽章
+  Widget _wangShuaiBadge(WangShuaiLevel level, ThemeData theme) {
+    final color = _wangShuaiColors[level]!;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
-      child: Text(label, style: TextStyle(fontSize: 11, color: fg)),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      decoration: BoxDecoration(
+        color: color.withAlpha(20),
+        borderRadius: BorderRadius.circular(3),
+      ),
+      child: Text(
+        _wangShuaiCN[level] ?? '',
+        style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600),
+      ),
     );
   }
 
-  /// 爻详情弹窗
-  void _showDetail(BuildContext context, YaoModel yao, int index) {
-    final pos = YaoPosition.values[index];
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) {
-        final theme = Theme.of(ctx);
-        return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('${_yaoPosCN[pos] ?? ''}爻详情', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 12),
-              _detailRow(theme, '阴阳', yao.yinYang == YaoYinYang.yang ? '阳爻 ———' : '阴爻 - -'),
-              _detailRow(theme, '动爻', yao.isMoving ? '是 ○' : '否'),
-              if (yao.tianGan != null) _detailRow(theme, '天干', _tianGanCN[yao.tianGan] ?? ''),
-              if (yao.diZhi != null) _detailRow(theme, '地支', _diZhiCN[yao.diZhi] ?? ''),
-              if (yao.liuShen != null) _detailRow(theme, '六神', _liuShenCN[yao.liuShen] ?? ''),
-              if (yao.liuQin != LiuQin.none) _detailRow(theme, '六亲', _liuQinCN[yao.liuQin] ?? ''),
-              if (yao.wangShuai != null) _detailRow(theme, '旺衰', _wangShuaiCN[yao.wangShuai] ?? ''),
-              _detailRow(theme, '世爻', yao.isShi ? '是' : '否'),
-              _detailRow(theme, '应爻', yao.isYing ? '是' : '否'),
-              if (yao.isXing) _detailRow(theme, '刑', '是'),
-              if (yao.isChong) _detailRow(theme, '冲', '是'),
-              if (yao.isHe) _detailRow(theme, '合', '是'),
-              if (yao.isHai) _detailRow(theme, '害', '是'),
-              if (yao.sanHeJu.isNotEmpty) _detailRow(theme, '三合局', yao.sanHeJu.join(',')),
-              const SizedBox(height: 16),
-            ],
+  /// 刑冲合害特殊标记
+  Widget _buildSpecialMarks(YaoModel yao, ThemeData theme) {
+    final marks = <String, Color>{};
+    final isDark = theme.brightness == Brightness.dark;
+
+    if (yao.isXing) marks['刑'] = const Color(0xFF7B1FA2);
+    if (yao.isChong) marks['冲'] = const Color(0xFFD32F2F);
+    if (yao.isHe) marks['合'] = const Color(0xFF2E7D32);
+    if (yao.isHai) marks['害'] = const Color(0xFFE65100);
+    if (yao.sanHeJu.isNotEmpty) marks['三合'] = const Color(0xFF1565C0);
+
+    if (marks.isEmpty) return const SizedBox.shrink();
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: marks.entries.map((e) {
+        return Container(
+          margin: const EdgeInsets.only(left: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+          decoration: BoxDecoration(
+            color: e.value.withAlpha(isDark ? 60 : 30),
+            borderRadius: BorderRadius.circular(3),
+          ),
+          child: Text(
+            e.key,
+            style: TextStyle(fontSize: 10, color: e.value, fontWeight: FontWeight.bold),
           ),
         );
-      },
+      }).toList(),
     );
   }
 
-  Widget _detailRow(ThemeData theme, String label, String value) {
+  /// 底部信息
+  Widget _buildFooter(ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+    final textColor = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
+    final shiStr = _shiYingStr(gua);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          SizedBox(width: 80, child: Text(label, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant))),
-          Expanded(child: Text(value, style: theme.textTheme.bodyMedium)),
-        ],
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Text(
+        shiStr,
+        style: TextStyle(fontSize: 11, color: textColor.withAlpha(150)),
       ),
     );
+  }
+
+  /// 世应文本
+  String _shiYingStr(GuaModel gua) {
+    final shiCN = _yaoPosCN[gua.yaos[gua.shiYaoIndex].position] ?? '';
+    final yingCN = _yaoPosCN[gua.yaos[gua.yingYaoIndex].position] ?? '';
+    return '世在${shiCN}爻 · 应在${yingCN}爻';
+  }
+
+  // ============ 辅助函数 ============
+
+  Color _wuXingColor(WuXing wx) {
+    switch (wx) {
+      case WuXing.jin: return const Color(0xFFF9A825);
+      case WuXing.mu: return const Color(0xFF2E7D32);
+      case WuXing.shui: return const Color(0xFF1565C0);
+      case WuXing.huo: return const Color(0xFFD32F2F);
+      case WuXing.tu: return const Color(0xFF8D6E63);
+    }
+  }
+
+  WuXing _diZhiWuXing(DiZhi dz) {
+    switch (dz) {
+      case DiZhi.zi: return WuXing.shui;
+      case DiZhi.chou: return WuXing.tu;
+      case DiZhi.yin: return WuXing.mu;
+      case DiZhi.mao: return WuXing.mu;
+      case DiZhi.chen: return WuXing.tu;
+      case DiZhi.si: return WuXing.huo;
+      case DiZhi.wu: return WuXing.huo;
+      case DiZhi.wei: return WuXing.tu;
+      case DiZhi.shen: return WuXing.jin;
+      case DiZhi.you: return WuXing.jin;
+      case DiZhi.xu: return WuXing.tu;
+      case DiZhi.hai: return WuXing.shui;
+    }
+  }
+
+  Color _liuQinTextColor(LiuQin lq) {
+    switch (lq) {
+      case LiuQin.parent: return const Color(0xFF1565C0);
+      case LiuQin.brother: return const Color(0xFF2E7D32);
+      case LiuQin.officer: return const Color(0xFFD32F2F);
+      case LiuQin.wife: return const Color(0xFFE65100);
+      case LiuQin.child: return const Color(0xFFF9A825);
+      case LiuQin.none: return Colors.transparent;
+    }
   }
 }

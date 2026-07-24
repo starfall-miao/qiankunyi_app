@@ -1,6 +1,5 @@
 /// 六爻纳甲排盘引擎
 /// 纯 Dart 实现，所有术数规则硬编码，离线运行
-library;
 
 import 'dart:math';
 import '../models/yao_model.dart';
