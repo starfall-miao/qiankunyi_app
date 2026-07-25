@@ -404,6 +404,38 @@ class _PaipanPageState extends State<PaipanPage> {
     );
   }
 
+  // ── 机器摇卦 ──
+
+  Widget _buildMachineToss(bool isDark, Color primary) {
+    return _infoCard(Icons.shuffle, '由系统模拟摇铜钱，随机生成六爻', isDark, primary);
+  }
+
+  // ── 时间起卦 ──
+
+  Widget _buildTimeToss(bool isDark, Color primary) {
+    return _infoCard(Icons.date_range, '以当前选中时间的年月日时数字起卦', isDark, primary);
+  }
+
+  Widget _infoCard(IconData icon, String text, bool isDark, Color primary) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: _cardBg(isDark),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _border(isDark)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: primary),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(text, style: TextStyle(fontSize: 12, color: _text(isDark))),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSubmitButton(BuildContext context, bool isDark, Color primary, PaipanProvider provider) {
     return SizedBox(
       width: double.infinity,
