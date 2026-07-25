@@ -47,17 +47,11 @@ class _PaipanPageState extends State<PaipanPage> {
     final tp = context.watch<ThemeProvider>();
     final isDark = theme.brightness == Brightness.dark;
     final primary = tp.colorSchemeType.primary;
-    final useAcrylic = tp.acrylicEffect;
-    final int a = (tp.acrylicOpacity * 255).round().clamp(0, 255);
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: useAcrylic
-            ? (isDark ? const Color(0xFF252542).withAlpha(a) : Colors.white.withAlpha(a))
-            : (isDark ? const Color(0xFF1A1A2E) : primary),
-        foregroundColor: useAcrylic
-            ? (isDark ? const Color(0xFFE8E0D8) : const Color(0xFF2C2C2C))
-            : const Color(0xFFF5F0EB),
+        backgroundColor: isDark ? null : primary,
+        foregroundColor: isDark ? null : const Color(0xFFF5F0EB),
         elevation: 0,
         titleSpacing: 0,
         title: Padding(
@@ -71,7 +65,7 @@ class _PaipanPageState extends State<PaipanPage> {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Icon(Icons.change_circle_outlined, size: 20,
-                    color: isDark ? secondaryColor(tp) : const Color(0xFFD4A574)),
+                    color: isDark ? const Color(0xFFD4A574) : const Color(0xFFF5F0EB)),
               ),
               const SizedBox(width: 8),
               Text(
@@ -79,13 +73,13 @@ class _PaipanPageState extends State<PaipanPage> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: isDark ? secondaryColor(tp) : const Color(0xFFD4A574),
+                  color: isDark ? const Color(0xFFD4A574) : const Color(0xFFF5F0EB),
                 ),
               ),
               Text(
                 _tabIndex == 0 ? ' 六爻' : ' 梅花',
                 style: TextStyle(fontSize: 12,
-                    color: isDark ? Colors.white54 : const Color(0xFFA1887F)),
+                    color: isDark ? Colors.white54 : const Color(0xFFE0D5C8)),
               ),
             ],
           ),
@@ -94,50 +88,38 @@ class _PaipanPageState extends State<PaipanPage> {
           IconButton(
             icon: Icon(
               tp.themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
-              color: isDark ? secondaryColor(tp) : const Color(0xFFD4A574),
+              color: isDark ? const Color(0xFFD4A574) : const Color(0xFFF5F0EB),
             ),
             tooltip: '切换主题',
             onPressed: () => tp.toggleTheme(),
           ),
         ],
       ),
-      body: _buildBody(context, theme, tp, isDark, primary, useAcrylic, a),
+      body: _buildBody(context, isDark, primary),
     );
   }
 
-  Color secondaryColor(ThemeProvider tp) {
-    // 金色辅助色（国风传统配色）
-    return const Color(0xFFD4A574);
-  }
-
-  Widget _buildBody(BuildContext context, ThemeData theme, ThemeProvider tp,
-      bool isDark, Color primary, bool useAcrylic, int a) {
+  Widget _buildBody(BuildContext context, bool isDark, Color primary) {
     final provider = context.watch<PaipanProvider>();
     final textColor = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
-    final bgColor = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB);
-    final cardBg = useAcrylic
-        ? (isDark ? const Color(0xFF252542).withAlpha(a) : Colors.white.withAlpha(a))
-        : (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB));
+    final cardBg = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB);
     final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
 
     return Container(
-      color: bgColor,
+      color: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB),
       child: Column(
         children: [
-          // ── 时间选择器 ──
-          _buildTimePicker(context, theme, isDark, primary, textColor, cardBg, borderColor),
-
-          // ── Tab 切换 ──
-          _buildTabBar(context, isDark, primary, borderColor),
-
-          // ── 输入区域 ──
+          // 时间选择器
+          _buildTimePicker(context, isDark, primary, textColor, cardBg, borderColor),
+          // Tab 切换
+          _buildTabBar(isDark, primary, borderColor),
+          // 输入区域
           Expanded(
             child: _tabIndex == 0
-                ? _buildLiuyaoInput(context, theme, tp, isDark, primary, textColor, cardBg, borderColor, useAcrylic, a)
-                : _buildMeihuaInput(context, theme, isDark, primary, textColor, cardBg, borderColor),
+                ? _buildLiuyaoInput(context, isDark, primary, textColor, cardBg, borderColor)
+                : _buildMeihuaInput(isDark, primary, textColor, cardBg, borderColor),
           ),
-
-          // ── 排盘按钮 ──
+          // 排盘按钮
           _buildSubmitButton(context, isDark, primary, provider),
         ],
       ),
@@ -146,8 +128,8 @@ class _PaipanPageState extends State<PaipanPage> {
 
   // ── 时间选择器 ──
 
-  Widget _buildTimePicker(BuildContext context, ThemeData theme, bool isDark,
-      Color primary, Color textColor, Color cardBg, Color borderColor) {
+  Widget _buildTimePicker(BuildContext context, bool isDark, Color primary,
+      Color textColor, Color cardBg, Color borderColor) {
     return Container(
       margin: const EdgeInsets.fromLTRB(8, 6, 8, 0),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -184,7 +166,7 @@ class _PaipanPageState extends State<PaipanPage> {
 
   // ── Tab 切换栏 ──
 
-  Widget _buildTabBar(BuildContext context, bool isDark, Color primary, Color borderColor) {
+  Widget _buildTabBar(bool isDark, Color primary, Color borderColor) {
     return Container(
       margin: const EdgeInsets.fromLTRB(8, 4, 8, 0),
       decoration: BoxDecoration(
@@ -194,16 +176,14 @@ class _PaipanPageState extends State<PaipanPage> {
       ),
       child: Row(
         children: [
-          _tabItem('六爻（铜钱）', 0),
-          _tabItem('梅花易数', 1),
+          _tabItem('六爻（铜钱）', 0, isDark, primary),
+          _tabItem('梅花易数', 1, isDark, primary),
         ],
       ),
     );
   }
 
-  Widget _tabItem(String label, int index) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primary = context.watch<ThemeProvider>().colorSchemeType.primary;
+  Widget _tabItem(String label, int index, bool isDark, Color primary) {
     final selected = _tabIndex == index;
     return Expanded(
       child: GestureDetector(
@@ -230,91 +210,97 @@ class _PaipanPageState extends State<PaipanPage> {
 
   // ── 六爻输入区 ──
 
-  Widget _buildLiuyaoInput(BuildContext context, ThemeData theme, ThemeProvider tp,
-      bool isDark, Color primary, Color textColor, Color cardBg, Color borderColor,
-      bool useAcrylic, int a) {
+  Widget _buildLiuyaoInput(BuildContext context, bool isDark, Color primary,
+      Color textColor, Color cardBg, Color borderColor) {
+    final provider = context.watch<PaipanProvider>();
     return SingleChildScrollView(
       padding: const EdgeInsets.all(8),
       child: Column(
         children: [
-          // 手动起卦区
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: borderColor),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          // 手动起卦
+          _inputCard(
+            title: '手动起卦（三数）',
+            icon: Icons.handyman_outlined,
+            isDark: isDark,
+            primary: primary,
+            textColor: textColor,
+            cardBg: cardBg,
+            borderColor: borderColor,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.handyman_outlined, size: 14, color: primary),
-                    const SizedBox(width: 4),
-                    Text('手动起卦（三数）', style: TextStyle(fontSize: 12, color: textColor, fontWeight: FontWeight.w500)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    _numField('上卦', _upperCtrl, '0-8'),
-                    const SizedBox(width: 6),
-                    _numField('下卦', _lowerCtrl, '0-8'),
-                    const SizedBox(width: 6),
-                    _numField('动爻', _movingCtrl, '0-6'),
-                  ],
-                ),
+                _numField('上卦', _upperCtrl, '0-8'),
+                const SizedBox(width: 6),
+                _numField('下卦', _lowerCtrl, '0-8'),
+                const SizedBox(width: 6),
+                _numField('动爻', _movingCtrl, '0-6'),
               ],
             ),
           ),
           const SizedBox(height: 6),
-
-          // 随机起卦区
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: borderColor),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          // 随机起卦
+          _inputCard(
+            title: '随机起卦',
+            icon: Icons.shuffle,
+            isDark: isDark,
+            primary: primary,
+            textColor: textColor,
+            cardBg: cardBg,
+            borderColor: borderColor,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.shuffle, size: 14, color: primary),
-                    const SizedBox(width: 4),
-                    Text('随机起卦', style: TextStyle(fontSize: 12, color: textColor, fontWeight: FontWeight.w500)),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    _smallBtn('上卦', primary, () {}),
-                    const SizedBox(width: 4),
-                    _smallBtn('下卦', primary, () {}),
-                    const SizedBox(width: 4),
-                    _smallBtn('动爻', primary, () {}),
-                    const SizedBox(width: 8),
-                    _smallBtn('全随机', primary, () {}),
-                  ],
-                ),
+                _smallBtn('上卦', primary, () {}),
+                const SizedBox(width: 4),
+                _smallBtn('下卦', primary, () {}),
+                const SizedBox(width: 4),
+                _smallBtn('动爻', primary, () {}),
+                const SizedBox(width: 8),
+                _smallBtn('全随机', primary, () {}),
               ],
             ),
           ),
           const SizedBox(height: 6),
-
           // 五行导航
           _buildWuxingNav(isDark, primary, cardBg, borderColor),
-
           const SizedBox(height: 6),
-
           // 排盘结果
-          if (provider.result != null)
-            _buildResult(context, theme, tp, isDark, primary, textColor, cardBg, borderColor, useAcrylic, a, provider.result!)
+          if (provider.currentResult != null)
+            _buildResult(provider.currentResult!, isDark, primary)
           else
             _buildEmptyHint(primary, textColor),
+        ],
+      ),
+    );
+  }
+
+  Widget _inputCard({
+    required String title,
+    required IconData icon,
+    required bool isDark,
+    required Color primary,
+    required Color textColor,
+    required Color cardBg,
+    required Color borderColor,
+    required Widget child,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: primary),
+              const SizedBox(width: 4),
+              Text(title, style: TextStyle(fontSize: 12, color: textColor, fontWeight: FontWeight.w500)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          child,
         ],
       ),
     );
@@ -390,35 +376,23 @@ class _PaipanPageState extends State<PaipanPage> {
 
   // ── 排盘结果 ──
 
-  Widget _buildResult(BuildContext context, ThemeData theme, ThemeProvider tp,
-      bool isDark, Color primary, Color textColor, Color cardBg, Color borderColor,
-      bool useAcrylic, int a, PaipanResult result) {
+  Widget _buildResult(PaipanResult result, bool isDark, Color primary) {
     return Column(
       children: [
-        if (result.liuyao != null)
-          GuaWidget(
-            gua: result.liuyao!,
-            theme: theme,
-            isDark: isDark,
-            primary: primary,
-            useAcrylic: useAcrylic,
-            acrylicAlpha: a,
-          ),
-        if (result.meihua != null)
-          MeihuaResultWidget(
-            result: result,
-            theme: theme,
-            isDark: isDark,
-            primary: primary,
-            useAcrylic: useAcrylic,
-            acrylicAlpha: a,
-          ),
+        GuaWidget(gua: result.benGua),
+        if (result.bianGua != null) ...[
+          const SizedBox(height: 6),
+          GuaWidget(gua: result.bianGua!),
+        ],
+        if (result.huGua != null) ...[
+          const SizedBox(height: 6),
+          GuaWidget(gua: result.huGua!),
+        ],
         const SizedBox(height: 8),
-        // 清空按钮
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: () => context.read<PaipanProvider>().clear(),
+            onPressed: () => context.read<PaipanProvider>().clearResult(),
             icon: const Icon(Icons.refresh, size: 16),
             label: const Text('清空排盘'),
           ),
@@ -445,64 +419,40 @@ class _PaipanPageState extends State<PaipanPage> {
 
   // ── 梅花易数输入 ──
 
-  Widget _buildMeihuaInput(BuildContext context, ThemeData theme, bool isDark,
-      Color primary, Color textColor, Color cardBg, Color borderColor) {
+  Widget _buildMeihuaInput(bool isDark, Color primary, Color textColor, Color cardBg, Color borderColor) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(8),
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: borderColor),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          _inputCard(
+            title: '三数起卦',
+            icon: Icons.numbers,
+            isDark: isDark,
+            primary: primary,
+            textColor: textColor,
+            cardBg: cardBg,
+            borderColor: borderColor,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.numbers, size: 14, color: primary),
-                    const SizedBox(width: 4),
-                    Text('三数起卦', style: TextStyle(fontSize: 12, color: textColor, fontWeight: FontWeight.w500)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    _numField('数 A', _numACtrl, '0-9'),
-                    const SizedBox(width: 6),
-                    _numField('数 B', _numBCtrl, '0-9'),
-                    const SizedBox(width: 6),
-                    _numField('数 C', _numCCtrl, '0-9'),
-                  ],
-                ),
+                _numField('数 A', _numACtrl, '0-9'),
+                const SizedBox(width: 6),
+                _numField('数 B', _numBCtrl, '0-9'),
+                const SizedBox(width: 6),
+                _numField('数 C', _numCCtrl, '0-9'),
               ],
             ),
           ),
           const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: borderColor),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.date_range, size: 14, color: primary),
-                    const SizedBox(width: 4),
-                    Text('日期起卦', style: TextStyle(fontSize: 12, color: textColor, fontWeight: FontWeight.w500)),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text('使用当前选中时间年月日数字起卦', style: TextStyle(fontSize: 11, color: isDark ? const Color(0xFF999999) : const Color(0xFF888888))),
-              ],
-            ),
+          _inputCard(
+            title: '日期起卦',
+            icon: Icons.date_range,
+            isDark: isDark,
+            primary: primary,
+            textColor: textColor,
+            cardBg: cardBg,
+            borderColor: borderColor,
+            child: Text('使用当前选中时间年月日数字起卦',
+                style: TextStyle(fontSize: 11, color: isDark ? const Color(0xFF999999) : const Color(0xFF888888))),
           ),
         ],
       ),
@@ -539,7 +489,7 @@ class _PaipanPageState extends State<PaipanPage> {
       final lower = int.tryParse(_lowerCtrl.text) ?? 0;
       final moving = int.tryParse(_movingCtrl.text) ?? 0;
       if (upper > 0 && lower > 0) {
-        final result = LiuyaoEngine.calculate(upper, lower, moving, time: _selectedTime);
+        final result = LiuYaoEngine.byNumbers(upper, lower, moving);
         provider.setResult(result);
       }
     } else {
@@ -547,7 +497,7 @@ class _PaipanPageState extends State<PaipanPage> {
       final b = int.tryParse(_numBCtrl.text) ?? 0;
       final c = int.tryParse(_numCCtrl.text) ?? 0;
       if (a > 0 || b > 0 || c > 0) {
-        final result = MeihuaEngine.calculate(a, b, c, time: _selectedTime);
+        final result = MeihuaEngine.fromNumbers(a, b, c);
         provider.setResult(result);
       }
     }

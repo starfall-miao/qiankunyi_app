@@ -191,8 +191,6 @@ class AppTheme {
     );
 
     final int a = (acrylicOpacity * 255).round().clamp(0, 255);
-    final baseBg = const Color(0xFF252542);
-    final scaffoldBg = const Color(0xFF1A1A2E);
 
     return ThemeData(
       useMaterial3: true,
