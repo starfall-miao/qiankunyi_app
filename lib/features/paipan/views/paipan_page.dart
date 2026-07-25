@@ -131,7 +131,6 @@ class _PaipanPageState extends State<PaipanPage> {
   Color _border(bool isDark) => isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
   Color _text(bool isDark) => isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
   Color _muted(bool isDark) => isDark ? const Color(0xFF999999) : const Color(0xFF888888);
-  Color _bodyBg(bool isDark) => isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB);
 
   Widget _buildTimePicker(BuildContext context, bool isDark, Color primary) {
     return Container(
