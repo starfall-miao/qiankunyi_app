@@ -177,7 +177,6 @@ class AppTheme {
   /// 获取对应配色方案的暗色主题
   static ThemeData darkTheme(ColorSchemeType type, {bool useAcrylic = false}) {
     final primary = type.primary;
-    final primaryDark = type.primaryDark;
     final secondary = _secondaryColor(type);
 
     final colorScheme = ColorScheme.dark(

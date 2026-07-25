@@ -1,8 +1,5 @@
 // 落·乾坤 - 设置状态管理
 
-import 'package:flutter/material.dart';
-import '../../core/theme/app_theme.dart';
-
 /// 排盘显示要素开关
 class DisplaySettings {
   bool showTianGan;    // 显示天干
