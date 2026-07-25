@@ -46,16 +46,20 @@ jobs:
           cache: true
       - run: flutter pub get
 
-      # 准备签名密钥（当 GitHub Secrets 配置后自动生效）
+      # 导入签名密钥（需先在 GitHub 配置 KEYSTORE_BASE64 等 Secrets）
+      # 若未配置则输出警告，build.gradle 自动回退 debug 签名
       - name: 🔑 导入签名密钥
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/qiankunyi-release-key.jks
-          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> android/key.properties
-          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
-          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
-          echo "storeFile=qiankunyi-release-key.jks" >> android/key.properties
-          echo "✅ 签名密钥已导入"
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/qiankunyi-release-key.jks
+            echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> android/key.properties
+            echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
+            echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
+            echo "storeFile=qiankunyi-release-key.jks" >> android/key.properties
+            echo "✅ 签名密钥已导入，将构建已签名 APK"
+          else
+            echo "⚠️ 未配置签名密钥，将使用 Debug 签名"
+          fi
 
       # Release APK（已签名）
       - name: 🏗️ 构建 Release APK
