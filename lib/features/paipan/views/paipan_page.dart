@@ -7,76 +7,9 @@ import '../providers/paipan_provider.dart';
 import '../engines/liuyao_engine.dart';
 import '../engines/meihua_engine.dart';
 import '../models/paipan_result.dart';
+import '../models/gua_model.dart';
 import '../models/yao_model.dart';
 import 'gua_widget.dart';
-
-/// 全局异常边界 Widget
-class ErrorBoundary extends StatefulWidget {
-  final Widget child;
-  const ErrorBoundary({super.key, required this.child});
-
-  @override
-  State<ErrorBoundary> createState() => _ErrorBoundaryState();
-}
-
-class _ErrorBoundaryState extends State<ErrorBoundary> {
-  dynamic _error;
-  StackTrace? _stack;
-
-  @override
-  void initState() {
-    super.initState();
-    // 捕获当前帧的构建异常
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // 空操作——FlutterError.onError 已全局处理
-    });
-  }
-
-  @override
-  void componentDidCatch(dynamic error, StackTrace stack) {
-    setState(() {
-      _error = error;
-      _stack = stack;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text('运行时异常', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              SelectableText('$_error',
-                style: const TextStyle(color: Colors.red, fontSize: 12)),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => setState(() { _error = null; _stack = null; }),
-                child: const Text('重试'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-    try {
-      return widget.child;
-    } catch (e, s) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        setState(() { _error = e; _stack = s; });
-      });
-      return const SizedBox.shrink();
-    }
-  }
-}
-
-// ────────────────────────────────────────────────────────────
 
 enum _YaoInput { shaoYin, shaoYang, laoYin, laoYang }
 
@@ -94,7 +27,7 @@ class _PaipanPageState extends State<PaipanPage> {
   final _numACtrl = TextEditingController();
   final _numBCtrl = TextEditingController();
   final _numCCtrl = TextEditingController();
-  DateTime _selectedTime = DateTime.now();
+  final DateTime _selectedTime = DateTime.now();
 
   @override
   void dispose() {
@@ -106,13 +39,10 @@ class _PaipanPageState extends State<PaipanPage> {
 
   @override
   Widget build(BuildContext context) {
-    return ErrorBoundary(
-      child: _buildPage(context),
-    );
+    return _buildPage(context);
   }
 
   Widget _buildPage(BuildContext context) {
-    // 先尝试获取 Provider，失败时显示错误而非崩溃
     final theme = Theme.of(context);
     final tp = context.read<ThemeProvider>();
     final pr = context.read<PaipanProvider>();
@@ -138,7 +68,7 @@ class _PaipanPageState extends State<PaipanPage> {
       ),
       body: Column(
         children: [
-          // 调试信息 — 验证页面可以渲染
+          // 调试确认条
           Container(
             color: Colors.green.shade100,
             padding: const EdgeInsets.all(8),
@@ -192,7 +122,6 @@ class _PaipanPageState extends State<PaipanPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 方法选择
         Wrap(
           spacing: 8,
           children: List.generate(3, (i) {
@@ -207,11 +136,7 @@ class _PaipanPageState extends State<PaipanPage> {
           }),
         ),
         const SizedBox(height: 8),
-
-        // 手工摇——逐爻选择
         if (_liuyaoMethod == 0) ..._buildManualSelector(p, t, dark),
-
-        // 起卦按钮
         SizedBox(
           height: 44,
           child: ElevatedButton.icon(
@@ -225,8 +150,6 @@ class _PaipanPageState extends State<PaipanPage> {
           ),
         ),
         const SizedBox(height: 12),
-
-        // 排盘结果
         if (pr.currentResult != null && pr.lastMethod == 'liuyao') ...[
           _guaCard('本卦', pr.currentResult!.benGua),
           if (pr.currentResult!.bianGua != null) _guaCard('变卦', pr.currentResult!.bianGua!),
@@ -346,7 +269,6 @@ class _PaipanPageState extends State<PaipanPage> {
           }),
         ),
         const SizedBox(height: 8),
-
         if (_meihuaMethod == 0) ...[
           Row(children: [
             Expanded(child: TextField(
@@ -371,7 +293,6 @@ class _PaipanPageState extends State<PaipanPage> {
             )),
           ]),
         ],
-
         const SizedBox(height: 8),
         SizedBox(
           height: 44,
@@ -386,12 +307,10 @@ class _PaipanPageState extends State<PaipanPage> {
           ),
         ),
         const SizedBox(height: 12),
-
         if (pr.currentResult != null && pr.lastMethod == 'meihua') ...[
           _guaCard('本卦', pr.currentResult!.benGua),
           if (pr.currentResult!.bianGua != null) _guaCard('变卦', pr.currentResult!.bianGua!),
           if (pr.currentResult!.huGua != null) _guaCard('互卦', pr.currentResult!.huGua!),
-          // 体用生克
           if (pr.currentResult!.benGua.yaos.length >= 6)
             _buildTiYong(pr.currentResult!),
           Center(
@@ -438,7 +357,6 @@ class _PaipanPageState extends State<PaipanPage> {
   }
 
   Widget _buildTiYong(PaipanResult result) {
-    // 简单体用生克展示
     final tiYong = MeihuaEngine.getTiYong(result);
     return Container(
       width: double.infinity,
@@ -447,7 +365,7 @@ class _PaipanPageState extends State<PaipanPage> {
       decoration: BoxDecoration(
         color: const Color(0xFFE8F5E9),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFF2E7D32).withAlpha(80)),
+        border: Border.all(color: Color(0xFF2E7D32).withAlpha(80)),
       ),
       child: Row(children: [
         const Icon(Icons.info_outline, color: Color(0xFF2E7D32), size: 22),
