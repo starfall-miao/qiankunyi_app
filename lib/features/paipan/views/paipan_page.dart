@@ -1,6 +1,5 @@
-// 排盘主页 — 国风紧凑版（主题感知）
-// 参考 hexagram.qiankunyi.com.cn 布局
-
+// 排盘主页 — 国风紧凑版
+// 支持六爻（手工摇卦/机器摇卦/时间起卦）和梅花易数
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -9,7 +8,9 @@ import '../providers/paipan_provider.dart';
 import '../engines/liuyao_engine.dart';
 import '../engines/meihua_engine.dart';
 import '../models/paipan_result.dart';
+import '../models/yao_model.dart';
 import 'gua_widget.dart';
+import 'meihua_widget.dart';
 
 /// 排盘主页
 class PaipanPage extends StatefulWidget {
@@ -19,26 +20,39 @@ class PaipanPage extends StatefulWidget {
   State<PaipanPage> createState() => _PaipanPageState();
 }
 
+/// 六爻手工输入中每一爻的状态
+enum _YaoInput { shaoYin, shaoYang, laoYin, laoYang }
+
 class _PaipanPageState extends State<PaipanPage> {
   int _tabIndex = 0;
-  final _upperCtrl = TextEditingController();
-  final _lowerCtrl = TextEditingController();
-  final _movingCtrl = TextEditingController();
+
+  // 六爻 — 方法选择
+  int _liuyaoMethod = 0; // 0=手工摇, 1=机器摇, 2=时间起卦
+
+  // 六爻 — 手工输入六爻状态（初→上）
+  List<_YaoInput> _manualYaos =
+      List.filled(6, _YaoInput.shaoYin);
+
+  // 梅花 — 方法选择
+  int _meihuaMethod = 0; // 0=三数起卦, 1=日期起卦
+
+  // 梅花 — 数字输入
   final _numACtrl = TextEditingController();
   final _numBCtrl = TextEditingController();
   final _numCCtrl = TextEditingController();
+
+  // 通用 — 时间选择
   DateTime _selectedTime = DateTime.now();
 
   @override
   void dispose() {
-    _upperCtrl.dispose();
-    _lowerCtrl.dispose();
-    _movingCtrl.dispose();
     _numACtrl.dispose();
     _numBCtrl.dispose();
     _numCCtrl.dispose();
     super.dispose();
   }
+
+  // ── 构建 ──
 
   @override
   Widget build(BuildContext context) {
@@ -67,19 +81,12 @@ class _PaipanPageState extends State<PaipanPage> {
                     color: isDark ? const Color(0xFFD4A574) : const Color(0xFFF5F0EB)),
               ),
               const SizedBox(width: 8),
-              Text(
-                '落·乾坤',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? const Color(0xFFD4A574) : const Color(0xFFF5F0EB),
-                ),
-              ),
-              Text(
-                _tabIndex == 0 ? ' 六爻' : ' 梅花',
-                style: TextStyle(fontSize: 12,
-                    color: isDark ? Colors.white54 : const Color(0xFFE0D5C8)),
-              ),
+              Text('落·乾坤',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold,
+                      color: isDark ? const Color(0xFFD4A574) : const Color(0xFFF5F0EB))),
+              Text(_tabIndex == 0 ? ' 六爻' : ' 梅花',
+                  style: TextStyle(fontSize: 12,
+                      color: isDark ? Colors.white54 : const Color(0xFFE0D5C8))),
             ],
           ),
         ),
@@ -99,27 +106,20 @@ class _PaipanPageState extends State<PaipanPage> {
   }
 
   Widget _buildBody(BuildContext context, bool isDark, Color primary) {
-    final provider = context.watch<PaipanProvider>();
-    final textColor = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
-    final cardBg = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB);
-    final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
-
     return Container(
       color: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB),
       child: Column(
         children: [
           // 时间选择器
-          _buildTimePicker(context, isDark, primary, textColor, cardBg, borderColor),
-          // Tab 切换
-          _buildTabBar(isDark, primary, borderColor),
-          // 输入区域
+          _buildTimePicker(context, isDark, primary),
+          // Tab 栏
+          _buildTabBar(isDark, primary),
+          // 主内容区
           Expanded(
             child: _tabIndex == 0
-                ? _buildLiuyaoInput(context, isDark, primary, textColor, cardBg, borderColor)
-                : _buildMeihuaInput(isDark, primary, textColor, cardBg, borderColor),
+                ? _buildLiuyaoContent(context, isDark, primary)
+                : _buildMeihuaContent(context, isDark, primary),
           ),
-          // 排盘按钮
-          _buildSubmitButton(context, isDark, primary, provider),
         ],
       ),
     );
@@ -127,8 +127,10 @@ class _PaipanPageState extends State<PaipanPage> {
 
   // ── 时间选择器 ──
 
-  Widget _buildTimePicker(BuildContext context, bool isDark, Color primary,
-      Color textColor, Color cardBg, Color borderColor) {
+  Widget _buildTimePicker(BuildContext context, bool isDark, Color primary) {
+    final textColor = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
+    final cardBg = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB);
+    final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
     return Container(
       margin: const EdgeInsets.fromLTRB(8, 6, 8, 0),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -163,9 +165,10 @@ class _PaipanPageState extends State<PaipanPage> {
     );
   }
 
-  // ── Tab 切换栏 ──
+  // ── Tab ──
 
-  Widget _buildTabBar(bool isDark, Color primary, Color borderColor) {
+  Widget _buildTabBar(bool isDark, Color primary) {
+    final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
     return Container(
       margin: const EdgeInsets.fromLTRB(8, 4, 8, 0),
       decoration: BoxDecoration(
@@ -193,94 +196,105 @@ class _PaipanPageState extends State<PaipanPage> {
             color: selected ? primary.withAlpha(25) : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
           ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-              color: selected ? primary : (isDark ? const Color(0xFF888888) : const Color(0xFF888888)),
-            ),
-          ),
+          child: Text(label,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13,
+                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                  color: selected ? primary : (isDark ? const Color(0xFF888888) : const Color(0xFF888888)))),
         ),
       ),
     );
   }
 
-  // ── 六爻输入区 ──
+  // ═══════════════════════ 六爻 ═══════════════════════
 
-  Widget _buildLiuyaoInput(BuildContext context, bool isDark, Color primary,
-      Color textColor, Color cardBg, Color borderColor) {
+  Widget _buildLiuyaoContent(BuildContext context, bool isDark, Color primary) {
     final provider = context.watch<PaipanProvider>();
     return SingleChildScrollView(
       padding: const EdgeInsets.all(8),
       child: Column(
         children: [
-          // 手动起卦
-          _inputCard(
-            title: '手动起卦（三数）',
-            icon: Icons.handyman_outlined,
-            isDark: isDark,
-            primary: primary,
-            textColor: textColor,
-            cardBg: cardBg,
-            borderColor: borderColor,
-            child: Row(
-              children: [
-                _numField('上卦', _upperCtrl, '0-8'),
-                const SizedBox(width: 6),
-                _numField('下卦', _lowerCtrl, '0-8'),
-                const SizedBox(width: 6),
-                _numField('动爻', _movingCtrl, '0-6'),
-              ],
+          // 方法选择
+          _buildMethodSelector(isDark, primary),
+          const SizedBox(height: 6),
+          // 根据方法显示不同的输入区
+          if (_liuyaoMethod == 0) _buildManualYaos(context, isDark, primary),
+          if (_liuyaoMethod == 1) _buildMachineToss(context, isDark, primary),
+          if (_liuyaoMethod == 2) _buildTimeToss(context, isDark, primary),
+          const SizedBox(height: 8),
+          // 排盘按钮
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: ElevatedButton.icon(
+              onPressed: () => _onLiuyaoSubmit(context, provider),
+              icon: const Icon(Icons.auto_awesome, size: 18),
+              label: const Text('起卦', style: TextStyle(fontSize: 16)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
             ),
           ),
-          const SizedBox(height: 6),
-          // 随机起卦
-          _inputCard(
-            title: '随机起卦',
-            icon: Icons.shuffle,
-            isDark: isDark,
-            primary: primary,
-            textColor: textColor,
-            cardBg: cardBg,
-            borderColor: borderColor,
-            child: Row(
-              children: [
-                _smallBtn('上卦', primary, () {}),
-                const SizedBox(width: 4),
-                _smallBtn('下卦', primary, () {}),
-                const SizedBox(width: 4),
-                _smallBtn('动爻', primary, () {}),
-                const SizedBox(width: 8),
-                _smallBtn('全随机', primary, () {}),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
-          // 五行导航
-          _buildWuxingNav(isDark, primary, cardBg, borderColor),
-          const SizedBox(height: 6),
-          // 排盘结果
-          if (provider.currentResult != null)
-            _buildResult(provider.currentResult!, isDark, primary)
-          else
-            _buildEmptyHint(primary, textColor),
+          const SizedBox(height: 8),
+          // 显示结果（仅本标签页产生的排盘结果）
+          if (provider.currentResult != null && _isLastResultLiuyao(provider))
+            ..._buildLiuyaoResult(provider.currentResult!, isDark, primary)
+          else if (provider.currentResult == null)
+            _buildEmptyHint(primary, isDark),
         ],
       ),
     );
   }
 
-  Widget _inputCard({
-    required String title,
-    required IconData icon,
-    required bool isDark,
-    required Color primary,
-    required Color textColor,
-    required Color cardBg,
-    required Color borderColor,
-    required Widget child,
-  }) {
+  /// 六爻方法选择
+  Widget _buildMethodSelector(bool isDark, Color primary) {
+    final methods = ['手工摇卦', '机器摇卦', '时间起卦'];
+    final cardBg = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB);
+    final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        children: List.generate(methods.length, (i) {
+          final sel = _liuyaoMethod == i;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _liuyaoMethod = i),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                margin: EdgeInsets.only(right: i < methods.length - 1 ? 4 : 0),
+                decoration: BoxDecoration(
+                  color: sel ? primary.withAlpha(25) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: sel ? primary : borderColor.withAlpha(80)),
+                ),
+                child: Text(methods[i],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12,
+                        fontWeight: sel ? FontWeight.bold : FontWeight.normal,
+                        color: sel ? primary : (isDark ? const Color(0xFFBBBBBB) : const Color(0xFF666666)))),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  // ── 手工摇卦 — 六爻逐爻输入 ──
+
+  Widget _buildManualYaos(BuildContext context, bool isDark, Color primary) {
+    final cardBg = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB);
+    final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
+    final textColor = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
+    final positions = ['初爻', '二爻', '三爻', '四爻', '五爻', '上爻'];
+
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -293,14 +307,359 @@ class _PaipanPageState extends State<PaipanPage> {
         children: [
           Row(
             children: [
-              Icon(icon, size: 14, color: primary),
+              Icon(Icons.pan_tool_outlined, size: 14, color: primary),
               const SizedBox(width: 4),
-              Text(title, style: TextStyle(fontSize: 12, color: textColor, fontWeight: FontWeight.w500)),
+              Text('逐爻选择（点击切换）',
+                  style: TextStyle(fontSize: 12, color: textColor, fontWeight: FontWeight.w500)),
             ],
           ),
           const SizedBox(height: 8),
-          child,
+          // 从初爻到上爻（从下到上）
+          for (int i = 0; i < 6; i++)
+            _buildYaoRow(i, positions[5 - i], isDark, primary, textColor),
         ],
+      ),
+    );
+  }
+
+  Widget _buildYaoRow(int index, String label, bool isDark, Color primary, Color textColor) {
+    final val = _manualYaos[index];
+    final options = [_YaoInput.shaoYin, _YaoInput.shaoYang, _YaoInput.laoYin, _YaoInput.laoYang];
+    final labels = ['少阴', '少阳', '老阴', '老阳'];
+    final syms = ['- -', '———', '- -×', '———○'];
+    final isMoving = (val == _YaoInput.laoYin || val == _YaoInput.laoYang);
+    final isYang = (val == _YaoInput.shaoYang || val == _YaoInput.laoYang);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 36,
+            child: Text(label, style: TextStyle(fontSize: 12, color: textColor)),
+          ),
+          // 爻符号
+          Container(
+            width: 60,
+            alignment: Alignment.center,
+            child: Text(
+              syms[index],
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isMoving
+                    ? (isYang ? const Color(0xFFD4A574) : const Color(0xFF8B4513))
+                    : (isYang ? const Color(0xFF3E2723) : const Color(0xFF8D6E63)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // 四个选项按钮
+          Expanded(
+            child: Row(
+              children: List.generate(4, (j) {
+                final sel = val == options[j];
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _manualYaos[index] = options[j]),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      margin: EdgeInsets.only(right: j < 3 ? 2 : 0),
+                      decoration: BoxDecoration(
+                        color: sel ? primary.withAlpha(25) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: sel ? primary : (isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8))),
+                      ),
+                      child: Text(labels[j],
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 10,
+                              fontWeight: sel ? FontWeight.bold : FontWeight.normal,
+                              color: sel ? primary : (isDark ? Color(0xFF999999) : Color(0xFF888888)))),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── 机器摇卦 ──
+
+  Widget _buildMachineToss(BuildContext context, bool isDark, Color primary) {
+    final cardBg = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB);
+    final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
+    final textColor = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.shuffle, size: 14, color: primary),
+          const SizedBox(width: 4),
+          Text('由系统模拟摇铜钱，随机生成六爻',
+              style: TextStyle(fontSize: 12, color: textColor)),
+        ],
+      ),
+    );
+  }
+
+  // ── 时间起卦 ──
+
+  Widget _buildTimeToss(BuildContext context, bool isDark, Color primary) {
+    final cardBg = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB);
+    final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
+    final textColor = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.date_range, size: 14, color: primary),
+          const SizedBox(width: 4),
+          Text('以当前选中时间的年月日时数字起卦',
+              style: TextStyle(fontSize: 12, color: textColor)),
+        ],
+      ),
+    );
+  }
+
+  // ── 六爻提交 ──
+
+  void _onLiuyaoSubmit(BuildContext context, PaipanProvider provider) {
+    PaipanResult result;
+    if (_liuyaoMethod == 0) {
+      // 手工摇卦 — 从 _manualYaos 构建 YaoModel
+      final yaos = <YaoModel>[];
+      for (int i = 0; i < 6; i++) {
+        final val = _manualYaos[i];
+        final isYang = (val == _YaoInput.shaoYang || val == _YaoInput.laoYang);
+        final isMoving = (val == _YaoInput.laoYin || val == _YaoInput.laoYang);
+        yaos.add(YaoModel(
+          yinYang: isYang ? YaoYinYang.yang : YaoYinYang.yin,
+          position: YaoPosition.values[5 - i],
+          isMoving: isMoving,
+        ));
+      }
+      result = LiuYaoEngine.fromYaos(yaos, time: _selectedTime);
+    } else if (_liuyaoMethod == 1) {
+      // 机器摇卦
+      result = LiuYaoEngine.manual();
+    } else {
+      // 时间起卦
+      result = LiuYaoEngine.byTime(_selectedTime);
+    }
+    provider.setResult(result, method: 'liuyao');
+  }
+
+  /// 判断当前结果是否为六爻生成
+  bool _isLastResultLiuyao(PaipanProvider provider) {
+    return provider.lastMethod == 'liuyao';
+  }
+
+  List<Widget> _buildLiuyaoResult(PaipanResult result, bool isDark, Color primary) {
+    return [
+      GuaWidget(gua: result.benGua),
+      if (result.bianGua != null) ...[
+        const SizedBox(height: 6),
+        GuaWidget(gua: result.bianGua!),
+      ],
+      if (result.huGua != null) ...[
+        const SizedBox(height: 6),
+        GuaWidget(gua: result.huGua!),
+      ],
+      const SizedBox(height: 8),
+      SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: () => context.read<PaipanProvider>().clearResult(),
+          icon: const Icon(Icons.refresh, size: 16),
+          label: const Text('清空排盘'),
+        ),
+      ),
+      const SizedBox(height: 16),
+    ];
+  }
+
+  // ═══════════════════════ 梅花易数 ═══════════════════════
+
+  Widget _buildMeihuaContent(BuildContext context, bool isDark, Color primary) {
+    final provider = context.watch<PaipanProvider>();
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        children: [
+          // 方法选择
+          _buildMeihuaMethodSelector(isDark, primary),
+          const SizedBox(height: 6),
+          if (_meihuaMethod == 0) _buildMeihuaNumbers(isDark, primary),
+          if (_meihuaMethod == 1) _buildMeihuaDate(isDark, primary),
+          const SizedBox(height: 8),
+          // 排盘按钮
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: ElevatedButton.icon(
+              onPressed: () => _onMeihuaSubmit(context, provider),
+              icon: const Icon(Icons.auto_awesome, size: 18),
+              label: const Text('起卦', style: TextStyle(fontSize: 16)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // 梅花结果
+          if (provider.currentResult != null && _isLastResultMeihua(provider))
+            MeihuaResultWidget(result: provider.currentResult!)
+          else if (provider.currentResult == null)
+            _buildEmptyHint(primary, isDark),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMeihuaMethodSelector(bool isDark, Color primary) {
+    final methods = ['三数起卦', '日期起卦'];
+    final cardBg = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB);
+    final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        children: List.generate(2, (i) {
+          final sel = _meihuaMethod == i;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _meihuaMethod = i),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                margin: EdgeInsets.only(right: i == 0 ? 4 : 0),
+                decoration: BoxDecoration(
+                  color: sel ? primary.withAlpha(25) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: sel ? primary : borderColor.withAlpha(80)),
+                ),
+                child: Text(methods[i],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12,
+                        fontWeight: sel ? FontWeight.bold : FontWeight.normal,
+                        color: sel ? primary : (isDark ? Color(0xFFBBBBBB) : Color(0xFF666666)))),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildMeihuaNumbers(bool isDark, Color primary) {
+    final cardBg = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB);
+    final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.numbers, size: 14, color: primary),
+              const SizedBox(width: 4),
+              Text('输入三个数字', style: TextStyle(fontSize: 12,
+                  color: isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728),
+                  fontWeight: FontWeight.w500)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _numField('A', _numACtrl, '0~9'),
+              const SizedBox(width: 6),
+              _numField('B', _numBCtrl, '0~9'),
+              const SizedBox(width: 6),
+              _numField('C', _numCCtrl, '0~9'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMeihuaDate(bool isDark, Color primary) {
+    final cardBg = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB);
+    final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.date_range, size: 14, color: primary),
+          const SizedBox(width: 4),
+          Text('以当前选中时间的年月日数字起卦',
+              style: TextStyle(fontSize: 12,
+                  color: isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728))),
+        ],
+      ),
+    );
+  }
+
+  void _onMeihuaSubmit(BuildContext context, PaipanProvider provider) {
+    PaipanResult result;
+    if (_meihuaMethod == 0) {
+      final a = int.tryParse(_numACtrl.text) ?? 0;
+      final b = int.tryParse(_numBCtrl.text) ?? 0;
+      final c = int.tryParse(_numCCtrl.text) ?? 0;
+      result = MeihuaEngine.fromNumbers(a, b, c);
+    } else {
+      result = MeihuaEngine.fromDateTime(_selectedTime);
+    }
+    provider.setResult(result, method: 'meihua');
+  }
+
+  bool _isLastResultMeihua(PaipanProvider provider) {
+    return provider.lastMethod == 'meihua';
+  }
+
+  // ── 通用 ──
+
+  Widget _buildEmptyHint(Color primary, bool isDark) {
+    final textColor = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: Column(
+          children: [
+            Icon(Icons.auto_awesome, size: 48, color: primary.withAlpha(60)),
+            const SizedBox(height: 12),
+            Text('选择排盘方式后点「起卦」',
+                style: TextStyle(fontSize: 14, color: textColor.withAlpha(120))),
+          ],
+        ),
       ),
     );
   }
@@ -321,188 +680,6 @@ class _PaipanPageState extends State<PaipanPage> {
       ),
     );
   }
-
-  Widget _smallBtn(String label, Color primary, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: primary.withAlpha(20),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Text(label, style: TextStyle(fontSize: 11, color: primary)),
-      ),
-    );
-  }
-
-  // ── 五行导航 ──
-
-  Widget _buildWuxingNav(bool isDark, Color primary, Color cardBg, Color borderColor) {
-    final wuxing = [
-      ('木', const Color(0xFF2E7D32)),
-      ('火', const Color(0xFFD32F2F)),
-      ('土', const Color(0xFF8D6E63)),
-      ('金', const Color(0xFFF9A825)),
-      ('水', const Color(0xFF1565C0)),
-    ];
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: wuxing.map((w) => Column(
-          children: [
-            Container(
-              width: 24, height: 24,
-              decoration: BoxDecoration(
-                color: w.$2.withAlpha(30),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(child: Text(w.$1, style: TextStyle(fontSize: 10, color: w.$2, fontWeight: FontWeight.bold))),
-            ),
-            const SizedBox(height: 2),
-            Text(w.$1, style: TextStyle(fontSize: 10, color: isDark ? const Color(0xFF999999) : const Color(0xFF888888))),
-          ],
-        )).toList(),
-      ),
-    );
-  }
-
-  // ── 排盘结果 ──
-
-  Widget _buildResult(PaipanResult result, bool isDark, Color primary) {
-    return Column(
-      children: [
-        GuaWidget(gua: result.benGua),
-        if (result.bianGua != null) ...[
-          const SizedBox(height: 6),
-          GuaWidget(gua: result.bianGua!),
-        ],
-        if (result.huGua != null) ...[
-          const SizedBox(height: 6),
-          GuaWidget(gua: result.huGua!),
-        ],
-        const SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () => context.read<PaipanProvider>().clearResult(),
-            icon: const Icon(Icons.refresh, size: 16),
-            label: const Text('清空排盘'),
-          ),
-        ),
-        const SizedBox(height: 16),
-      ],
-    );
-  }
-
-  Widget _buildEmptyHint(Color primary, Color textColor) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 40),
-        child: Column(
-          children: [
-            Icon(Icons.auto_awesome, size: 48, color: primary.withAlpha(60)),
-            const SizedBox(height: 12),
-            Text('输入卦数或点击随机起卦', style: TextStyle(fontSize: 14, color: textColor.withAlpha(120))),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── 梅花易数输入 ──
-
-  Widget _buildMeihuaInput(bool isDark, Color primary, Color textColor, Color cardBg, Color borderColor) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        children: [
-          _inputCard(
-            title: '三数起卦',
-            icon: Icons.numbers,
-            isDark: isDark,
-            primary: primary,
-            textColor: textColor,
-            cardBg: cardBg,
-            borderColor: borderColor,
-            child: Row(
-              children: [
-                _numField('数 A', _numACtrl, '0-9'),
-                const SizedBox(width: 6),
-                _numField('数 B', _numBCtrl, '0-9'),
-                const SizedBox(width: 6),
-                _numField('数 C', _numCCtrl, '0-9'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
-          _inputCard(
-            title: '日期起卦',
-            icon: Icons.date_range,
-            isDark: isDark,
-            primary: primary,
-            textColor: textColor,
-            cardBg: cardBg,
-            borderColor: borderColor,
-            child: Text('使用当前选中时间年月日数字起卦',
-                style: TextStyle(fontSize: 11, color: isDark ? const Color(0xFF999999) : const Color(0xFF888888))),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── 排盘按钮 ──
-
-  Widget _buildSubmitButton(BuildContext context, bool isDark, Color primary, PaipanProvider provider) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: SizedBox(
-          width: double.infinity,
-          height: 44,
-          child: ElevatedButton.icon(
-            onPressed: () => _onSubmit(context, provider),
-            icon: const Icon(Icons.auto_awesome, size: 18),
-            label: const Text('开始排盘', style: TextStyle(fontSize: 16)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _onSubmit(BuildContext context, PaipanProvider provider) {
-    if (_tabIndex == 0) {
-      final upper = int.tryParse(_upperCtrl.text) ?? 0;
-      final lower = int.tryParse(_lowerCtrl.text) ?? 0;
-      final moving = int.tryParse(_movingCtrl.text) ?? 0;
-      if (upper > 0 && lower > 0) {
-        final result = LiuYaoEngine.byNumbers(upper, lower, moving);
-        provider.setResult(result);
-      }
-    } else {
-      final a = int.tryParse(_numACtrl.text) ?? 0;
-      final b = int.tryParse(_numBCtrl.text) ?? 0;
-      final c = int.tryParse(_numCCtrl.text) ?? 0;
-      if (a > 0 || b > 0 || c > 0) {
-        final result = MeihuaEngine.fromNumbers(a, b, c);
-        provider.setResult(result);
-      }
-    }
-  }
-
-  // ── 时间选择 ──
 
   Future<void> _pickDateTime(BuildContext context) async {
     final date = await showDatePicker(

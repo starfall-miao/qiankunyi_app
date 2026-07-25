@@ -261,6 +261,11 @@ class LiuYaoEngine {
     return _buildResult(yaos, 'manual');
   }
 
+  /// 从爻列表构建排盘结果（手工输入用）
+  static PaipanResult fromYaos(List<YaoModel> yaos, {DateTime? time}) {
+    return _buildResult(yaos, '手工摇卦', time);
+  }
+
   /// 时间起卦
   static PaipanResult byTime(DateTime time) {
     final year = time.year % 100;
