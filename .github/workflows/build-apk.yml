@@ -70,10 +70,12 @@ jobs:
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
 
-      # Debug APK（未签名，备用）
+      # Debug APK（未签名，备用，非必过）
       - name: 🏗️ 构建 Debug APK
+        continue-on-error: true
         run: flutter build apk --debug --build-number=${{ env.BUILD_NUMBER }}
       - uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: android-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
