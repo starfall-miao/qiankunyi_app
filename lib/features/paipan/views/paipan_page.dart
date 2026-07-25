@@ -103,29 +103,16 @@ class _PaipanPageState extends State<PaipanPage> {
       ),
       body: Container(
         color: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB),
-        child: _buildBody(context, isDark, primary),
+        child: SafeArea(
+          child: _tabIndex == 0
+              ? _buildLiuyaoContent(context, isDark, primary)
+              : _buildMeihuaContent(context, isDark, primary),
+        ),
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, bool isDark, Color primary) {
-    return Column(
-        children: [
-          // 时间选择器
-          _buildTimePicker(context, isDark, primary),
-          // Tab 栏
-          _buildTabBar(isDark, primary),
-          // 主内容区
-          Expanded(
-            child: _tabIndex == 0
-                ? _buildLiuyaoContent(context, isDark, primary)
-                : _buildMeihuaContent(context, isDark, primary),
-          ),
-        ],
-      );
-  }
-
-  // ── 时间选择器 ──
+  // ── 便捷取色方法 ──
 
   Color _cardBg(bool isDark) => isDark ? const Color(0xFF2C2C2C) : Colors.white;
   Color _border(bool isDark) => isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
@@ -211,41 +198,34 @@ class _PaipanPageState extends State<PaipanPage> {
 
   Widget _buildLiuyaoContent(BuildContext context, bool isDark, Color primary) {
     final provider = context.watch<PaipanProvider>();
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        children: [
-          // 方法选择
-          _buildMethodSelector(isDark, primary),
-          const SizedBox(height: 6),
-          // 根据方法显示不同的输入区
-          if (_liuyaoMethod == 0) _buildManualYaos(context, isDark, primary),
-          if (_liuyaoMethod == 1) _buildMachineToss(context, isDark, primary),
-          if (_liuyaoMethod == 2) _buildTimeToss(context, isDark, primary),
-          const SizedBox(height: 8),
-          // 排盘按钮
-          SizedBox(
-            width: double.infinity,
-            height: 44,
-            child: ElevatedButton.icon(
-              onPressed: () => _onLiuyaoSubmit(context, provider),
-              icon: const Icon(Icons.auto_awesome, size: 18),
-              label: const Text('起卦', style: TextStyle(fontSize: 16)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
+    return Column(
+      children: [
+        // 固定头部
+        _buildTimePicker(context, isDark, primary),
+        _buildTabBar(isDark, primary),
+        // 可滚动内容
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+            child: Column(
+              children: [
+                _buildMethodSelector(isDark, primary),
+                const SizedBox(height: 6),
+                if (_liuyaoMethod == 0) _buildManualYaos(context, isDark, primary),
+                if (_liuyaoMethod == 1) _buildMachineToss(isDark, primary),
+                if (_liuyaoMethod == 2) _buildTimeToss(isDark, primary),
+                const SizedBox(height: 8),
+                _buildSubmitButton(context, isDark, primary, provider),
+                const SizedBox(height: 8),
+                if (provider.currentResult != null && _isLastResultLiuyao(provider))
+                  ..._buildLiuyaoResult(provider.currentResult!, isDark, primary)
+                else if (provider.currentResult == null)
+                  _buildEmptyHint(primary, isDark),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          // 显示结果（仅本标签页产生的排盘结果）
-          if (provider.currentResult != null && _isLastResultLiuyao(provider))
-            ..._buildLiuyaoResult(provider.currentResult!, isDark, primary)
-          else if (provider.currentResult == null)
-            _buildEmptyHint(primary, isDark),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -424,6 +404,29 @@ class _PaipanPageState extends State<PaipanPage> {
     );
   }
 
+  Widget _buildSubmitButton(BuildContext context, bool isDark, Color primary, PaipanProvider provider) {
+    return SizedBox(
+      width: double.infinity,
+      height: 44,
+      child: ElevatedButton.icon(
+        onPressed: () {
+          if (_tabIndex == 0) {
+            _onLiuyaoSubmit(context, provider);
+          } else {
+            _onMeihuaSubmit(context, provider);
+          }
+        },
+        icon: const Icon(Icons.auto_awesome, size: 18),
+        label: const Text('起卦', style: TextStyle(fontSize: 16)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
+    );
+  }
+
   // ── 六爻提交 ──
 
   void _onLiuyaoSubmit(BuildContext context, PaipanProvider provider) {
@@ -485,39 +488,33 @@ class _PaipanPageState extends State<PaipanPage> {
 
   Widget _buildMeihuaContent(BuildContext context, bool isDark, Color primary) {
     final provider = context.watch<PaipanProvider>();
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        children: [
-          // 方法选择
-          _buildMeihuaMethodSelector(isDark, primary),
-          const SizedBox(height: 6),
-          if (_meihuaMethod == 0) _buildMeihuaNumbers(isDark, primary),
-          if (_meihuaMethod == 1) _buildMeihuaDate(isDark, primary),
-          const SizedBox(height: 8),
-          // 排盘按钮
-          SizedBox(
-            width: double.infinity,
-            height: 44,
-            child: ElevatedButton.icon(
-              onPressed: () => _onMeihuaSubmit(context, provider),
-              icon: const Icon(Icons.auto_awesome, size: 18),
-              label: const Text('起卦', style: TextStyle(fontSize: 16)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
+    return Column(
+      children: [
+        // 固定头部
+        _buildTimePicker(context, isDark, primary),
+        _buildTabBar(isDark, primary),
+        // 可滚动内容
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+            child: Column(
+              children: [
+                _buildMeihuaMethodSelector(isDark, primary),
+                const SizedBox(height: 6),
+                if (_meihuaMethod == 0) _buildMeihuaNumbers(isDark, primary),
+                if (_meihuaMethod == 1) _buildMeihuaDate(isDark, primary),
+                const SizedBox(height: 8),
+                _buildSubmitButton(context, isDark, primary, provider),
+                const SizedBox(height: 8),
+                if (provider.currentResult != null && _isLastResultMeihua(provider))
+                  MeihuaResultWidget(result: provider.currentResult!)
+                else if (provider.currentResult == null)
+                  _buildEmptyHint(primary, isDark),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          // 梅花结果
-          if (provider.currentResult != null && _isLastResultMeihua(provider))
-            MeihuaResultWidget(result: provider.currentResult!)
-          else if (provider.currentResult == null)
-            _buildEmptyHint(primary, isDark),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
