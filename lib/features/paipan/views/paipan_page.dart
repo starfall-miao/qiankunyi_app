@@ -216,7 +216,7 @@ class _PaipanPageState extends State<PaipanPage> {
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: Row(children: [
                 SizedBox(width: 32, child: Text(pos[i], style: TextStyle(fontSize: 12, color: t))),
-                SizedBox(width: 36, child: Text(syms[idx],
+                SizedBox(width: 36, child: Text(syms[v.index],
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
                         color: mv ? (yg ? const Color(0xFFD4A574) : const Color(0xFF8B4513))
                                   : (yg ? const Color(0xFF3E2723) : const Color(0xFF8D6E63))))),
