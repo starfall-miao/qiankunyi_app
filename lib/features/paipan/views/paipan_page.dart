@@ -1,5 +1,5 @@
-/// 排盘主页 — 国风紧凑版
-/// 参考 hexagram.qiankunyi.com.cn 布局
+// 排盘主页 — 国风紧凑版
+// 参考 hexagram.qiankunyi.com.cn 布局
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -181,13 +181,12 @@ class _PaipanPageState extends State<PaipanPage> {
       firstDate: DateTime(1900),
       lastDate: DateTime(2100),
     );
-    if (date == null) return;
-    if (!context.mounted) return;
+    if (date == null || !mounted) return;
     final time = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(_selectedTime),
     );
-    if (time == null) return;
+    if (time == null || !mounted) return;
     setState(() {
       _selectedTime = DateTime(date.year, date.month, date.day, time.hour, time.minute);
     });

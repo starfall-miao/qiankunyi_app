@@ -1,5 +1,5 @@
-/// 六爻卦象渲染组件 — 国风紧凑版
-/// 配色参考 hexagram.qiankunyi.com.cn
+// 六爻卦象渲染组件 — 国风紧凑版
+// 配色参考 hexagram.qiankunyi.com.cn
 import 'package:flutter/material.dart';
 import '../models/yao_model.dart';
 import '../models/gua_model.dart';
@@ -426,7 +426,7 @@ class GuaWidget extends StatelessWidget {
   String _shiYingStr(GuaModel gua) {
     final shiCN = _yaoPosCN[gua.yaos[gua.shiYaoIndex].position] ?? '';
     final yingCN = _yaoPosCN[gua.yaos[gua.yingYaoIndex].position] ?? '';
-    return '世在${shiCN}爻 · 应在${yingCN}爻';
+    return '世在$shiCN爻 · 应在$yingCN爻';
   }
 
   // ============ 辅助函数 ============

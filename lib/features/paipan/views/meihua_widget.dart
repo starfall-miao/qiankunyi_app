@@ -1,5 +1,5 @@
-/// 梅花易数卦象展示组件 — 国风紧凑版
-/// 本卦、变卦、互卦三卦并排展示及体用生克
+// 梅花易数卦象展示组件 — 国风紧凑版
+// 本卦、变卦、互卦三卦并排展示及体用生克
 import 'package:flutter/material.dart';
 import '../models/paipan_result.dart';
 import '../models/gua_model.dart';
