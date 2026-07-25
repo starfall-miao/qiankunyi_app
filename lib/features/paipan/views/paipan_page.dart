@@ -127,17 +127,20 @@ class _PaipanPageState extends State<PaipanPage> {
 
   // ── 时间选择器 ──
 
+  Color _cardBg(bool isDark) => isDark ? const Color(0xFF2C2C2C) : Colors.white;
+  Color _border(bool isDark) => isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
+  Color _text(bool isDark) => isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
+  Color _muted(bool isDark) => isDark ? const Color(0xFF999999) : const Color(0xFF888888);
+  Color _bodyBg(bool isDark) => isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB);
+
   Widget _buildTimePicker(BuildContext context, bool isDark, Color primary) {
-    final textColor = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
-    final cardBg = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB);
-    final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
     return Container(
       margin: const EdgeInsets.fromLTRB(8, 6, 8, 0),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: cardBg,
+        color: _cardBg(isDark),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderColor),
+        border: Border.all(color: _border(isDark)),
       ),
       child: Row(
         children: [
@@ -146,7 +149,7 @@ class _PaipanPageState extends State<PaipanPage> {
           Text(
             '${_selectedTime.year}年${_selectedTime.month}月${_selectedTime.day}日 '
             '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}',
-            style: TextStyle(fontSize: 12, color: textColor),
+            style: TextStyle(fontSize: 12, color: _text(isDark)),
           ),
           const Spacer(),
           GestureDetector(
@@ -168,13 +171,12 @@ class _PaipanPageState extends State<PaipanPage> {
   // ── Tab ──
 
   Widget _buildTabBar(bool isDark, Color primary) {
-    final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
     return Container(
       margin: const EdgeInsets.fromLTRB(8, 4, 8, 0),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB),
+        color: _cardBg(isDark),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderColor),
+        border: Border.all(color: _border(isDark)),
       ),
       child: Row(
         children: [
@@ -200,7 +202,7 @@ class _PaipanPageState extends State<PaipanPage> {
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13,
                   fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                  color: selected ? primary : (isDark ? const Color(0xFF888888) : const Color(0xFF888888)))),
+                  color: selected ? primary : _muted(isDark))),
         ),
       ),
     );
@@ -251,14 +253,12 @@ class _PaipanPageState extends State<PaipanPage> {
   /// 六爻方法选择
   Widget _buildMethodSelector(bool isDark, Color primary) {
     final methods = ['手工摇卦', '机器摇卦', '时间起卦'];
-    final cardBg = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB);
-    final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: cardBg,
+        color: _cardBg(isDark),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderColor),
+        border: Border.all(color: _border(isDark)),
       ),
       child: Row(
         children: List.generate(methods.length, (i) {
@@ -272,7 +272,7 @@ class _PaipanPageState extends State<PaipanPage> {
                 decoration: BoxDecoration(
                   color: sel ? primary.withAlpha(25) : Colors.transparent,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: sel ? primary : borderColor.withAlpha(80)),
+                  border: Border.all(color: sel ? primary : _border(isDark).withAlpha(80)),
                 ),
                 child: Text(methods[i],
                     textAlign: TextAlign.center,
@@ -290,17 +290,14 @@ class _PaipanPageState extends State<PaipanPage> {
   // ── 手工摇卦 — 六爻逐爻输入 ──
 
   Widget _buildManualYaos(BuildContext context, bool isDark, Color primary) {
-    final cardBg = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB);
-    final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
-    final textColor = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
     final positions = ['初爻', '二爻', '三爻', '四爻', '五爻', '上爻'];
 
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: cardBg,
+        color: _cardBg(isDark),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderColor),
+        border: Border.all(color: _border(isDark)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,19 +307,19 @@ class _PaipanPageState extends State<PaipanPage> {
               Icon(Icons.pan_tool_outlined, size: 14, color: primary),
               const SizedBox(width: 4),
               Text('逐爻选择（点击切换）',
-                  style: TextStyle(fontSize: 12, color: textColor, fontWeight: FontWeight.w500)),
+                  style: TextStyle(fontSize: 12, color: _text(isDark), fontWeight: FontWeight.w500)),
             ],
           ),
           const SizedBox(height: 8),
           // 从初爻到上爻（从下到上）
           for (int i = 0; i < 6; i++)
-            _buildYaoRow(i, positions[5 - i], isDark, primary, textColor),
+            _buildYaoRow(i, positions[5 - i], isDark, primary, _text(isDark)),
         ],
       ),
     );
   }
 
-  Widget _buildYaoRow(int index, String label, bool isDark, Color primary, Color textColor) {
+  Widget _buildYaoRow(int index, String label, bool isDark, Color primary, Color tColor) {
     final val = _manualYaos[index];
     final options = [_YaoInput.shaoYin, _YaoInput.shaoYang, _YaoInput.laoYin, _YaoInput.laoYang];
     final labels = ['少阴', '少阳', '老阴', '老阳'];
@@ -336,7 +333,7 @@ class _PaipanPageState extends State<PaipanPage> {
         children: [
           SizedBox(
             width: 36,
-            child: Text(label, style: TextStyle(fontSize: 12, color: textColor)),
+            child: Text(label, style: TextStyle(fontSize: 12, color: tColor)),
           ),
           // 爻符号
           Container(
@@ -389,22 +386,19 @@ class _PaipanPageState extends State<PaipanPage> {
   // ── 机器摇卦 ──
 
   Widget _buildMachineToss(BuildContext context, bool isDark, Color primary) {
-    final cardBg = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB);
-    final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
-    final textColor = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: cardBg,
+        color: _cardBg(isDark),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderColor),
+        border: Border.all(color: _border(isDark)),
       ),
       child: Row(
         children: [
           Icon(Icons.shuffle, size: 14, color: primary),
           const SizedBox(width: 4),
           Text('由系统模拟摇铜钱，随机生成六爻',
-              style: TextStyle(fontSize: 12, color: textColor)),
+              style: TextStyle(fontSize: 12, color: _text(isDark))),
         ],
       ),
     );
@@ -413,22 +407,19 @@ class _PaipanPageState extends State<PaipanPage> {
   // ── 时间起卦 ──
 
   Widget _buildTimeToss(BuildContext context, bool isDark, Color primary) {
-    final cardBg = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB);
-    final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
-    final textColor = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: cardBg,
+        color: _cardBg(isDark),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderColor),
+        border: Border.all(color: _border(isDark)),
       ),
       child: Row(
         children: [
           Icon(Icons.date_range, size: 14, color: primary),
           const SizedBox(width: 4),
           Text('以当前选中时间的年月日时数字起卦',
-              style: TextStyle(fontSize: 12, color: textColor)),
+              style: TextStyle(fontSize: 12, color: _text(isDark))),
         ],
       ),
     );
@@ -533,14 +524,12 @@ class _PaipanPageState extends State<PaipanPage> {
 
   Widget _buildMeihuaMethodSelector(bool isDark, Color primary) {
     final methods = ['三数起卦', '日期起卦'];
-    final cardBg = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB);
-    final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: cardBg,
+        color: _cardBg(isDark),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderColor),
+        border: Border.all(color: _border(isDark)),
       ),
       child: Row(
         children: List.generate(2, (i) {
@@ -554,7 +543,7 @@ class _PaipanPageState extends State<PaipanPage> {
                 decoration: BoxDecoration(
                   color: sel ? primary.withAlpha(25) : Colors.transparent,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: sel ? primary : borderColor.withAlpha(80)),
+                  border: Border.all(color: sel ? primary : _border(isDark).withAlpha(80)),
                 ),
                 child: Text(methods[i],
                     textAlign: TextAlign.center,
@@ -570,14 +559,12 @@ class _PaipanPageState extends State<PaipanPage> {
   }
 
   Widget _buildMeihuaNumbers(bool isDark, Color primary) {
-    final cardBg = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB);
-    final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: cardBg,
+        color: _cardBg(isDark),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderColor),
+        border: Border.all(color: _border(isDark)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -607,14 +594,12 @@ class _PaipanPageState extends State<PaipanPage> {
   }
 
   Widget _buildMeihuaDate(bool isDark, Color primary) {
-    final cardBg = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB);
-    final borderColor = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: cardBg,
+        color: _cardBg(isDark),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderColor),
+        border: Border.all(color: _border(isDark)),
       ),
       child: Row(
         children: [
@@ -648,7 +633,6 @@ class _PaipanPageState extends State<PaipanPage> {
   // ── 通用 ──
 
   Widget _buildEmptyHint(Color primary, bool isDark) {
-    final textColor = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 40),
@@ -657,7 +641,7 @@ class _PaipanPageState extends State<PaipanPage> {
             Icon(Icons.auto_awesome, size: 48, color: primary.withAlpha(60)),
             const SizedBox(height: 12),
             Text('选择排盘方式后点「起卦」',
-                style: TextStyle(fontSize: 14, color: textColor.withAlpha(120))),
+                style: TextStyle(fontSize: 14, color: _text(isDark).withAlpha(120))),
           ],
         ),
       ),

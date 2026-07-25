@@ -135,6 +135,13 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _modeChip(IconData icon, String label, ThemeMode target, ThemeMode current, ThemeProvider provider) {
     final selected = current == target;
+    final theme = Theme.of(context);
+    final chipTextColor = theme.brightness == Brightness.dark
+        ? const Color(0xFFE0D5C8)
+        : const Color(0xFF4A3728);
+    final chipIconColor = selected
+        ? theme.colorScheme.primary
+        : chipTextColor.withAlpha(150);
     return Expanded(
       child: InkWell(
         onTap: () => provider.setThemeMode(target),
@@ -142,18 +149,18 @@ class _SettingsPageState extends State<SettingsPage> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: selected ? Theme.of(context).colorScheme.primaryContainer : Colors.transparent,
+            color: selected ? theme.colorScheme.primaryContainer : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: selected ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
+              color: selected ? theme.colorScheme.primary : chipTextColor.withAlpha(50),
               width: selected ? 1.5 : 1,
             ),
           ),
           child: Column(
             children: [
-              Icon(icon, size: 20, color: selected ? Theme.of(context).colorScheme.primary : null),
+              Icon(icon, size: 20, color: chipIconColor),
               const SizedBox(height: 4),
-              Text(label, style: const TextStyle(fontSize: 12)),
+              Text(label, style: TextStyle(fontSize: 12, color: chipTextColor)),
             ],
           ),
         ),
