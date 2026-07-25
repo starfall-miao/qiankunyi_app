@@ -16,8 +16,8 @@ class ThemeProvider extends ChangeNotifier {
 
   ThemeMode get themeMode => _themeMode;
   bool get isDarkMode => _themeMode == ThemeMode.dark;
-  ColorSchemeType get colorScheme => _colorScheme;
-  bool get useAcrylic => _useAcrylic;
+  ColorSchemeType get colorSchemeType => _colorScheme;
+  bool get acrylicEffect => _useAcrylic;
 
   ThemeProvider() {
     _loadPrefs();

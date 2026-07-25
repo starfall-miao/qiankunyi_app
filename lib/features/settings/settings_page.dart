@@ -253,7 +253,7 @@ class _SettingsPageState extends State<SettingsPage> {
           Switch(
             value: provider.acrylicEffect,
             onChanged: (_) => provider.toggleAcrylic(),
-            activeColor: theme.colorScheme.primary,
+            activeThumbColor: theme.colorScheme.primary,
           ),
         ],
       ),
@@ -451,7 +451,7 @@ class _SettingsPageState extends State<SettingsPage> {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: Theme.of(context).colorScheme.primary,
+            activeThumbColor: Theme.of(context).colorScheme.primary,
           ),
         ],
       ),

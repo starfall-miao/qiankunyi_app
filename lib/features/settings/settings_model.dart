@@ -47,21 +47,3 @@ enum RiPoAnDongRule {
   final String label;
   const RiPoAnDongRule(this.label);
 }
-
-/// 配色方案设置
-enum ColorThemeOption {
-  xuanZi('玄紫', ColorSchemeType.xuanZi),
-  cangQing('藏青', ColorSchemeType.cangQing),
-  chiHong('赤红', ColorSchemeType.chiHong),
-  moLu('墨绿', ColorSchemeType.moLu),
-  qiuHuang('秋黄', ColorSchemeType.qiuHuang),
-  yanZhi('胭脂', ColorSchemeType.yanZhi),
-  qingLan('青蓝', ColorSchemeType.qingLan),
-  songYan('松烟', ColorSchemeType.songYan);
-
-  final String label;
-  final ColorSchemeType scheme;
-  const ColorThemeOption(this.label, this.scheme);
-
-  Color get primaryColor => scheme.primary;
-}
