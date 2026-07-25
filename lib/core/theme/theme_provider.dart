@@ -1,32 +1,55 @@
+// 落·乾坤 - 主题状态管理
+// 支持暗/亮/跟随系统 + 多配色方案 + 亚克力效果
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'app_theme.dart';
 
 class ThemeProvider extends ChangeNotifier {
-  static const String _key = 'theme_mode';
+  static const String _modeKey = 'theme_mode';
+  static const String _colorKey = 'color_scheme';
+  static const String _acrylicKey = 'use_acrylic';
 
   ThemeMode _themeMode = ThemeMode.system;
+  ColorSchemeType _colorScheme = ColorSchemeType.xuanZi;
+  bool _useAcrylic = false;
 
   ThemeMode get themeMode => _themeMode;
-
   bool get isDarkMode => _themeMode == ThemeMode.dark;
+  ColorSchemeType get colorScheme => _colorScheme;
+  bool get useAcrylic => _useAcrylic;
 
   ThemeProvider() {
-    _loadThemeMode();
+    _loadPrefs();
   }
 
-  Future<void> _loadThemeMode() async {
+  Future<void> _loadPrefs() async {
     final prefs = await SharedPreferences.getInstance();
-    final value = prefs.getString(_key) ?? 'system';
-    _themeMode = _parse(value);
+    _themeMode = _parseMode(prefs.getString(_modeKey) ?? 'system');
+    _colorScheme = _parseColor(prefs.getString(_colorKey) ?? 'xuanZi');
+    _useAcrylic = prefs.getBool(_acrylicKey) ?? false;
     notifyListeners();
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
     notifyListeners();
-
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_key, _serialize(mode));
+    await prefs.setString(_modeKey, _serializeMode(mode));
+  }
+
+  Future<void> setColorScheme(ColorSchemeType type) async {
+    _colorScheme = type;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_colorKey, type.name);
+  }
+
+  Future<void> toggleAcrylic() async {
+    _useAcrylic = !_useAcrylic;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_acrylicKey, _useAcrylic);
   }
 
   Future<void> toggleTheme() async {
@@ -34,7 +57,7 @@ class ThemeProvider extends ChangeNotifier {
     await setThemeMode(next);
   }
 
-  static ThemeMode _parse(String value) {
+  static ThemeMode _parseMode(String value) {
     switch (value) {
       case 'light':
         return ThemeMode.light;
@@ -45,14 +68,21 @@ class ThemeProvider extends ChangeNotifier {
     }
   }
 
-  static String _serialize(ThemeMode mode) {
+  static String _serializeMode(ThemeMode mode) {
     switch (mode) {
       case ThemeMode.light:
         return 'light';
       case ThemeMode.dark:
         return 'dark';
-      case ThemeMode.system:
+      default:
         return 'system';
     }
+  }
+
+  static ColorSchemeType _parseColor(String value) {
+    return ColorSchemeType.values.firstWhere(
+      (e) => e.name == value,
+      orElse: () => ColorSchemeType.xuanZi,
+    );
   }
 }

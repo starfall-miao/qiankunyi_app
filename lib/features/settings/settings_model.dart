@@ -1,6 +1,7 @@
-// 乾坤易 - 设置状态管理
+// 落·乾坤 - 设置状态管理
 
 import 'package:flutter/material.dart';
+import '../../core/theme/app_theme.dart';
 
 /// 排盘显示要素开关
 class DisplaySettings {
@@ -27,10 +28,10 @@ class DisplaySettings {
 
 /// 字体主题选项
 enum FontTheme {
-  classic('经典', 'Noto Serif SC'),
-  modern('现代', 'Noto Sans SC'),
-  song('宋体', 'SimSun'),
-  kai('楷体', 'KaiTi');
+  classic('经典', 'HarmonyOS_Sans_SC'),
+  modern('现代', 'HarmonyOS_Sans_SC'),
+  song('宋体', 'HarmonyOS_Sans_SC'),
+  kai('楷体', 'HarmonyOS_Sans_SC');
 
   final String label;
   final String fontFamily;
@@ -47,28 +48,20 @@ enum RiPoAnDongRule {
   const RiPoAnDongRule(this.label);
 }
 
-/// 应用设置模型
-class AppSettings {
-  // 主题
-  ThemeMode themeMode;
-  FontTheme fontTheme;
-  double fontSize;
+/// 配色方案设置
+enum ColorThemeOption {
+  xuanZi('玄紫', ColorSchemeType.xuanZi),
+  cangQing('藏青', ColorSchemeType.cangQing),
+  chiHong('赤红', ColorSchemeType.chiHong),
+  moLu('墨绿', ColorSchemeType.moLu),
+  qiuHuang('秋黄', ColorSchemeType.qiuHuang),
+  yanZhi('胭脂', ColorSchemeType.yanZhi),
+  qingLan('青蓝', ColorSchemeType.qingLan),
+  songYan('松烟', ColorSchemeType.songYan);
 
-  // 排盘规则
-  RiPoAnDongRule riPoAnDongRule;
-  bool wanZiShiSwitch;      // 晚子时切换为次日
-  bool chenMuTuYao;         // 日令辰墓土爻
+  final String label;
+  final ColorSchemeType scheme;
+  const ColorThemeOption(this.label, this.scheme);
 
-  // 显示要素
-  DisplaySettings display;
-
-  AppSettings({
-    this.themeMode = ThemeMode.system,
-    this.fontTheme = FontTheme.classic,
-    this.fontSize = 16.0,
-    this.riPoAnDongRule = RiPoAnDongRule.youQing,
-    this.wanZiShiSwitch = false,
-    this.chenMuTuYao = false,
-    DisplaySettings? display,
-  }) : display = display ?? DisplaySettings();
+  Color get primaryColor => scheme.primary;
 }

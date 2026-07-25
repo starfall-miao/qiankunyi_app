@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="qiankunyi_app"
+        android:label="落·乾坤"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

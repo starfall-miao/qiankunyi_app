@@ -105,6 +105,16 @@ flutter:
   #       - asset: fonts/TrajanPro.ttf
   #       - asset: fonts/TrajanPro_Bold.ttf
   #         weight: 700
-  #
-  # For details regarding fonts from package dependencies,
-  # see https://flutter.dev/to/font-from-package
+
+  # 鸿蒙字体（HarmonyOS Sans SC）
+  fonts:
+    - family: HarmonyOS_Sans_SC
+      fonts:
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Light.ttf
+          weight: 300
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Regular.ttf
+          weight: 400
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Medium.ttf
+          weight: 500
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Bold.ttf
+          weight: 700
