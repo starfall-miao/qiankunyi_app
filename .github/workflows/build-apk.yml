@@ -1,4 +1,4 @@
-name: 全平台编译
+name: 全平台编译（已签名 Release APK）
 
 on:
   push:
@@ -8,11 +8,14 @@ on:
       - 'docs/**'
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch:        # 手动触发
+  workflow_dispatch:
+
+env:
+  BUILD_NUMBER: ${{ github.run_number }}
 
 jobs:
   ###########################################################################
-  # 1️⃣ 代码分析（最快的 runner 上做）
+  # 1️⃣ 代码分析
   ###########################################################################
   analyze:
     runs-on: ubuntu-latest
@@ -26,7 +29,7 @@ jobs:
       - run: flutter analyze
 
   ###########################################################################
-  # 2️⃣ Android APK
+  # 2️⃣ Android APK（Debug + 已签名 Release）
   ###########################################################################
   android:
     needs: [analyze]
@@ -43,23 +46,34 @@ jobs:
           cache: true
       - run: flutter pub get
 
+      # 准备签名密钥（当 GitHub Secrets 配置后自动生效）
+      - name: 🔑 导入签名密钥
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/qiankunyi-release-key.jks
+          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> android/key.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
+          echo "storeFile=qiankunyi-release-key.jks" >> android/key.properties
+          echo "✅ 签名密钥已导入"
+
+      # Release APK（已签名）
+      - name: 🏗️ 构建 Release APK
+        run: flutter build apk --release --build-number=${{ env.BUILD_NUMBER }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+      # Debug APK（未签名，备用）
       - name: 🏗️ 构建 Debug APK
-        run: flutter build apk --debug
+        run: flutter build apk --debug --build-number=${{ env.BUILD_NUMBER }}
       - uses: actions/upload-artifact@v4
         with:
           name: android-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
-
-      - name: 🏗️ 构建 Release APK（未签名）
-        if: github.ref == 'refs/heads/main'
-        run: flutter build apk --release
-      - uses: actions/upload-artifact@v4
-        if: github.ref == 'refs/heads/main'
-        with:
-          name: android-release-apk-unsigned
-          path: build/app/outputs/flutter-apk/app-release-unsigned.apk
-          if-no-files-found: warn
 
   ###########################################################################
   # 3️⃣ Linux 桌面
@@ -78,7 +92,7 @@ jobs:
           sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
       - run: flutter pub get
       - name: 🏗️ 构建 Linux 桌面版
-        run: flutter build linux --release
+        run: flutter build linux --release --build-number=${{ env.BUILD_NUMBER }}
       - uses: actions/upload-artifact@v4
         with:
           name: linux-release
@@ -99,7 +113,7 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: 🏗️ 构建 Windows 桌面版（Release）
-        run: flutter build windows --release
+        run: flutter build windows --release --build-number=${{ env.BUILD_NUMBER }}
       - name: 📦 打包 VC++ 运行时 DLL
         shell: pwsh
         run: |
@@ -108,19 +122,7 @@ jobs:
             Copy-Item "$vcRedistDir\*.dll" "build\windows\x64\runner\Release\" -Force
             Write-Host "已复制 VC++ 运行时 DLL"
           } else {
-            Write-Host "未找到 VC++ 运行时目录，尝试查找..."
-            $paths = @(
-              "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Redist\MSVC\*\x64\Microsoft.VC143.CRT\*.dll",
-              "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\*\x64\Microsoft.VC143.CRT\*.dll"
-            )
-            foreach ($p in $paths) {
-              $files = Get-ChildItem $p -ErrorAction SilentlyContinue
-              if ($files) {
-                Copy-Item $files.DirectoryName\*.dll "build\windows\x64\runner\Release\" -Force
-                Write-Host "已复制 VC++ 运行时 DLL 从 $($files.DirectoryName)"
-                break
-              }
-            }
+            Write-Host "未找到 VC++ 运行时目录，跳过"
           }
           Write-Host "=== 输出目录文件列表 ==="
           Get-ChildItem "build\windows\x64\runner\Release\" | Select-Object Name, Length | Format-Table -AutoSize
@@ -131,7 +133,7 @@ jobs:
           if-no-files-found: warn
 
   ###########################################################################
-  # 5️⃣ iOS（不签名，只能装模拟器）
+  # 5️⃣ iOS（不签名，仅模拟器）
   ###########################################################################
   ios:
     needs: [analyze]
@@ -143,8 +145,8 @@ jobs:
           channel: 'stable'
           cache: true
       - run: flutter pub get
-      - name: 🏗️ 构建 iOS 版（不签名，仅模拟器可用）
-        run: flutter build ios --debug --no-codesign
+      - name: 🏗️ 构建 iOS 版（不签名，仅模拟器）
+        run: flutter build ios --debug --no-codesign --build-number=${{ env.BUILD_NUMBER }}
       - uses: actions/upload-artifact@v4
         with:
           name: ios-debug
@@ -165,7 +167,7 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: 🏗️ 构建 macOS 桌面版
-        run: flutter build macos --release
+        run: flutter build macos --release --build-number=${{ env.BUILD_NUMBER }}
       - uses: actions/upload-artifact@v4
         with:
           name: macos-release
