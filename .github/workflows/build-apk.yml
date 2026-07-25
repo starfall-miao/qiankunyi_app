@@ -177,3 +177,79 @@ jobs:
           name: macos-release
           path: build/macos/Build/Products/Release/
           if-no-files-found: warn
+
+  ###########################################################################
+  # 7️⃣ GitHub Release（仅 push 到 main 时发布 beta 版本）
+  ###########################################################################
+  release:
+    if: github.event_name == 'push' && github.ref_name == 'main'
+    needs: [android, windows, linux, macos, ios]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 生成版本标签
+        id: tag
+        run: |
+          echo "tag=beta-v${{ env.BUILD_NUMBER }}" >> $GITHUB_OUTPUT
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-release-apk
+          path: release/
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-debug-apk
+          path: release/
+
+      - name: 打包桌面端产物
+        run: |
+          mkdir -p release/desktop
+          # 下载并打包 Windows
+          gh run download ${{ github.run_id }} -n windows-release -D /tmp/win
+          cd /tmp/win && zip -r ${{ github.workspace }}/release/desktop/windows-release.zip . && cd -
+          # 下载并打包 Linux
+          gh run download ${{ github.run_id }} -n linux-release -D /tmp/linux
+          cd /tmp/linux && zip -r ${{ github.workspace }}/release/desktop/linux-release.zip . && cd -
+          # 下载并打包 macOS
+          gh run download ${{ github.run_id }} -n macos-release -D /tmp/macos
+          cd /tmp/macos && zip -r ${{ github.workspace }}/release/desktop/macos-release.zip . && cd -
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: 构建 Release 日志
+        run: |
+          cat > /tmp/release_body.md << 'RELEASENOTES'
+          ## 落·乾坤 Beta 版本
+
+          构建编号: ${{ env.BUILD_NUMBER }}
+          提交: ${{ github.sha }}
+          日期: $(date '+%Y-%m-%d %H:%M')
+
+          ### 📦 包含的构建产物
+          - 📱 Android Release APK（已签名）
+          - 🪟 Windows 桌面版
+          - 🐧 Linux 桌面版
+          - 🍎 macOS 桌面版
+          - 📲 iOS Debug（模拟器）
+
+          ### ⚠️ 注意事项
+          - 这是测试版本，可能存在不稳定因素
+          - Android APK 已使用自签名证书签名
+          - 桌面版为 ZIP 压缩包，解压即可运行
+          RELEASENOTES
+
+      - name: 创建 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: beta-v${{ env.BUILD_NUMBER }}
+          name: "Beta v${{ env.BUILD_NUMBER }}"
+          body_path: /tmp/release_body.md
+          prerelease: true
+          files: |
+            release/*.apk
+            release/desktop/*.zip
+          fail_on_unmatched_files: false

@@ -101,14 +101,15 @@ class _PaipanPageState extends State<PaipanPage> {
           ),
         ],
       ),
-      body: _buildBody(context, isDark, primary),
+      body: Container(
+        color: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB),
+        child: _buildBody(context, isDark, primary),
+      ),
     );
   }
 
   Widget _buildBody(BuildContext context, bool isDark, Color primary) {
-    return Container(
-      color: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB),
-      child: Column(
+    return Column(
         children: [
           // 时间选择器
           _buildTimePicker(context, isDark, primary),
@@ -121,8 +122,7 @@ class _PaipanPageState extends State<PaipanPage> {
                 : _buildMeihuaContent(context, isDark, primary),
           ),
         ],
-      ),
-    );
+      );
   }
 
   // ── 时间选择器 ──
