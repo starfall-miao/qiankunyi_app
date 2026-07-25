@@ -30,7 +30,7 @@ class _PaipanPageState extends State<PaipanPage> {
   int _liuyaoMethod = 0; // 0=手工摇, 1=机器摇, 2=时间起卦
 
   // 六爻 — 手工输入六爻状态（初→上）
-  List<_YaoInput> _manualYaos =
+  final List<_YaoInput> _manualYaos =
       List.filled(6, _YaoInput.shaoYin);
 
   // 梅花 — 方法选择
