@@ -28,14 +28,13 @@ class AboutPage extends StatelessWidget {
           Center(
             child: Column(
               children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: primary.withAlpha(30),
-                    borderRadius: BorderRadius.circular(20),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Image.asset(
+                    'assets/images/app_icon.png',
+                    width: 96,
+                    height: 96,
                   ),
-                  child: Icon(Icons.change_circle_outlined, size: 48, color: primary),
                 ),
                 const SizedBox(height: 12),
                 Text(

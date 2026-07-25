@@ -1,5 +1,5 @@
 // 落·乾坤 - 主题状态管理
-// 支持暗/亮/跟随系统 + 多配色方案 + 亚克力效果
+// 支持暗/亮/跟随系统 + 多配色方案 + 亚克力效果（可调透明度）
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,15 +9,18 @@ class ThemeProvider extends ChangeNotifier {
   static const String _modeKey = 'theme_mode';
   static const String _colorKey = 'color_scheme';
   static const String _acrylicKey = 'use_acrylic';
+  static const String _opacityKey = 'acrylic_opacity';
 
   ThemeMode _themeMode = ThemeMode.system;
   ColorSchemeType _colorScheme = ColorSchemeType.xuanZi;
   bool _useAcrylic = false;
+  double _acrylicOpacity = 0.75;
 
   ThemeMode get themeMode => _themeMode;
   bool get isDarkMode => _themeMode == ThemeMode.dark;
   ColorSchemeType get colorSchemeType => _colorScheme;
   bool get acrylicEffect => _useAcrylic;
+  double get acrylicOpacity => _acrylicOpacity;
 
   ThemeProvider() {
     _loadPrefs();
@@ -28,6 +31,7 @@ class ThemeProvider extends ChangeNotifier {
     _themeMode = _parseMode(prefs.getString(_modeKey) ?? 'system');
     _colorScheme = _parseColor(prefs.getString(_colorKey) ?? 'xuanZi');
     _useAcrylic = prefs.getBool(_acrylicKey) ?? false;
+    _acrylicOpacity = prefs.getDouble(_opacityKey) ?? 0.75;
     notifyListeners();
   }
 
@@ -45,11 +49,22 @@ class ThemeProvider extends ChangeNotifier {
     await prefs.setString(_colorKey, type.name);
   }
 
-  Future<void> toggleAcrylic() async {
-    _useAcrylic = !_useAcrylic;
+  Future<void> setAcrylicEffect(bool value) async {
+    _useAcrylic = value;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_acrylicKey, _useAcrylic);
+    await prefs.setBool(_acrylicKey, value);
+  }
+
+  Future<void> toggleAcrylic() async {
+    await setAcrylicEffect(!_useAcrylic);
+  }
+
+  Future<void> setAcrylicOpacity(double value) async {
+    _acrylicOpacity = value.clamp(0.0, 1.0);
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_opacityKey, _acrylicOpacity);
   }
 
   Future<void> toggleTheme() async {
@@ -59,23 +74,17 @@ class ThemeProvider extends ChangeNotifier {
 
   static ThemeMode _parseMode(String value) {
     switch (value) {
-      case 'light':
-        return ThemeMode.light;
-      case 'dark':
-        return ThemeMode.dark;
-      default:
-        return ThemeMode.system;
+      case 'light': return ThemeMode.light;
+      case 'dark': return ThemeMode.dark;
+      default: return ThemeMode.system;
     }
   }
 
   static String _serializeMode(ThemeMode mode) {
     switch (mode) {
-      case ThemeMode.light:
-        return 'light';
-      case ThemeMode.dark:
-        return 'dark';
-      default:
-        return 'system';
+      case ThemeMode.light: return 'light';
+      case ThemeMode.dark: return 'dark';
+      case ThemeMode.system: return 'system';
     }
   }
 

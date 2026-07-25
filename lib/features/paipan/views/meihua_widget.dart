@@ -9,14 +9,29 @@ import '../../paipan/engines/meihua_engine.dart';
 /// 梅花易数排盘展示
 class MeihuaResultWidget extends StatelessWidget {
   final PaipanResult result;
+  final ThemeData theme;
+  final bool isDark;
+  final Color primary;
+  final bool useAcrylic;
+  final int acrylicAlpha;
 
-  const MeihuaResultWidget({super.key, required this.result});
+  const MeihuaResultWidget({
+    super.key,
+    required this.result,
+    required this.theme,
+    required this.isDark,
+    required this.primary,
+    this.useAcrylic = false,
+    this.acrylicAlpha = 200,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isWide = MediaQuery.of(context).size.width > 600;
-    final isDark = theme.brightness == Brightness.dark;
+    // 使用传入参数
+    final effectiveIsDark = isDark;
+    final effectivePrimary = primary;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -27,14 +42,14 @@ class MeihuaResultWidget extends StatelessWidget {
           child: Row(
             children: [
               Icon(Icons.auto_awesome,
-                  color: isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728),
+                  color: effectiveIsDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728),
                   size: 18),
               const SizedBox(width: 6),
               Text(
                 result.method,
                 style: TextStyle(
                   fontSize: 13,
-                  color: isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728),
+                  color: effectiveIsDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -43,7 +58,7 @@ class MeihuaResultWidget extends StatelessWidget {
                 '${result.paipanTime.month}/${result.paipanTime.day} ${result.paipanTime.hour}:${result.paipanTime.minute.toString().padLeft(2, '0')}',
                 style: TextStyle(
                   fontSize: 12,
-                  color: isDark ? const Color(0xFF888888) : const Color(0xFF888888),
+                  color: effectiveIsDark ? const Color(0xFF888888) : const Color(0xFF888888),
                 ),
               ),
             ],

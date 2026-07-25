@@ -98,22 +98,37 @@ const _wangShuaiColors = <WangShuaiLevel, Color>{
 class GuaWidget extends StatelessWidget {
   final GuaModel gua;
   final bool showFooter;
+  final ThemeData theme;
+  final bool isDark;
+  final Color primary;
+  final bool useAcrylic;
+  final int acrylicAlpha;
 
-  const GuaWidget({super.key, required this.gua, this.showFooter = true});
+  const GuaWidget({
+    super.key,
+    required this.gua,
+    this.showFooter = true,
+    required this.theme,
+    required this.isDark,
+    required this.primary,
+    this.useAcrylic = false,
+    this.acrylicAlpha = 200,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // 使用外部传入的参数覆盖默认色
+    final effectivePrimary = primary;
+    final effectiveIsDark = isDark;
     return Container(
       decoration: BoxDecoration(
-        color: theme.brightness == Brightness.dark
-            ? const Color(0xFF2C2C2C)
-            : const Color(0xFFF5F0EB),
+        color: useAcrylic
+            ? (isDark ? const Color(0xFF252542).withAlpha(acrylicAlpha) : Colors.white.withAlpha(acrylicAlpha))
+            : (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF5F0EB)),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: theme.brightness == Brightness.dark
-              ? const Color(0xFF444444)
-              : const Color(0xFFE0D5C8),
+          color: isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8),
           width: 1,
         ),
       ),

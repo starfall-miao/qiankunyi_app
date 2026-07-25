@@ -82,7 +82,7 @@ class AppTheme {
   AppTheme._();
 
   /// 获取对应配色方案的亮色主题
-  static ThemeData lightTheme(ColorSchemeType type, {bool useAcrylic = false}) {
+  static ThemeData lightTheme(ColorSchemeType type, {bool useAcrylic = false, double acrylicOpacity = 0.75}) {
     final primary = type.primary;
     final secondary = _secondaryColor(type);
 
@@ -95,6 +95,8 @@ class AppTheme {
       onSurface: const Color(0xFF2C2C2C),
     );
 
+    final int a = (acrylicOpacity * 255).round().clamp(0, 255);
+
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
@@ -103,7 +105,7 @@ class AppTheme {
       appBarTheme: AppBarTheme(
         centerTitle: true,
         elevation: 0,
-        backgroundColor: useAcrylic ? Colors.transparent : Colors.white,
+        backgroundColor: useAcrylic ? Colors.white.withAlpha(a) : Colors.white,
         foregroundColor: const Color(0xFF2C2C2C),
         titleTextStyle: const TextStyle(
           color: Color(0xFF2C2C2C),
@@ -117,7 +119,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        color: useAcrylic ? Colors.white.withAlpha(200) : Colors.white,
+        color: useAcrylic ? Colors.white.withAlpha(a) : Colors.white,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -142,7 +144,7 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         elevation: 0,
-        backgroundColor: useAcrylic ? Colors.white.withAlpha(230) : Colors.white,
+        backgroundColor: useAcrylic ? Colors.white.withAlpha(a) : Colors.white,
         indicatorColor: primary.withAlpha(30),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
@@ -167,7 +169,7 @@ class AppTheme {
         }),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: useAcrylic ? Colors.white.withAlpha(230) : Colors.white,
+        backgroundColor: useAcrylic ? Colors.white.withAlpha(a) : Colors.white,
         selectedItemColor: primary,
         unselectedItemColor: const Color(0xFF888888),
       ),
@@ -175,7 +177,7 @@ class AppTheme {
   }
 
   /// 获取对应配色方案的暗色主题
-  static ThemeData darkTheme(ColorSchemeType type, {bool useAcrylic = false}) {
+  static ThemeData darkTheme(ColorSchemeType type, {bool useAcrylic = false, double acrylicOpacity = 0.75}) {
     final primary = type.primary;
     final secondary = _secondaryColor(type);
 
@@ -187,6 +189,10 @@ class AppTheme {
       onSecondary: Colors.white,
       onSurface: const Color(0xFFE8E0D8),
     );
+
+    final int a = (acrylicOpacity * 255).round().clamp(0, 255);
+    final baseBg = const Color(0xFF252542);
+    final scaffoldBg = const Color(0xFF1A1A2E);
 
     return ThemeData(
       useMaterial3: true,
@@ -210,7 +216,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        color: useAcrylic ? const Color(0xFF252542).withAlpha(200) : const Color(0xFF252542),
+        color: useAcrylic ? const Color(0xFF252542).withAlpha(a) : const Color(0xFF252542),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -236,7 +242,7 @@ class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         elevation: 0,
         backgroundColor: useAcrylic
-            ? const Color(0xFF252542).withAlpha(230)
+            ? const Color(0xFF252542).withAlpha(a)
             : const Color(0xFF252542),
         indicatorColor: primary.withAlpha(30),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
@@ -263,7 +269,7 @@ class AppTheme {
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: useAcrylic
-            ? const Color(0xFF252542).withAlpha(230)
+            ? const Color(0xFF252542).withAlpha(a)
             : const Color(0xFF252542),
         selectedItemColor: primary,
         unselectedItemColor: const Color(0xFF888888),

@@ -230,31 +230,58 @@ class _SettingsPageState extends State<SettingsPage> {
     final provider = context.watch<ThemeProvider>();
 
     return _buildCard(
-      Row(
+      Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withAlpha(25),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(Icons.blur_on, color: theme.colorScheme.primary, size: 22),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withAlpha(25),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.blur_on, color: theme.colorScheme.primary, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('亚克力效果', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const Text('毛玻璃背景模糊效果', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  ],
+                ),
+              ),
+              Switch(
+                value: provider.acrylicEffect,
+                onChanged: (_) => provider.toggleAcrylic(),
+                activeThumbColor: theme.colorScheme.primary,
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          if (provider.acrylicEffect) ...[
+            const SizedBox(height: 8),
+            Row(
               children: [
-                const Text('亚克力效果', style: TextStyle(fontWeight: FontWeight.w600)),
-                const Text('毛玻璃背景模糊效果', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                const SizedBox(width: 50),
+                const Text('透明', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                Expanded(
+                  child: Slider(
+                    value: provider.acrylicOpacity,
+                    min: 0.1,
+                    max: 1.0,
+                    divisions: 9,
+                    label: '${(provider.acrylicOpacity * 100).round()}%',
+                    onChanged: (v) => provider.setAcrylicOpacity(v),
+                  ),
+                ),
+                const Text('不透明', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                const SizedBox(width: 4),
+                Text('${(provider.acrylicOpacity * 100).round()}%',
+                    style: TextStyle(fontSize: 12, color: theme.colorScheme.primary, fontWeight: FontWeight.w600)),
               ],
             ),
-          ),
-          Switch(
-            value: provider.acrylicEffect,
-            onChanged: (_) => provider.toggleAcrylic(),
-            activeThumbColor: theme.colorScheme.primary,
-          ),
+          ],
         ],
       ),
     );
