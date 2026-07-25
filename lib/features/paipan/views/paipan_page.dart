@@ -362,49 +362,7 @@ class _PaipanPageState extends State<PaipanPage> {
     );
   }
 
-  // ── 机器摇卦 ──
-
-  Widget _buildMachineToss(BuildContext context, bool isDark, Color primary) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: _cardBg(isDark),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _border(isDark)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.shuffle, size: 14, color: primary),
-          const SizedBox(width: 4),
-          Text('由系统模拟摇铜钱，随机生成六爻',
-              style: TextStyle(fontSize: 12, color: _text(isDark))),
-        ],
-      ),
-    );
-  }
-
-  // ── 时间起卦 ──
-
-  Widget _buildTimeToss(BuildContext context, bool isDark, Color primary) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: _cardBg(isDark),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _border(isDark)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.date_range, size: 14, color: primary),
-          const SizedBox(width: 4),
-          Text('以当前选中时间的年月日时数字起卦',
-              style: TextStyle(fontSize: 12, color: _text(isDark))),
-        ],
-      ),
-    );
-  }
-
-  // ── 机器摇卦 ──
+  // ── 机器摇卦 ── 时间起卦 ──
 
   Widget _buildMachineToss(bool isDark, Color primary) {
     return _infoCard(Icons.shuffle, '由系统模拟摇铜钱，随机生成六爻', isDark, primary);
