@@ -23,6 +23,7 @@ class QianKunYiApp extends StatelessWidget {
         return MaterialApp(
           title: '落·乾坤',
           debugShowCheckedModeBanner: false,
+          textScaleFactor: scale,
           theme: AppTheme.lightTheme(tp.colorSchemeType,
               useAcrylic: tp.acrylicEffect, acrylicOpacity: tp.acrylicOpacity),
           darkTheme: AppTheme.darkTheme(tp.colorSchemeType,
