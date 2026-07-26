@@ -57,9 +57,6 @@ class _PaipanPageState extends State<PaipanPage> {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB),
       appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFF4A3728),
-        foregroundColor: isDark ? const Color(0xFFE0D5C8) : const Color(0xFFF5F0EB),
-        elevation: 0,
         title: Text('排盘 · ${_tabIndex == 0 ? "六爻" : "梅花"}',
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         actions: [
