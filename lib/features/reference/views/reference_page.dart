@@ -8,6 +8,7 @@ import '../data/xiangyi_data.dart';
 import '../data/qinxing_data.dart';
 import '../data/shensha_dictionary.dart';
 import '../data/dongbian_dictionary.dart';
+import '../data/yaoci_data.dart';
 
 class ReferencePage extends StatelessWidget {
   const ReferencePage({super.key});
@@ -179,6 +180,9 @@ class _GuaCiTabState extends State<_GuaCiTab> {
                 _infoRow(theme, '卦辞', gc.ci),
                 if (gc.xiang.isNotEmpty) _infoRow(theme, '象辞', gc.xiang),
                 if (gc.yiXiang.isNotEmpty) _infoRow(theme, '意象', gc.yiXiang),
+                // ── 爻辞 ──
+                if (yaoCiMap.containsKey(gc.name))
+                  ..._buildYaoCiSection(theme, gc.name),
                 if (gc.fangWei.isNotEmpty || gc.shuZi.isNotEmpty || gc.ziRan.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
@@ -241,6 +245,75 @@ class _GuaCiTabState extends State<_GuaCiTab> {
       case '土': return Colors.brown;
       default: return Colors.grey;
     }
+  }
+
+  /// 构建爻辞展示区域
+  List<Widget> _buildYaoCiSection(ThemeData theme, GuaName name) {
+    final yaos = yaoCiMap[name];
+    if (yaos == null || yaos.isEmpty) return [];
+    // 初爻阴阳：按卦序奇偶粗略判断（初九/初六）
+    // 精确判断需要查六爻卦象表，此处简化处理
+    return [
+      const SizedBox(height: 8),
+      const Divider(height: 1),
+      const SizedBox(height: 6),
+      Text('📜 爻辞', style: TextStyle(
+        fontWeight: FontWeight.w600,
+        fontSize: 13,
+        color: theme.colorScheme.primary,
+      )),
+      const SizedBox(height: 4),
+      for (int i = 0; i < yaos.length; i++) ...[
+        _buildYaoLine(theme, yaos[i], i, name.index % 2 == 0),
+        if (i < yaos.length - 1) const SizedBox(height: 2),
+      ],
+    ];
+  }
+
+  Widget _buildYaoLine(ThemeData theme, YaoCi yao, int index, bool yang) {
+    final pos = yaoPositionName(index, yang);
+    return Container(
+      margin: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: theme.colorScheme.outlineVariant.withAlpha(80)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            decoration: BoxDecoration(
+              color: yang ? theme.colorScheme.primary.withAlpha(25) : theme.colorScheme.secondary.withAlpha(25),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(pos, textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11, fontWeight: FontWeight.bold,
+                color: yang ? theme.colorScheme.primary : theme.colorScheme.secondary,
+              )),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(yao.text, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                if (yao.explanation.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(yao.explanation,
+                      style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withAlpha(160))),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
