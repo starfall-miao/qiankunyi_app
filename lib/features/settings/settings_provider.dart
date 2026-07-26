@@ -1,6 +1,7 @@
 // 落·乾坤 - 设置持久化与状态管理
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/utils/logger.dart';
 
 /// 排盘显示要素开关
 class DisplaySettings {
@@ -106,16 +107,42 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   // Setters with persistence
-  set fontSize(double v) { _fontSize = v; _save(); notifyListeners(); }
-  set riPoRule(RiPoAnDongRule v) { _riPoRule = v; _save(); notifyListeners(); }
-  set wanZiShi(bool v) { _wanZiShi = v; _save(); notifyListeners(); }
-  set chenMuTuYao(bool v) { _chenMuTuYao = v; _save(); notifyListeners(); }
-  set display(DisplaySettings v) { _display = v; _save(); notifyListeners(); }
+  set fontSize(double v) {
+    _fontSize = v;
+    _save();
+    notifyListeners();
+    Logger.instance.info('字体大小: ${v.toInt()}px');
+  }
+  set riPoRule(RiPoAnDongRule v) {
+    _riPoRule = v;
+    _save();
+    notifyListeners();
+    Logger.instance.info('日破暗动规则: ${v.label}');
+  }
+  set wanZiShi(bool v) {
+    _wanZiShi = v;
+    _save();
+    notifyListeners();
+    Logger.instance.info('晚子时: ${v ? "开启" : "关闭"}');
+  }
+  set chenMuTuYao(bool v) {
+    _chenMuTuYao = v;
+    _save();
+    notifyListeners();
+    Logger.instance.info('辰沐土爻: ${v ? "开启" : "关闭"}');
+  }
+  set display(DisplaySettings v) {
+    _display = v;
+    _save();
+    notifyListeners();
+    Logger.instance.info('显示要素已更新');
+  }
 
   void toggleDisplay(String key) {
     final m = _display.toMap()..update(key, (v) => !(v as bool));
     _display = DisplaySettings.fromMap(m);
     _save();
     notifyListeners();
+    Logger.instance.info('切换显示要素: $key = ${_display.toMap()[key]}');
   }
 }

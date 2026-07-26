@@ -201,12 +201,32 @@ class _PaipanPageState extends State<PaipanPage> {
 
         // 排盘结果
         if (pr.liuyaoResult != null) ...[
-          _guaCard('本卦', pr.liuyaoResult!.benGua),
-          if (pr.liuyaoResult!.bianGua != null)
-            _guaCard('变卦', pr.liuyaoResult!.bianGua!),
-          if (pr.liuyaoResult!.huGua != null)
-            _guaCard('互卦', pr.liuyaoResult!.huGua!),
-          const SizedBox(height: 8),
+          // ── 装饰标题 ──
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: p.withAlpha(60))),
+            ),
+            child: Row(
+              children: [
+                Text('☯ ', style: TextStyle(fontSize: 18, color: p)),
+                Text('六爻纳甲 · 排盘结果',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: t)),
+              ],
+            ),
+          ),
+          // ── 六爻三卦 ──
+          _miniGuaCard('本卦', pr.liuyaoResult!.benGua, p, t, c, dark),
+          if (pr.liuyaoResult!.bianGua != null) ...[
+            const SizedBox(height: 8),
+            _miniGuaCard('变卦', pr.liuyaoResult!.bianGua!, p, t, c, dark),
+          ],
+          if (pr.liuyaoResult!.huGua != null) ...[
+            const SizedBox(height: 8),
+            _miniGuaCard('互卦', pr.liuyaoResult!.huGua!, p, t, c, dark),
+          ],
+          const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -381,13 +401,17 @@ class _PaipanPageState extends State<PaipanPage> {
             final labels = ['三数起卦', '日期起卦'];
             final sel = _meihuaMethod == i;
             return ChoiceChip(
-              label: Text(labels[i], style: const TextStyle(fontSize: 12)),
+              label: Text(labels[i], style: TextStyle(fontSize: 12, color: sel ? p : t)),
               selected: sel,
               onSelected: (v) => setState(() {
                 _meihuaMethod = i;
                 _emptyInputWarn = false;
               }),
-              selectedColor: p.withAlpha(30),
+              selectedColor: p.withAlpha(40),
+              backgroundColor: dark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
+              side: BorderSide(color: sel ? p : b.withAlpha(80), width: sel ? 1.5 : 1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              visualDensity: VisualDensity.compact,
             );
           }),
         ),
@@ -648,19 +672,37 @@ class _PaipanPageState extends State<PaipanPage> {
           ),
         ),
 
-        // ── 三卦并排 ──
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _miniGuaCard('本卦', result.benGua, p, t, c, dark),
-            const SizedBox(width: 8),
-            if (result.bianGua != null) ...[
-              _miniGuaCard('变卦', result.bianGua!, p, t, c, dark),
-              const SizedBox(width: 8),
-            ],
-            if (result.huGua != null)
-              _miniGuaCard('互卦', result.huGua!, p, t, c, dark),
-          ].map((w) => Expanded(child: w)).toList(),
+        // ── 三卦：宽屏并排 / 窄屏竖排 ──
+        LayoutBuilder(
+          builder: (ctx2, constraints) {
+            final isWide = constraints.maxWidth >= 340;
+            final cards = <Widget>[
+              _miniGuaCard('本卦', result.benGua, p, t, c, dark),
+              if (result.bianGua != null) ...[
+                const SizedBox(width: 8),
+                _miniGuaCard('变卦', result.bianGua!, p, t, c, dark),
+              ],
+              if (result.huGua != null) ...[
+                const SizedBox(width: 8),
+                _miniGuaCard('互卦', result.huGua!, p, t, c, dark),
+              ],
+            ];
+
+            if (isWide) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: cards.map((w) => w is SizedBox ? w : Expanded(child: w)).toList(),
+              );
+            } else {
+              // 窄屏：竖排，去掉 SizedBox 间的 width
+              return Column(
+                children: cards.where((w) => w is! SizedBox).map((w) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: w,
+                )).toList(),
+              );
+            }
+          },
         ),
 
         const SizedBox(height: 14),
