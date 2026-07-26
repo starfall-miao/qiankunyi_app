@@ -49,7 +49,7 @@ class PaipanPage extends StatefulWidget {
   State<PaipanPage> createState() => _PaipanPageState();
 }
 
-class _PaipanPageState extends State<PaipanPage> {
+class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateMixin {
   final _log = Logger.instance;
   int _tabIndex = 0;
   int _liuyaoMethod = 0;
@@ -60,9 +60,20 @@ class _PaipanPageState extends State<PaipanPage> {
   final _numCCtrl = TextEditingController();
   final DateTime _selectedTime = DateTime.now();
   bool _emptyInputWarn = false;
+  bool _isLoading = false;
+  late final AnimationController _animCtrl;
+  late final Animation<double> _fadeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _animCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+  }
 
   @override
   void dispose() {
+    _animCtrl.dispose();
     _numACtrl.dispose();
     _numBCtrl.dispose();
     _numCCtrl.dispose();
@@ -188,9 +199,11 @@ class _PaipanPageState extends State<PaipanPage> {
         SizedBox(
           height: 44,
           child: ElevatedButton.icon(
-            onPressed: () => _submitLiuyao(pr),
-            icon: const Icon(Icons.auto_awesome, size: 18),
-            label: const Text('起卦', style: TextStyle(fontSize: 16)),
+            onPressed: _isLoading ? null : () => _submitLiuyao(pr),
+            icon: _isLoading
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.auto_awesome, size: 18),
+            label: Text(_isLoading ? '起卦中…' : '起卦', style: const TextStyle(fontSize: 16)),
             style: ElevatedButton.styleFrom(
               backgroundColor: p, foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -200,7 +213,11 @@ class _PaipanPageState extends State<PaipanPage> {
         const SizedBox(height: 12),
 
         // 排盘结果
-        if (pr.liuyaoResult != null) ...[
+        FadeTransition(
+          opacity: _fadeAnim,
+          child: pr.liuyaoResult != null ? Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
           // ── 装饰标题 ──
           Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -251,14 +268,17 @@ class _PaipanPageState extends State<PaipanPage> {
                 style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
               ),
             ],
-          ),
-        ] else
-          _emptyHint(p, t),
+          )
+        : _emptyHint(p, t),
+        ),
       ],
     );
   }
 
   void _submitLiuyao(PaipanProvider pr) {
+    setState(() => _isLoading = true);
+    _animCtrl.reset();
+
     PaipanResult r;
     if (_liuyaoMethod == 0) {
       final ys = <YaoModel>[];
@@ -277,9 +297,15 @@ class _PaipanPageState extends State<PaipanPage> {
     } else {
       r = LiuYaoEngine.byTime(_selectedTime);
     }
-    pr.setLiuyaoResult(r);
-    final names = ['手工摇卦', '机器摇卦', '时间起卦'];
-    _log.info('六爻起卦: ${names[_liuyaoMethod]}', '${r.benGua.name}');
+
+    // 模拟短加载延迟（增强仪式感）
+    Future.delayed(const Duration(milliseconds: 300), () {
+      pr.setLiuyaoResult(r);
+      setState(() => _isLoading = false);
+      _animCtrl.forward();
+      final names = ['手工摇卦', '机器摇卦', '时间起卦'];
+      _log.info('六爻起卦: ${names[_liuyaoMethod]}', '${r.benGua.name}');
+    });
   }
 
   // ═══════════════════ 手工摇面板（国风卦签样式） ═══════════════════
@@ -436,9 +462,11 @@ class _PaipanPageState extends State<PaipanPage> {
         SizedBox(
           height: 44,
           child: ElevatedButton.icon(
-            onPressed: () => _submitMeihua(pr),
-            icon: const Icon(Icons.auto_awesome, size: 18),
-            label: const Text('起卦', style: TextStyle(fontSize: 16)),
+            onPressed: _isLoading ? null : () => _submitMeihua(pr),
+            icon: _isLoading
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.auto_awesome, size: 18),
+            label: Text(_isLoading ? '起卦中…' : '起卦', style: const TextStyle(fontSize: 16)),
             style: ElevatedButton.styleFrom(
               backgroundColor: p, foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -447,32 +475,48 @@ class _PaipanPageState extends State<PaipanPage> {
         ),
         const SizedBox(height: 12),
 
-        if (pr.meihuaResult != null)
-          _meihuaResultSection(context, pr, pr.meihuaResult!, p, t, b, c, dark)
-        else
-          _emptyHint(p, t),
+        FadeTransition(
+          opacity: _fadeAnim,
+          child: pr.meihuaResult != null
+              ? _meihuaResultSection(context, pr, pr.meihuaResult!, p, t, b, c, dark)
+              : _emptyHint(p, t),
+        ),
       ],
     );
   }
 
   void _submitMeihua(PaipanProvider pr) {
+    setState(() => _isLoading = true);
+    _animCtrl.reset();
+
     if (_meihuaMethod == 0) {
       final aText = _numACtrl.text.trim();
       final bText = _numBCtrl.text.trim();
       final cText = _numCCtrl.text.trim();
       if (aText.isEmpty || bText.isEmpty || cText.isEmpty) {
-        setState(() => _emptyInputWarn = true);
+        setState(() {
+          _isLoading = false;
+          _emptyInputWarn = true;
+        });
         return;
       }
       setState(() => _emptyInputWarn = false);
       final a = int.tryParse(aText) ?? 0;
       final b = int.tryParse(bText) ?? 0;
       final c = int.tryParse(cText) ?? 0;
-      pr.setMeihuaResult(MeihuaEngine.fromNumbers(a, b, c));
-      _log.info('梅花起卦: 三数($a,$b,$c)');
+      Future.delayed(const Duration(milliseconds: 300), () {
+        pr.setMeihuaResult(MeihuaEngine.fromNumbers(a, b, c));
+        setState(() => _isLoading = false);
+        _animCtrl.forward();
+        _log.info('梅花起卦: 三数($a,$b,$c)');
+      });
     } else {
-      pr.setMeihuaResult(MeihuaEngine.fromDateTime(_selectedTime));
-      _log.info('梅花起卦: 日期${_selectedTime.year}${_selectedTime.month}${_selectedTime.day}');
+      Future.delayed(const Duration(milliseconds: 300), () {
+        pr.setMeihuaResult(MeihuaEngine.fromDateTime(_selectedTime));
+        setState(() => _isLoading = false);
+        _animCtrl.forward();
+        _log.info('梅花起卦: 日期${_selectedTime.year}${_selectedTime.month}${_selectedTime.day}');
+      });
     }
   }
 
