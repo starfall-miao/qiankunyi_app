@@ -153,7 +153,7 @@ class GuaWidget extends StatelessWidget {
           // 六冲/六合简短标记
           Text(
             '${_guaGongCN[gua.gong] ?? ''}宫',
-            style: TextStyle(fontSize: 12, color: textColor.withAlpha(150)),
+            style: TextStyle(fontSize: 12, color: textColor.withAlpha(220), fontWeight: FontWeight.w500),
           ),
         ],
       ),
@@ -204,7 +204,7 @@ class GuaWidget extends StatelessWidget {
           // 天干地支
           Text(
             _tianGanCN[yao.tianGan] ?? '',
-            style: TextStyle(fontSize: 13, color: textColor.withAlpha(200)),
+            style: TextStyle(fontSize: 13, color: textColor.withAlpha(220)),
           ),
           const SizedBox(width: 2),
           Text(
@@ -415,7 +415,7 @@ class GuaWidget extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Text(
         shiStr,
-        style: TextStyle(fontSize: 11, color: textColor.withAlpha(150)),
+        style: TextStyle(fontSize: 11, color: textColor.withAlpha(200), fontWeight: FontWeight.w500),
       ),
     );
   }

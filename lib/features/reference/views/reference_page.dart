@@ -19,8 +19,11 @@ class ReferencePage extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('参考资料'),
-          bottom: const TabBar(
+          bottom: TabBar(
             isScrollable: true,
+            labelColor: theme.colorScheme.primary,
+            unselectedLabelColor: null, // 使用默认 Text color
+            indicatorColor: theme.colorScheme.primary,
             tabs: [
               Tab(text: '六十四卦'),
               Tab(text: '纳音'),
@@ -92,10 +95,17 @@ class _GuaCiTabState extends State<_GuaCiTab> {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: FilterChip(
-                  label: Text(gong),
+                  label: Text(gong, style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                    color: selected ? _gongColor(gong) : null,
+                  )),
                   selected: selected,
-                  selectedColor: _gongColor(gong).withAlpha(60),
+                  selectedColor: _gongColor(gong).withAlpha(40),
+                  backgroundColor: theme.colorScheme.surface,
                   checkmarkColor: _gongColor(gong),
+                  side: BorderSide(color: selected ? _gongColor(gong) : theme.colorScheme.outlineVariant, width: selected ? 1.5 : 1),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   onSelected: (_) => setState(() => _selectedGong = gong),
                 ),
               );
@@ -420,8 +430,16 @@ class _XiangYiTabState extends State<_XiangYiTab> {
               return Padding(
                 padding: const EdgeInsets.only(right: 6),
                 child: FilterChip(
-                  label: Text(name, style: TextStyle(fontSize: 15, fontWeight: sel ? FontWeight.bold : FontWeight.normal)),
+                  label: Text(name, style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: sel ? FontWeight.bold : FontWeight.normal,
+                    color: sel ? theme.colorScheme.primary : null,
+                  )),
                   selected: sel,
+                  selectedColor: theme.colorScheme.primary.withAlpha(30),
+                  backgroundColor: theme.colorScheme.surface,
+                  side: BorderSide(color: sel ? theme.colorScheme.primary : theme.colorScheme.outlineVariant, width: sel ? 1.5 : 1),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   onSelected: (_) => setState(() { _selectedGua = name; _selectedCategory = null; }),
                 ),
               );
@@ -439,8 +457,16 @@ class _XiangYiTabState extends State<_XiangYiTab> {
               return Padding(
                 padding: const EdgeInsets.only(right: 6),
                 child: ChoiceChip(
-                  label: Text(cat, style: TextStyle(fontSize: 13, fontWeight: sel ? FontWeight.bold : FontWeight.normal)),
+                  label: Text(cat, style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: sel ? FontWeight.bold : FontWeight.normal,
+                    color: sel ? theme.colorScheme.primary : null,
+                  )),
                   selected: sel,
+                  selectedColor: theme.colorScheme.primary.withAlpha(30),
+                  backgroundColor: theme.colorScheme.surface,
+                  side: BorderSide(color: sel ? theme.colorScheme.primary : theme.colorScheme.outlineVariant, width: sel ? 1.5 : 1),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   onSelected: (_) => setState(() => _selectedCategory = sel ? null : cat),
                 ),
               );
@@ -673,8 +699,16 @@ class _ShenShaTabState extends State<_ShenShaTab> {
             children: types.map((t) => Padding(
               padding: const EdgeInsets.only(right: 6),
               child: ChoiceChip(
-                label: Text(t, style: TextStyle(fontSize: 14, fontWeight: _filterType == t ? FontWeight.bold : FontWeight.normal)),
+                label: Text(t, style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: _filterType == t ? FontWeight.bold : FontWeight.normal,
+                  color: _filterType == t ? theme.colorScheme.primary : null,
+                )),
                 selected: _filterType == t,
+                selectedColor: theme.colorScheme.primary.withAlpha(30),
+                backgroundColor: theme.colorScheme.surface,
+                side: BorderSide(color: _filterType == t ? theme.colorScheme.primary : theme.colorScheme.outlineVariant, width: _filterType == t ? 1.5 : 1),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 onSelected: (_) => setState(() => _filterType = t),
               ),
             )).toList(),
@@ -758,8 +792,16 @@ class _DongBianTabState extends State<_DongBianTab> {
             children: cats.map((c) => Padding(
               padding: const EdgeInsets.only(right: 6),
               child: ChoiceChip(
-                label: Text(c, style: TextStyle(fontSize: 14, fontWeight: _filterCat == c ? FontWeight.bold : FontWeight.normal)),
+                label: Text(c, style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: _filterCat == c ? FontWeight.bold : FontWeight.normal,
+                  color: _filterCat == c ? theme.colorScheme.primary : null,
+                )),
                 selected: _filterCat == c,
+                selectedColor: theme.colorScheme.primary.withAlpha(30),
+                backgroundColor: theme.colorScheme.surface,
+                side: BorderSide(color: _filterCat == c ? theme.colorScheme.primary : theme.colorScheme.outlineVariant, width: _filterCat == c ? 1.5 : 1),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 onSelected: (_) => setState(() => _filterCat = c),
               ),
             )).toList(),

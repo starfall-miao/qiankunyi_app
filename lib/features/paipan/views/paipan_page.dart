@@ -119,7 +119,7 @@ class _PaipanPageState extends State<PaipanPage> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: sel ? FontWeight.bold : FontWeight.normal,
-              color: sel ? p : (dark ? Colors.grey.shade400 : Colors.grey.shade600),
+              color: sel ? p : t.withAlpha(160),
             ),
           ),
         ),
@@ -138,13 +138,17 @@ class _PaipanPageState extends State<PaipanPage> {
         Wrap(
           spacing: 8,
           children: List.generate(3, (i) {
-            final labels = ['手工摇卦', '机器摇卦', '时间起卦'];
+            final cLabels = ['手工摇卦', '机器摇卦', '时间起卦'];
             final sel = _liuyaoMethod == i;
             return ChoiceChip(
-              label: Text(labels[i], style: const TextStyle(fontSize: 12)),
+              label: Text(cLabels[i], style: TextStyle(fontSize: 12, color: sel ? p : t)),
               selected: sel,
               onSelected: (v) => setState(() => _liuyaoMethod = i),
-              selectedColor: p.withAlpha(30),
+              selectedColor: p.withAlpha(40),
+              backgroundColor: dark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
+              side: BorderSide(color: sel ? p : b.withAlpha(80), width: sel ? 1.5 : 1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              visualDensity: VisualDensity.compact,
             );
           }),
         ),
@@ -181,6 +185,7 @@ class _PaipanPageState extends State<PaipanPage> {
               onPressed: () => pr.clearLiuyao(),
               icon: const Icon(Icons.refresh, size: 16),
               label: const Text('清空排盘'),
+              style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
             ),
           ),
         ] else
@@ -304,7 +309,7 @@ class _PaipanPageState extends State<PaipanPage> {
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: s ? FontWeight.bold : FontWeight.normal,
-                              color: s ? p : (dark ? Colors.grey.shade400 : Colors.grey.shade600),
+                              color: s ? p : t.withAlpha(180),
                             )),
                       ),
                     );
@@ -387,6 +392,7 @@ class _PaipanPageState extends State<PaipanPage> {
               onPressed: () => pr.clearMeihua(),
               icon: const Icon(Icons.refresh, size: 16),
               label: const Text('清空排盘'),
+              style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
             ),
           ),
         ] else
@@ -502,7 +508,7 @@ class _PaipanPageState extends State<PaipanPage> {
       child: Column(children: [
         Icon(Icons.auto_awesome, size: 48, color: p.withAlpha(60)),
         const SizedBox(height: 12),
-        Text('选择排盘方式后点「起卦」', style: TextStyle(fontSize: 14, color: t.withAlpha(120))),
+        Text('选择排盘方式后点「起卦」', style: TextStyle(fontSize: 14, color: t.withAlpha(180))),
       ]),
     );
   }
