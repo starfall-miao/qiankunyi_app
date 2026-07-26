@@ -19,19 +19,36 @@ class QianKunYiApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer2<ThemeProvider, SettingsProvider>(
       builder: (context, tp, sp, _) {
-        final scale = sp.loaded ? sp.fontSize / 16.0 : 1.0;
         return MaterialApp(
           title: '落·乾坤',
           debugShowCheckedModeBanner: false,
-          textScaleFactor: scale,
           theme: AppTheme.lightTheme(tp.colorSchemeType,
               useAcrylic: tp.acrylicEffect, acrylicOpacity: tp.acrylicOpacity),
           darkTheme: AppTheme.darkTheme(tp.colorSchemeType,
               useAcrylic: tp.acrylicEffect, acrylicOpacity: tp.acrylicOpacity),
           themeMode: tp.themeMode,
+          builder: (ctx, child) => _FontScaled(child: child!),
           home: const MainShell(),
         );
       },
+    );
+  }
+}
+
+/// 字体缩放 — 读取 SettingsProvider 并应用 textScaleFactor
+class _FontScaled extends StatelessWidget {
+  final Widget child;
+  const _FontScaled({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final sp = context.watch<SettingsProvider>();
+    final scale = sp.loaded ? sp.fontSize / 16.0 : 1.0;
+    // ignore: deprecated_member_use
+    return MediaQuery(
+      // ignore: deprecated_member_use
+      data: MediaQuery.of(context).copyWith(textScaleFactor: scale),
+      child: child,
     );
   }
 }
