@@ -418,8 +418,6 @@ class _SettingsPageState extends State<SettingsPage> {
   // ──────────────── 调试与日志 ────────────────
 
   Widget _buildDebugSettings(ThemeData theme) {
-    final isDark = theme.brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF2C2C2C) : Colors.white;
     return _buildCard(
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,

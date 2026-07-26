@@ -212,7 +212,6 @@ class _PaipanPageState extends State<PaipanPage> {
     final pos = ['初爻', '二爻', '三爻', '四爻', '五爻', '上爻'];
     final opts = [_YaoInput.shaoYin, _YaoInput.shaoYang, _YaoInput.laoYin, _YaoInput.laoYang];
     final lbs = ['少阴', '少阳', '老阴', '老阳'];
-    final syms = ['⚊', '⚋', '⚊⊙', '⚋×'];
 
     return [
       Container(
