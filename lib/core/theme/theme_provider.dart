@@ -15,12 +15,14 @@ class ThemeProvider extends ChangeNotifier {
   ColorSchemeType _colorScheme = ColorSchemeType.xuanZi;
   bool _useAcrylic = false;
   double _acrylicOpacity = 0.75;
+  bool _renderDebug = false;
 
   ThemeMode get themeMode => _themeMode;
   bool get isDarkMode => _themeMode == ThemeMode.dark;
   ColorSchemeType get colorSchemeType => _colorScheme;
   bool get acrylicEffect => _useAcrylic;
   double get acrylicOpacity => _acrylicOpacity;
+  bool get renderDebug => _renderDebug;
 
   ThemeProvider() {
     _loadPrefs();
@@ -70,6 +72,11 @@ class ThemeProvider extends ChangeNotifier {
   Future<void> toggleTheme() async {
     final next = _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
     await setThemeMode(next);
+  }
+
+  Future<void> setRenderDebug(bool value) async {
+    _renderDebug = value;
+    notifyListeners();
   }
 
   static ThemeMode _parseMode(String value) {

@@ -1,4 +1,4 @@
-// 排盘主页 — 调试版（最小化验证能否渲染）
+// 排盘主页 — 全功能版
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -28,6 +28,7 @@ class _PaipanPageState extends State<PaipanPage> {
   final _numBCtrl = TextEditingController();
   final _numCCtrl = TextEditingController();
   final DateTime _selectedTime = DateTime.now();
+  bool _emptyInputWarn = false;
 
   @override
   void dispose() {
@@ -39,16 +40,14 @@ class _PaipanPageState extends State<PaipanPage> {
 
   @override
   Widget build(BuildContext context) {
-    return _buildPage(context);
-  }
-
-  Widget _buildPage(BuildContext context) {
     final theme = Theme.of(context);
-    final tp = context.read<ThemeProvider>();
-    final pr = context.read<PaipanProvider>();
+    final tp = context.watch<ThemeProvider>();
+    final pr = context.watch<PaipanProvider>();
     final isDark = theme.brightness == Brightness.dark;
     final p = tp.colorSchemeType.primary;
     final t = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
+    final b = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
+    final c = isDark ? const Color(0xFF2C2C2C) : Colors.white;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB),
@@ -68,26 +67,33 @@ class _PaipanPageState extends State<PaipanPage> {
       ),
       body: Column(
         children: [
-          // 调试确认条
-          Container(
-            color: Colors.green.shade100,
-            padding: const EdgeInsets.all(8),
-            child: Text('✅ 页面渲染正常',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade800)),
-          ),
+          // 渲染检测条（仅调试模式显示）
+          if (tp.renderDebug)
+            Container(
+              color: Colors.green.shade100,
+              padding: const EdgeInsets.all(8),
+              child: Row(children: [
+                Icon(Icons.check_circle, size: 16, color: Colors.green.shade700),
+                const SizedBox(width: 6),
+                Text('渲染检测：页面正常',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.green.shade800)),
+              ]),
+            ),
           // Tab 行
-          Row(children: [
-            _tabBtn('六爻（铜钱）', 0, p, isDark),
-            _tabBtn('梅花易数', 1, p, isDark),
-          ]),
-          const Divider(height: 1),
+          Container(
+            decoration: BoxDecoration(color: c, border: Border(bottom: BorderSide(color: b))),
+            child: Row(children: [
+              _tabBtn('六爻（铜钱）', 0, p, isDark),
+              _tabBtn('梅花易数', 1, p, isDark),
+            ]),
+          ),
           // 内容区域
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(12),
               child: _tabIndex == 0
-                  ? _liuyaoContent(context, pr, p, t, isDark)
-                  : _meihuaContent(context, pr, p, t, isDark),
+                  ? _liuyaoContent(context, pr, p, t, b, c, isDark)
+                  : _meihuaContent(context, pr, p, t, b, c, isDark),
             ),
           ),
         ],
@@ -116,12 +122,14 @@ class _PaipanPageState extends State<PaipanPage> {
     );
   }
 
-  // ── 六爻内容 ──
+  // ═══════════════════ 六爻 ═══════════════════
 
-  Widget _liuyaoContent(BuildContext context, PaipanProvider pr, Color p, Color t, bool dark) {
+  Widget _liuyaoContent(BuildContext context, PaipanProvider pr, Color p,
+      Color t, Color b, Color c, bool dark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // 方法选择
         Wrap(
           spacing: 8,
           children: List.generate(3, (i) {
@@ -136,7 +144,11 @@ class _PaipanPageState extends State<PaipanPage> {
           }),
         ),
         const SizedBox(height: 8),
-        if (_liuyaoMethod == 0) ..._buildManualSelector(p, t, dark),
+
+        // 手工摇——爻位选择面板（国风卦签风格）
+        if (_liuyaoMethod == 0) ..._buildManualPanel(p, t, b, c, dark),
+
+        // 起卦按钮
         SizedBox(
           height: 44,
           child: ElevatedButton.icon(
@@ -150,14 +162,18 @@ class _PaipanPageState extends State<PaipanPage> {
           ),
         ),
         const SizedBox(height: 12),
-        if (pr.currentResult != null && pr.lastMethod == 'liuyao') ...[
-          _guaCard('本卦', pr.currentResult!.benGua),
-          if (pr.currentResult!.bianGua != null) _guaCard('变卦', pr.currentResult!.bianGua!),
-          if (pr.currentResult!.huGua != null) _guaCard('互卦', pr.currentResult!.huGua!),
+
+        // 排盘结果
+        if (pr.liuyaoResult != null) ...[
+          _guaCard('本卦', pr.liuyaoResult!.benGua),
+          if (pr.liuyaoResult!.bianGua != null)
+            _guaCard('变卦', pr.liuyaoResult!.bianGua!),
+          if (pr.liuyaoResult!.huGua != null)
+            _guaCard('互卦', pr.liuyaoResult!.huGua!),
           const SizedBox(height: 8),
           Center(
             child: TextButton.icon(
-              onPressed: () => pr.clearResult(),
+              onPressed: () => pr.clearLiuyao(),
               icon: const Icon(Icons.refresh, size: 16),
               label: const Text('清空排盘'),
             ),
@@ -187,24 +203,24 @@ class _PaipanPageState extends State<PaipanPage> {
     } else {
       r = LiuYaoEngine.byTime(_selectedTime);
     }
-    pr.setResult(r, method: 'liuyao');
+    pr.setLiuyaoResult(r);
   }
 
-  // ── 手工摇卦选择器 ──
+  // ═══════════════════ 手工摇面板（国风卦签样式） ═══════════════════
 
-  List<Widget> _buildManualSelector(Color p, Color t, bool dark) {
+  List<Widget> _buildManualPanel(Color p, Color t, Color b, Color c, bool dark) {
     final pos = ['初爻', '二爻', '三爻', '四爻', '五爻', '上爻'];
     final opts = [_YaoInput.shaoYin, _YaoInput.shaoYang, _YaoInput.laoYin, _YaoInput.laoYang];
     final lbs = ['少阴', '少阳', '老阴', '老阳'];
-    final syms = ['- -', '———', '- -×', '———○'];
+    final syms = ['⚊', '⚋', '⚊⊙', '⚋×'];
 
     return [
       Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: dark ? const Color(0xFF2C2C2C) : Colors.white,
+          color: c,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: dark ? const Color(0xFF444444) : const Color(0xFFE0D5C8)),
+          border: Border.all(color: b),
         ),
         child: Column(
           children: List.generate(6, (i) {
@@ -212,35 +228,83 @@ class _PaipanPageState extends State<PaipanPage> {
             final v = _manualYaos[idx];
             final mv = v == _YaoInput.laoYin || v == _YaoInput.laoYang;
             final yg = v == _YaoInput.shaoYang || v == _YaoInput.laoYang;
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(children: [
-                SizedBox(width: 32, child: Text(pos[i], style: TextStyle(fontSize: 12, color: t))),
-                SizedBox(width: 36, child: Text(syms[v.index],
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
-                        color: mv ? (yg ? const Color(0xFFD4A574) : const Color(0xFF8B4513))
-                                  : (yg ? const Color(0xFF3E2723) : const Color(0xFF8D6E63))))),
-                const Spacer(),
-                ...List.generate(4, (j) {
-                  final s = v == opts[j];
-                  return GestureDetector(
-                    onTap: () => setState(() => _manualYaos[idx] = opts[j]),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                      margin: const EdgeInsets.only(left: 4),
-                      decoration: BoxDecoration(
-                        color: s ? p.withAlpha(25) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: s ? p : (dark ? const Color(0xFF444444) : const Color(0xFFE0D5C8))),
-                      ),
-                      child: Text(lbs[j],
-                          style: TextStyle(fontSize: 10,
-                              fontWeight: s ? FontWeight.bold : FontWeight.normal,
-                              color: s ? p : (dark ? Colors.grey.shade400 : Colors.grey.shade600))),
+            final rowColor = i.isEven
+                ? (dark ? Colors.white.withAlpha(8) : Colors.grey.shade50)
+                : Colors.transparent;
+
+            // 爻画颜色
+            final yaoColor = mv
+                ? (yg ? const Color(0xFFD4A574) : const Color(0xFF8B4513))
+                : (yg ? const Color(0xFF3E2723) : const Color(0xFF8D6E63));
+
+            return Container(
+              decoration: BoxDecoration(color: rowColor),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: Row(
+                children: [
+                  // 爻位名
+                  SizedBox(width: 30,
+                    child: Text(pos[i],
+                        style: TextStyle(fontSize: 11, color: t, fontWeight: FontWeight.w500))),
+                  const SizedBox(width: 6),
+                  // 分隔线
+                  Container(width: 1, height: 20, color: b.withAlpha(80)),
+                  const SizedBox(width: 8),
+                  // 爻画（粗线条风格，模拟 GuaWidget 的视觉）
+                  Container(
+                    width: 44, height: 14,
+                    decoration: BoxDecoration(
+                      color: yaoColor,
+                      borderRadius: BorderRadius.circular(2),
+                      border: mv ? Border.all(color: const Color(0xFFD4A574).withAlpha(120), width: 1) : null,
                     ),
-                  );
-                }),
-              ]),
+                    alignment: Alignment.center,
+                    child: mv
+                        ? Text(v == _YaoInput.laoYang ? '⚊' : '⚋',
+                            style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold))
+                        : null,
+                  ),
+                  const SizedBox(width: 8),
+                  // 动爻标记
+                  if (mv)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD4A574).withAlpha(30),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      child: const Text('动', style: TextStyle(fontSize: 9, color: Color(0xFFD4A574), fontWeight: FontWeight.bold)),
+                    )
+                  else
+                    const SizedBox(width: 18),
+                  const Spacer(),
+                  // 四型按钮组
+                  ...List.generate(4, (j) {
+                    final s = v == opts[j];
+                    return GestureDetector(
+                      onTap: () => setState(() => _manualYaos[idx] = opts[j]),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                        margin: const EdgeInsets.only(left: 4),
+                        decoration: BoxDecoration(
+                          color: s ? p.withAlpha(25) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: s ? p : b.withAlpha(100),
+                            width: s ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Text(lbs[j],
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: s ? FontWeight.bold : FontWeight.normal,
+                              color: s ? p : (dark ? Colors.grey.shade400 : Colors.grey.shade600),
+                            )),
+                      ),
+                    );
+                  }),
+                ],
+              ),
             );
           }),
         ),
@@ -249,9 +313,10 @@ class _PaipanPageState extends State<PaipanPage> {
     ];
   }
 
-  // ── 梅花内容 ──
+  // ═══════════════════ 梅花 ═══════════════════
 
-  Widget _meihuaContent(BuildContext context, PaipanProvider pr, Color p, Color t, bool dark) {
+  Widget _meihuaContent(BuildContext context, PaipanProvider pr, Color p,
+      Color t, Color b, Color c, bool dark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -263,36 +328,31 @@ class _PaipanPageState extends State<PaipanPage> {
             return ChoiceChip(
               label: Text(labels[i], style: const TextStyle(fontSize: 12)),
               selected: sel,
-              onSelected: (v) => setState(() => _meihuaMethod = i),
+              onSelected: (v) => setState(() {
+                _meihuaMethod = i;
+                _emptyInputWarn = false;
+              }),
               selectedColor: p.withAlpha(30),
             );
           }),
         ),
         const SizedBox(height: 8),
+
         if (_meihuaMethod == 0) ...[
           Row(children: [
-            Expanded(child: TextField(
-              controller: _numACtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'A', hintText: '0~9', isDense: true,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 10)),
-            )),
+            _numField('A', _numACtrl, '数字1'),
             const SizedBox(width: 8),
-            Expanded(child: TextField(
-              controller: _numBCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'B', hintText: '0~9', isDense: true,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 10)),
-            )),
+            _numField('B', _numBCtrl, '数字2'),
             const SizedBox(width: 8),
-            Expanded(child: TextField(
-              controller: _numCCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'C', hintText: '0~9', isDense: true,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 10)),
-            )),
+            _numField('C', _numCCtrl, '数字3'),
           ]),
+          if (_emptyInputWarn)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text('⚠ 请填写数字后再起卦', style: TextStyle(fontSize: 11, color: Colors.red.shade700)),
+            ),
         ],
+
         const SizedBox(height: 8),
         SizedBox(
           height: 44,
@@ -307,15 +367,18 @@ class _PaipanPageState extends State<PaipanPage> {
           ),
         ),
         const SizedBox(height: 12),
-        if (pr.currentResult != null && pr.lastMethod == 'meihua') ...[
-          _guaCard('本卦', pr.currentResult!.benGua),
-          if (pr.currentResult!.bianGua != null) _guaCard('变卦', pr.currentResult!.bianGua!),
-          if (pr.currentResult!.huGua != null) _guaCard('互卦', pr.currentResult!.huGua!),
-          if (pr.currentResult!.benGua.yaos.length >= 6)
-            _buildTiYong(pr.currentResult!),
+
+        if (pr.meihuaResult != null) ...[
+          _guaCard('本卦', pr.meihuaResult!.benGua),
+          if (pr.meihuaResult!.bianGua != null)
+            _guaCard('变卦', pr.meihuaResult!.bianGua!),
+          if (pr.meihuaResult!.huGua != null)
+            _guaCard('互卦', pr.meihuaResult!.huGua!),
+          if (pr.meihuaResult!.benGua.yaos.length >= 6)
+            _buildTiYong(pr.meihuaResult!),
           Center(
             child: TextButton.icon(
-              onPressed: () => pr.clearResult(),
+              onPressed: () => pr.clearMeihua(),
               icon: const Icon(Icons.refresh, size: 16),
               label: const Text('清空排盘'),
             ),
@@ -327,20 +390,39 @@ class _PaipanPageState extends State<PaipanPage> {
   }
 
   void _submitMeihua(PaipanProvider pr) {
-    PaipanResult r;
     if (_meihuaMethod == 0) {
-      r = MeihuaEngine.fromNumbers(
-        int.tryParse(_numACtrl.text) ?? 0,
-        int.tryParse(_numBCtrl.text) ?? 0,
-        int.tryParse(_numCCtrl.text) ?? 0,
-      );
+      final aText = _numACtrl.text.trim();
+      final bText = _numBCtrl.text.trim();
+      final cText = _numCCtrl.text.trim();
+      if (aText.isEmpty || bText.isEmpty || cText.isEmpty) {
+        setState(() => _emptyInputWarn = true);
+        return;
+      }
+      setState(() => _emptyInputWarn = false);
+      final a = int.tryParse(aText) ?? 0;
+      final b = int.tryParse(bText) ?? 0;
+      final c = int.tryParse(cText) ?? 0;
+      pr.setMeihuaResult(MeihuaEngine.fromNumbers(a, b, c));
     } else {
-      r = MeihuaEngine.fromDateTime(_selectedTime);
+      pr.setMeihuaResult(MeihuaEngine.fromDateTime(_selectedTime));
     }
-    pr.setResult(r, method: 'meihua');
   }
 
-  // ── 通用 ──
+  Widget _numField(String label, TextEditingController ctrl, String hint) {
+    return Expanded(
+      child: TextField(
+        controller: ctrl, keyboardType: TextInputType.number,
+        style: const TextStyle(fontSize: 14),
+        decoration: InputDecoration(
+          labelText: label, hintText: hint, isDense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+        ),
+      ),
+    );
+  }
+
+  // ═══════════════════ 通用 ═══════════════════
 
   Widget _guaCard(String label, GuaModel gua) {
     return Padding(
@@ -358,19 +440,50 @@ class _PaipanPageState extends State<PaipanPage> {
 
   Widget _buildTiYong(PaipanResult result) {
     final tiYong = MeihuaEngine.getTiYong(result);
+    Color bgColor;
+    Color borderColor;
+    Color textColor;
+    IconData icon;
+
+    if (tiYong.contains('比和')) {
+      bgColor = const Color(0xFFE8F5E9);
+      borderColor = const Color(0xFF2E7D32);
+      textColor = const Color(0xFF2E7D32);
+      icon = Icons.check_circle_outline;
+    } else if (tiYong.contains('用生体') || tiYong.contains('进益')) {
+      bgColor = const Color(0xFFE8F5E9);
+      borderColor = const Color(0xFF2E7D32);
+      textColor = const Color(0xFF2E7D32);
+      icon = Icons.trending_up;
+    } else if (tiYong.contains('用克体') || tiYong.contains('凶险')) {
+      bgColor = const Color(0xFFFFEBEE);
+      borderColor = const Color(0xFFD32F2F);
+      textColor = const Color(0xFFD32F2F);
+      icon = Icons.warning_amber_outlined;
+    } else if (tiYong.contains('体克用')) {
+      bgColor = const Color(0xFFFFF3E0);
+      borderColor = const Color(0xFFEF6C00);
+      textColor = const Color(0xFFEF6C00);
+      icon = Icons.auto_fix_high;
+    } else {
+      bgColor = const Color(0xFFF5F5F5);
+      borderColor = const Color(0xFFE0E0E0);
+      textColor = const Color(0xFF4A3728);
+      icon = Icons.info_outline;
+    }
+
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F5E9),
+        color: bgColor,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Color(0xFF2E7D32).withAlpha(80)),
+        border: Border.all(color: borderColor.withAlpha(80)),
       ),
       child: Row(children: [
-        const Icon(Icons.info_outline, color: Color(0xFF2E7D32), size: 22),
+        Icon(icon, color: textColor, size: 22),
         const SizedBox(width: 10),
-        Expanded(child: Text(tiYong, style: const TextStyle(fontSize: 13, color: Color(0xFF2E7D32)))),
+        Expanded(child: Text(tiYong, style: TextStyle(fontSize: 13, color: textColor))),
       ]),
     );
   }

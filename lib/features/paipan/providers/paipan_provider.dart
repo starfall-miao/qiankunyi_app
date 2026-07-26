@@ -1,25 +1,42 @@
 import 'package:flutter/foundation.dart';
 import '../models/paipan_result.dart';
 
-/// 排盘状态管理
+/// 排盘状态管理 — 六爻与梅花独立存储
 class PaipanProvider extends ChangeNotifier {
-  PaipanResult? _currentResult;
-  String _lastMethod = ''; // 'liuyao' | 'meihua'
+  PaipanResult? _liuyaoResult;
+  PaipanResult? _meihuaResult;
 
-  PaipanResult? get currentResult => _currentResult;
-  String get lastMethod => _lastMethod;
+  PaipanResult? get liuyaoResult => _liuyaoResult;
+  PaipanResult? get meihuaResult => _meihuaResult;
 
-  /// 执行排盘
-  void setResult(PaipanResult result, {String method = ''}) {
-    _currentResult = result;
-    _lastMethod = method;
+  /// 六爻起卦
+  void setLiuyaoResult(PaipanResult result) {
+    _liuyaoResult = result;
     notifyListeners();
   }
 
-  /// 清除当前结果
-  void clearResult() {
-    _currentResult = null;
-    _lastMethod = '';
+  /// 梅花起卦
+  void setMeihuaResult(PaipanResult result) {
+    _meihuaResult = result;
+    notifyListeners();
+  }
+
+  /// 清除全部
+  void clearAll() {
+    _liuyaoResult = null;
+    _meihuaResult = null;
+    notifyListeners();
+  }
+
+  /// 仅清除六爻
+  void clearLiuyao() {
+    _liuyaoResult = null;
+    notifyListeners();
+  }
+
+  /// 仅清除梅花
+  void clearMeihua() {
+    _meihuaResult = null;
     notifyListeners();
   }
 }

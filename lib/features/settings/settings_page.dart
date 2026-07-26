@@ -23,6 +23,16 @@ class _SettingsPageState extends State<SettingsPage> {
   late bool _wanZiShi;
   late bool _chenMuTuYao;
   late DisplaySettings _display;
+  bool _autoLog = true;
+
+  final _logs = <String>[];
+
+  void _addLog(String msg) {
+    if (!_autoLog) return;
+    final ts = DateTime.now().toString().substring(11, 19);
+    _logs.insert(0, '[$ts] $msg');
+    if (_logs.length > 200) _logs.removeLast();
+  }
 
   @override
   void initState() {
@@ -33,6 +43,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _wanZiShi = false;
     _chenMuTuYao = false;
     _display = DisplaySettings();
+    _addLog('设置页面已加载');
   }
 
   @override
@@ -70,6 +81,11 @@ class _SettingsPageState extends State<SettingsPage> {
             _buildSectionHeader(theme, '👁️ 显示要素'),
             const SizedBox(height: 8),
             _buildDisplaySettings(theme),
+            const SizedBox(height: 16),
+
+            _buildSectionHeader(theme, '🔧 调试与日志'),
+            const SizedBox(height: 8),
+            _buildDebugSettings(theme),
             const SizedBox(height: 16),
 
             _buildSectionHeader(theme, '📖 信息'),
@@ -397,6 +413,109 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
+  }
+
+  // ──────────────── 调试与日志 ────────────────
+
+  Widget _buildDebugSettings(ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF2C2C2C) : Colors.white;
+    return _buildCard(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSwitchRow('自动记录日志', '页面加载、排盘操作等事件自动写入日志', _autoLog, (v) {
+            setState(() {
+              _autoLog = v;
+              if (v) _addLog('日志记录已启用');
+            });
+          }),
+          const Divider(height: 16),
+          _buildSwitchRow('渲染检测', '页面顶部显示渲染状态标记，辅助排查显示问题', context.watch<ThemeProvider>().renderDebug, (v) {
+            context.read<ThemeProvider>().setRenderDebug(v);
+            _addLog(v ? '渲染检测已开启' : '渲染检测已关闭');
+          }),
+          const Divider(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _showLogDialog(context),
+              icon: const Icon(Icons.list_alt, size: 18),
+              label: const Text('查看运行日志'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: theme.colorScheme.primary,
+                side: BorderSide(color: theme.colorScheme.primary.withAlpha(80)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLogDialog(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB);
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: bg,
+        insetPadding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Row(children: [
+                Icon(Icons.list_alt, size: 20, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                const Text('运行日志', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  tooltip: '清空日志',
+                  onPressed: () {
+                    setState(() { _logs.clear(); });
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ]),
+            ),
+            const Divider(height: 1),
+            if (_logs.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(child: Text('暂无日志', style: TextStyle(color: Colors.grey))),
+              )
+            else
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _logs.length,
+                  padding: const EdgeInsets.all(12),
+                  itemBuilder: (_, i) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(_logs[i],
+                        style: TextStyle(fontSize: 11, color: isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728))),
+                  ),
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('关闭'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    _addLog('查看日志');
   }
 
   // ──────────────── 关于 ────────────────
