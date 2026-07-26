@@ -1,6 +1,8 @@
 // 六爻卦象渲染组件 — 国风紧凑版
 // 配色参考 hexagram.qiankunyi.com.cn
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../settings/settings_provider.dart';
 import '../models/yao_model.dart';
 import '../models/gua_model.dart';
 
@@ -105,6 +107,7 @@ class GuaWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final ds = context.watch<SettingsProvider>().display;
 
     return Container(
       decoration: BoxDecoration(
@@ -120,10 +123,10 @@ class GuaWidget extends StatelessWidget {
         children: [
           _buildHeader(theme),
           const Divider(height: 1, thickness: 1),
-          ...List.generate(6, (i) => _buildYaoRow(context, i, theme)),
+          ...List.generate(6, (i) => _buildYaoRow(context, i, theme, ds)),
           if (showFooter) ...[
             const Divider(height: 1, thickness: 1),
-            _buildFooter(theme),
+            _buildFooter(theme, ds),
           ],
         ],
       ),
@@ -179,7 +182,7 @@ class GuaWidget extends StatelessWidget {
   }
 
   /// 单行爻渲染（上→五→四→三→二→初）
-  Widget _buildYaoRow(BuildContext context, int displayIndex, ThemeData theme) {
+  Widget _buildYaoRow(BuildContext context, int displayIndex, ThemeData theme, DisplaySettings ds) {
     final yaoIdx = 5 - displayIndex;
     final yao = gua.yaos[yaoIdx];
     final isDark = theme.brightness == Brightness.dark;
@@ -194,19 +197,20 @@ class GuaWidget extends StatelessWidget {
       child: Row(
         children: [
           // 六神（窄竖条）
-          _buildLiuShenTag(yao, theme),
-          const SizedBox(width: 4),
+          if (ds.showLiuShen) _buildLiuShenTag(yao, theme),
+          if (ds.showLiuShen) const SizedBox(width: 4),
           // 世应标记
-          SizedBox(width: 18, child: _buildShiYingMark(yao, theme)),
+          if (ds.showShiYing) SizedBox(width: 18, child: _buildShiYingMark(yao, theme)),
           // 爻画
           SizedBox(width: 40, child: _buildYaoLine(yao, theme)),
           const SizedBox(width: 6),
-          // 天干地支
-          Text(
+          // 天干
+          if (ds.showTianGan) Text(
             _tianGanCN[yao.tianGan] ?? '',
             style: TextStyle(fontSize: 13, color: textColor.withAlpha(220)),
           ),
-          const SizedBox(width: 2),
+          if (ds.showTianGan) const SizedBox(width: 2),
+          // 地支
           Text(
             _diZhiCN[yao.diZhi] ?? '',
             style: TextStyle(fontSize: 13, color: textColor),
@@ -220,13 +224,13 @@ class GuaWidget extends StatelessWidget {
           if (yao.liuQin != LiuQin.none)
             _liuQinBadge(yao, theme),
           // 旺衰
-          if (yao.wangShuai != null) ...[
+          if (ds.showWangShuai && yao.wangShuai != null) ...[
             const SizedBox(width: 4),
             _wangShuaiBadge(yao.wangShuai!, theme),
           ],
           const Spacer(),
           // 刑冲合害标记
-          _buildSpecialMarks(yao, theme),
+          if (ds.showXingChong) _buildSpecialMarks(yao, theme),
           // 动爻标记
           if (yao.isMoving)
             Padding(
@@ -407,7 +411,7 @@ class GuaWidget extends StatelessWidget {
   }
 
   /// 底部信息
-  Widget _buildFooter(ThemeData theme) {
+  Widget _buildFooter(ThemeData theme, DisplaySettings ds) {
     final isDark = theme.brightness == Brightness.dark;
     final textColor = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
     final shiStr = _shiYingStr(gua);

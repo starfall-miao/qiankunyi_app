@@ -7,6 +7,7 @@ import 'core/theme/theme_provider.dart';
 import 'core/utils/logger.dart';
 import 'features/paipan/providers/paipan_provider.dart';
 import 'features/cases/providers/case_provider.dart';
+import 'features/settings/settings_provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -71,6 +72,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => PaipanProvider()),
         ChangeNotifierProvider(create: (_) => CaseProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()..init()),
       ],
       child: const QianKunYiApp(),
     ),

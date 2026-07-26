@@ -151,12 +151,12 @@ jobs:
           channel: 'stable'
           cache: true
       - run: flutter pub get
-      - name: 🏗️ 构建 iOS 版（不签名，仅模拟器）
-        run: flutter build ios --debug --no-codesign --build-number=${{ env.BUILD_NUMBER }}
+      - name: 🏗️ 构建 iOS 版（模拟器）
+        run: flutter build ios --debug --no-codesign --simulator --build-number=${{ env.BUILD_NUMBER }}
       - uses: actions/upload-artifact@v4
         with:
           name: ios-debug
-          path: build/ios/iphonesimulator/
+          path: build/ios/Debug-iphonesimulator/
           if-no-files-found: warn
 
   ###########################################################################

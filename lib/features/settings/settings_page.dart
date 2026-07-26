@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/logger.dart';
-import 'settings_model.dart';
+import 'settings_provider.dart';
 import 'views/about_page.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -18,23 +18,11 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  late FontTheme _fontTheme;
-  late double _fontSize;
-  late RiPoAnDongRule _riPoRule;
-  late bool _wanZiShi;
-  late bool _chenMuTuYao;
-  late DisplaySettings _display;
   final _log = Logger.instance;
 
   @override
   void initState() {
     super.initState();
-    _fontTheme = FontTheme.classic;
-    _fontSize = 16;
-    _riPoRule = RiPoAnDongRule.youQing;
-    _wanZiShi = false;
-    _chenMuTuYao = false;
-    _display = DisplaySettings();
     _log.info('设置页面已加载');
   }
 
@@ -98,146 +86,158 @@ class _SettingsPageState extends State<SettingsPage> {
       child: Text(title,
           style: theme.textTheme.titleSmall?.copyWith(
             color: theme.colorScheme.primary,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
           )),
     );
   }
 
-  Widget _buildCard(Widget child, {EdgeInsetsGeometry? padding}) {
+  Widget _buildCard(Widget child) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: EdgeInsets.zero,
       child: Padding(
-        padding: padding ?? const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: child,
       ),
     );
   }
 
-  // ──────────────── 主题模式 ────────────────
-
-  Widget _buildThemeModeCard(ThemeData theme, bool isDark) {
-    final provider = context.watch<ThemeProvider>();
-    final mode = provider.themeMode;
-
-    return _buildCard(
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('显示模式', style: TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 12),
-          Row(
+  Widget _buildSettingRow({
+    required IconData icon,
+    required String title,
+    String subtitle = '',
+    Widget? trailing,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: const Color(0xFF8D6E63)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _modeChip(Icons.light_mode, '浅色', ThemeMode.light, mode, provider),
-              const SizedBox(width: 8),
-              _modeChip(Icons.dark_mode, '深色', ThemeMode.dark, mode, provider),
-              const SizedBox(width: 8),
-              _modeChip(Icons.settings_brightness, '跟随系统', ThemeMode.system, mode, provider),
+              Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+              if (subtitle.isNotEmpty)
+                Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
             ],
           ),
+        ),
+        if (trailing != null) trailing,
+      ],
+    );
+  }
+
+  Widget _buildSwitchRow(String title, String subtitle, bool value, ValueChanged<bool> onChanged) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+              if (subtitle.isNotEmpty)
+                Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            ],
+          ),
+        ),
+        Switch(value: value, onChanged: onChanged),
+      ],
+    );
+  }
+
+  // ──────────────── 主题与配色 ────────────────
+
+  Widget _buildThemeModeCard(ThemeData theme, bool isDark) {
+    final tp = context.watch<ThemeProvider>();
+    final mode = tp.themeMode;
+
+    return _buildCard(
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _modeChip(Icons.light_mode, '浅色', ThemeMode.light, mode, tp),
+          _modeChip(Icons.dark_mode, '深色', ThemeMode.dark, mode, tp),
+          _modeChip(Icons.auto_mode, '跟随系统', ThemeMode.system, mode, tp),
         ],
       ),
     );
   }
 
   Widget _modeChip(IconData icon, String label, ThemeMode target, ThemeMode current, ThemeProvider provider) {
-    final selected = current == target;
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final chipTextColor = isDark
-        ? const Color(0xFFE0D5C8)
-        : const Color(0xFF4A3728);
-    final chipIconColor = selected
-        ? theme.colorScheme.primary
-        : chipTextColor.withAlpha(180);
-    final chipBg = selected
-        ? theme.colorScheme.primary.withAlpha(20)
-        : (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2));
-    return Expanded(
-      child: InkWell(
-        onTap: () {
-          provider.setThemeMode(target);
-          Logger.instance.info('主题模式: $label');
-        },
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: chipBg,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: selected ? theme.colorScheme.primary : chipTextColor.withAlpha(60),
-              width: selected ? 1.5 : 1,
-            ),
+    final isSelected = current == target;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2);
+
+    return GestureDetector(
+      onTap: () {
+        provider.setThemeMode(target);
+        Logger.instance.info('主题模式: $label');
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Theme.of(context).colorScheme.primary : bg,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary
+                : (isDark ? const Color(0xFF555555) : const Color(0xFFD0C8B8)),
+            width: isSelected ? 2 : 1,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 22, color: chipIconColor),
-              const SizedBox(height: 4),
-              Text(label, style: TextStyle(fontSize: 12, color: chipTextColor)),
-            ],
-          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon,
+                size: 18,
+                color: isSelected
+                    ? Colors.white
+                    : (isDark ? const Color(0xFFE0D5C8).withAlpha(180) : const Color(0xFF4A3728).withAlpha(180))),
+            const SizedBox(width: 6),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 12,
+                    color: isSelected
+                        ? Colors.white
+                        : (isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728)))),
+          ],
         ),
       ),
     );
   }
 
-  // ──────────────── 配色方案 ────────────────
-
   Widget _buildColorSchemeSelector(ThemeData theme, bool isDark) {
-    final provider = context.watch<ThemeProvider>();
-    final current = provider.colorSchemeType;
+    final tp = context.read<ThemeProvider>();
+    final current = tp.colorSchemeType;
 
     return _buildCard(
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('配色主题', style: TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 12),
+          const Text('配色方案', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+          const SizedBox(height: 8),
           Wrap(
-            spacing: 10,
-            runSpacing: 10,
+            spacing: 8,
+            runSpacing: 8,
             children: ColorSchemeType.values.map((type) {
-              final selected = current == type;
+              final selected = type == current;
+              final p = type.primaryColor;
               return GestureDetector(
-                onTap: () => provider.setColorScheme(type),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 56,
-                  height: 56,
+                onTap: () {
+                  tp.setColorScheme(type);
+                  Logger.instance.info('配色方案: ${type.name}');
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: type.primary.withAlpha(30),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: selected ? type.primary : Colors.grey.shade300,
-                      width: selected ? 2.5 : 1,
-                    ),
+                    color: selected ? p : (isDark ? const Color(0xFF2C2C2C) : Colors.white),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: selected ? p : (isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8))),
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 20,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          color: type.primary,
-                          borderRadius: BorderRadius.circular(6),
-                          boxShadow: selected
-                              ? [BoxShadow(color: type.primary.withAlpha(100), blurRadius: 8)]
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(type.label,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                            color: selected ? type.primary : null,
-                          )),
-                    ],
-                  ),
+                  child: Text(type.name,
+                      style: TextStyle(
+                          fontSize: 13,
+                          color: selected ? Colors.white : (isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728)))),
                 ),
               );
             }).toList(),
@@ -247,95 +247,50 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // ──────────────── 亚克力效果 ────────────────
-
   Widget _buildAcrylicToggle(ThemeData theme) {
-    final provider = context.watch<ThemeProvider>();
+    final tp = context.watch<ThemeProvider>();
 
     return _buildCard(
-      Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withAlpha(25),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.blur_on, color: theme.colorScheme.primary, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('亚克力效果', style: TextStyle(fontWeight: FontWeight.w600)),
-                    const Text('毛玻璃背景模糊效果', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                  ],
-                ),
-              ),
-              Switch(
-                value: provider.acrylicEffect,
-                onChanged: (_) => provider.toggleAcrylic(),
-                activeThumbColor: theme.colorScheme.primary,
-              ),
-            ],
-          ),
-          if (provider.acrylicEffect) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const SizedBox(width: 50),
-                const Text('透明', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                Expanded(
-                  child: Slider(
-                    value: provider.acrylicOpacity,
-                    min: 0.1,
-                    max: 1.0,
-                    divisions: 9,
-                    label: '${(provider.acrylicOpacity * 100).round()}%',
-                    onChanged: (v) => provider.setAcrylicOpacity(v),
-                  ),
-                ),
-                const Text('不透明', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                const SizedBox(width: 4),
-                Text('${(provider.acrylicOpacity * 100).round()}%',
-                    style: TextStyle(fontSize: 12, color: theme.colorScheme.primary, fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ],
-        ],
+      _buildSettingRow(
+        icon: Icons.blur_on,
+        title: '亚克力效果',
+        subtitle: '毛玻璃视觉效果（实验性）',
+        trailing: Switch(
+          value: tp.useAcrylic,
+          onChanged: (v) => tp.setAcrylic(v),
+        ),
       ),
     );
   }
 
-  // ──────────────── 字体设置 ────────────────
+  // ──────────────── 字体与显示 ────────────────
 
   Widget _buildFontSettings(ThemeData theme) {
+    final sp = context.watch<SettingsProvider>();
+
     return _buildCard(
       Column(
         children: [
           _buildSettingRow(
             icon: Icons.text_fields,
             title: '字体',
-            subtitle: '鸿蒙字体（HarmonyOS Sans）',
-            trailing: Text(FontTheme.values[_fontTheme.index].label),
+            subtitle: '鸿蒙字体（HarmonyOS Sans SC）',
+            trailing: const Icon(Icons.check_circle, size: 18, color: Colors.green),
           ),
           const Divider(height: 16),
           _buildSettingRow(
             icon: Icons.format_size,
             title: '字体大小',
-            subtitle: '${_fontSize.toInt()}px',
+            subtitle: '${sp.fontSize.toInt()}px',
             trailing: SizedBox(
               width: 140,
               child: Slider(
-                value: _fontSize,
+                value: sp.fontSize,
                 min: 12,
                 max: 24,
                 divisions: 12,
-                label: '${_fontSize.toInt()}px',
-                onChanged: (v) => setState(() => _fontSize = v),
+                label: '${sp.fontSize.toInt()}px',
+                onChanged: (v) => sp.fontSize = v,
               ),
             ),
           ),
@@ -347,6 +302,8 @@ class _SettingsPageState extends State<SettingsPage> {
   // ──────────────── 排盘规则 ────────────────
 
   Widget _buildRuleSettings(ThemeData theme) {
+    final sp = context.watch<SettingsProvider>();
+
     return _buildCard(
       Column(
         children: [
@@ -354,23 +311,23 @@ class _SettingsPageState extends State<SettingsPage> {
             icon: Icons.rule,
             title: '日破暗动规则',
             trailing: DropdownButton<RiPoAnDongRule>(
-              value: _riPoRule,
+              value: sp.riPoRule,
               underline: const SizedBox(),
               items: RiPoAnDongRule.values.map((r) {
                 return DropdownMenuItem(value: r, child: Text(r.label));
               }).toList(),
               onChanged: (v) {
-                if (v != null) setState(() => _riPoRule = v);
+                if (v != null) sp.riPoRule = v;
               },
             ),
           ),
           const Divider(height: 16),
-          _buildSwitchRow('晚子时', '23:00-00:59 时柱判定', _wanZiShi, (v) {
-            setState(() => _wanZiShi = v);
+          _buildSwitchRow('晚子时', '23:00-00:59 时柱判定', sp.wanZiShi, (v) {
+            sp.wanZiShi = v;
           }),
           const Divider(height: 16),
-          _buildSwitchRow('辰沐土爻', '辰/戌/丑/未月土爻旺相', _chenMuTuYao, (v) {
-            setState(() => _chenMuTuYao = v);
+          _buildSwitchRow('辰沐土爻', '辰/戌/丑/未月土爻旺相', sp.chenMuTuYao, (v) {
+            sp.chenMuTuYao = v;
           }),
         ],
       ),
@@ -380,35 +337,37 @@ class _SettingsPageState extends State<SettingsPage> {
   // ──────────────── 显示要素 ────────────────
 
   Widget _buildDisplaySettings(ThemeData theme) {
+    final sp = context.watch<SettingsProvider>();
+
     return _buildCard(
       Column(
         children: [
-          _buildSwitchRow('天干', '', _display.showTianGan, (v) {
-            setState(() => _display.showTianGan = v);
+          _buildSwitchRow('天干', '', sp.display.showTianGan, (v) {
+            sp.toggleDisplay('showTianGan');
           }),
           const Divider(height: 4),
-          _buildSwitchRow('纳音', '', _display.showNaYin, (v) {
-            setState(() => _display.showNaYin = v);
+          _buildSwitchRow('纳音', '', sp.display.showNaYin, (v) {
+            sp.toggleDisplay('showNaYin');
           }),
           const Divider(height: 4),
-          _buildSwitchRow('神煞', '', _display.showShenSha, (v) {
-            setState(() => _display.showShenSha = v);
+          _buildSwitchRow('神煞', '', sp.display.showShenSha, (v) {
+            sp.toggleDisplay('showShenSha');
           }),
           const Divider(height: 4),
-          _buildSwitchRow('六神', '青龙/朱雀/勾陈/螣蛇/白虎/玄武', _display.showLiuShen, (v) {
-            setState(() => _display.showLiuShen = v);
+          _buildSwitchRow('六神', '青龙/朱雀/勾陈/螣蛇/白虎/玄武', sp.display.showLiuShen, (v) {
+            sp.toggleDisplay('showLiuShen');
           }),
           const Divider(height: 4),
-          _buildSwitchRow('旺衰', '旺/相/休/囚/死', _display.showWangShuai, (v) {
-            setState(() => _display.showWangShuai = v);
+          _buildSwitchRow('旺衰', '旺/相/休/囚/死', sp.display.showWangShuai, (v) {
+            sp.toggleDisplay('showWangShuai');
           }),
           const Divider(height: 4),
-          _buildSwitchRow('世应', '', _display.showShiYing, (v) {
-            setState(() => _display.showShiYing = v);
+          _buildSwitchRow('世应', '', sp.display.showShiYing, (v) {
+            sp.toggleDisplay('showShiYing');
           }),
           const Divider(height: 4),
-          _buildSwitchRow('刑冲合害', '', _display.showXingChong, (v) {
-            setState(() => _display.showXingChong = v);
+          _buildSwitchRow('刑冲合害', '', sp.display.showXingChong, (v) {
+            sp.toggleDisplay('showXingChong');
           }),
         ],
       ),
@@ -418,29 +377,26 @@ class _SettingsPageState extends State<SettingsPage> {
   // ──────────────── 调试与日志 ────────────────
 
   Widget _buildDebugSettings(ThemeData theme) {
+    final log = Logger.instance;
+
     return _buildCard(
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSwitchRow('自动记录日志', '页面加载、排盘操作、异常等事件自动写入日志', _log.enabled, (v) {
-            _log.setEnabled(v);
+          _buildSwitchRow('自动记录日志', '页面加载、排盘操作、异常等事件自动写入日志', log.enabled, (v) {
+            setState(() => log.setEnabled(v));
           }),
           const Divider(height: 16),
-          _buildSwitchRow('渲染检测', '页面顶部显示渲染状态标记，辅助排查显示问题', context.watch<ThemeProvider>().renderDebug, (v) {
+          _buildSwitchRow('渲染检测', '排盘页顶部显示渲染状态条', context.read<ThemeProvider>().renderDebug, (v) {
             context.read<ThemeProvider>().setRenderDebug(v);
-            _log.info(v ? '渲染检测已开启' : '渲染检测已关闭');
           }),
           const Divider(height: 16),
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton.icon(
+            child: TextButton.icon(
               onPressed: () => _showLogDialog(context),
-              icon: const Icon(Icons.list_alt, size: 18),
+              icon: const Icon(Icons.terminal),
               label: const Text('查看运行日志'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: theme.colorScheme.primary,
-                side: BorderSide(color: theme.colorScheme.primary.withAlpha(80)),
-              ),
             ),
           ),
         ],
@@ -448,111 +404,67 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  // ──────────────── 日志查看弹窗 ────────────────
+
   void _showLogDialog(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB);
-    final entries = _log.logs;
+    final log = Logger.instance;
     showDialog(
       context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: bg,
-        insetPadding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Row(children: [
-                Icon(Icons.list_alt, size: 20, color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
-                const Text('运行日志', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                const Spacer(),
-                Text('${entries.length}条', style: TextStyle(fontSize: 12, color: theme.colorScheme.primary)),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 20),
-                  tooltip: '清空日志',
-                  onPressed: () {
-                    _log.clear();
-                    Navigator.pop(ctx);
-                  },
-                ),
-              ]),
-            ),
-            const Divider(height: 1),
-            if (entries.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(child: Text('暂无日志', style: TextStyle(color: Colors.grey))),
-              )
-            else
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: entries.length,
-                  padding: const EdgeInsets.all(12),
-                  itemBuilder: (_, i) {
-                    final e = entries[i];
-                    Color levelColor;
-                    switch (e.level) {
-                      case LogLevel.error:
-                        levelColor = const Color(0xFFD32F2F);
-                      case LogLevel.warn:
-                        levelColor = const Color(0xFFEF6C00);
-                      case LogLevel.info:
-                        levelColor = theme.colorScheme.primary;
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: levelColor.withAlpha(25),
-                                borderRadius: BorderRadius.circular(3),
-                              ),
-                              child: Text(e.levelTag,
-                                  style: TextStyle(fontSize: 9, color: levelColor, fontWeight: FontWeight.bold)),
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(e.formatted.substring(e.formatted.indexOf(']', 9) + 2),
-                                  style: TextStyle(fontSize: 11,
-                                      color: isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728))),
-                            ),
-                          ]),
-                          if (e.detail != null && e.detail!.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 50, top: 2),
-                              child: Text(e.detail!,
-                                  style: TextStyle(fontSize: 10, color: levelColor.withAlpha(180))),
-                            ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('关闭'),
-                ),
-              ),
+            const Text('运行日志'),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, size: 20),
+              onPressed: () {
+                log.clear();
+                Navigator.of(ctx).pop();
+              },
+              tooltip: '清空日志',
             ),
           ],
         ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: log.logs.length,
+            itemBuilder: (_, i) {
+              final e = log.logs[i];
+              final color = e.level == 'ERROR' ? Colors.red :
+                  e.level == 'WARN' ? Colors.orange : Colors.grey;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 1),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: color.withAlpha(30),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      child: Text(e.level, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '[${e.time.substring(11, 19)}] ${e.message}',
+                        style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('关闭')),
+        ],
       ),
     );
-    _log.info('查看日志');
   }
 
   // ──────────────── 关于 ────────────────
@@ -560,90 +472,17 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildAboutButton(ThemeData theme) {
     return _buildCard(
       InkWell(
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutPage())),
         borderRadius: BorderRadius.circular(12),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AboutPage())),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withAlpha(25),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.info_outline, color: theme.colorScheme.primary, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('关于 落·乾坤', style: TextStyle(fontWeight: FontWeight.w600)),
-                    const Text('版本 1.0.0 · 原作者及项目介绍',
-                        style: TextStyle(fontSize: 12, color: Colors.grey)),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right, color: Colors.grey.shade400),
-            ],
+          child: _buildSettingRow(
+            icon: Icons.info_outline,
+            title: '关于落·乾坤',
+            subtitle: '版本 1.0.0',
+            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
           ),
         ),
-      ),
-    );
-  }
-
-  // ──────────────── 通用组件 ────────────────
-
-  Widget _buildSettingRow({
-    required IconData icon,
-    required String title,
-    String? subtitle,
-    Widget? trailing,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-                if (subtitle != null)
-                  Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              ],
-            ),
-          ),
-          if (trailing != null) trailing,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSwitchRow(String title, String subtitle, bool value, ValueChanged<bool> onChanged) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-                if (subtitle.isNotEmpty)
-                  Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeThumbColor: Theme.of(context).colorScheme.primary,
-          ),
-        ],
       ),
     );
   }
