@@ -1,6 +1,7 @@
 // 排盘主页 — 全功能版
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/utils/logger.dart';
@@ -56,15 +57,15 @@ class _PaipanPageState extends State<PaipanPage> {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB),
       appBar: AppBar(
-        backgroundColor: isDark ? null : p,
-        foregroundColor: isDark ? null : const Color(0xFFF5F0EB),
+        backgroundColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFF4A3728),
+        foregroundColor: isDark ? const Color(0xFFE0D5C8) : const Color(0xFFF5F0EB),
         elevation: 0,
         title: Text('排盘 · ${_tabIndex == 0 ? "六爻" : "梅花"}',
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: Icon(tp.themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
-                color: isDark ? const Color(0xFFD4A574) : const Color(0xFFF5F0EB)),
+                color: const Color(0xFFD4A574)),
             onPressed: () => tp.toggleTheme(),
           ),
         ],
@@ -192,7 +193,14 @@ class _PaipanPageState extends State<PaipanPage> {
                 label: const Text('清空排盘'),
                 style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
+              TextButton.icon(
+                onPressed: () => _shareResult(pr.liuyaoResult!),
+                icon: const Icon(Icons.share_outlined, size: 16),
+                label: const Text('分享'),
+                style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+              ),
+              const SizedBox(width: 12),
               TextButton.icon(
                 onPressed: () => _saveCurrentResult(context, pr, pr.liuyaoResult!),
                 icon: const Icon(Icons.bookmark_add_outlined, size: 16),
@@ -410,7 +418,14 @@ class _PaipanPageState extends State<PaipanPage> {
                 label: const Text('清空排盘'),
                 style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
+              TextButton.icon(
+                onPressed: () => _shareResult(pr.meihuaResult!),
+                icon: const Icon(Icons.share_outlined, size: 16),
+                label: const Text('分享'),
+                style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+              ),
+              const SizedBox(width: 12),
               TextButton.icon(
                 onPressed: () => _saveCurrentResult(context, pr, pr.meihuaResult!),
                 icon: const Icon(Icons.bookmark_add_outlined, size: 16),
@@ -517,6 +532,73 @@ class _PaipanPageState extends State<PaipanPage> {
         ],
       ),
     );
+  }
+
+  void _shareResult(PaipanResult result) {
+    final guaCN = <GuaName, String>{
+      GuaName.qian: '乾为天', GuaName.kun: '坤为地', GuaName.zhun: '水雷屯',
+      GuaName.meng: '山水蒙', GuaName.xu: '水天需', GuaName.song: '天水讼',
+      GuaName.shi: '地水师', GuaName.bi: '水地比', GuaName.xiaoXu: '风天小畜',
+      GuaName.lv: '天泽履', GuaName.tai: '地天泰', GuaName.pi: '天地否',
+      GuaName.tongRen: '天火同人', GuaName.daYou: '火天大有', GuaName.qian2: '地山谦',
+      GuaName.yu: '雷地豫', GuaName.sui: '泽雷随', GuaName.gu: '山风蛊',
+      GuaName.lin: '地泽临', GuaName.guan: '风地观', GuaName.shiHe: '火雷噬嗑',
+      GuaName.bi2: '山火贲', GuaName.bo: '山地剥', GuaName.fu: '地雷复',
+      GuaName.wuWang: '天雷无妄', GuaName.daXu: '山天大畜', GuaName.yi: '山雷颐',
+      GuaName.daGuo: '泽风大过', GuaName.kan: '坎为水', GuaName.li: '离为火',
+      GuaName.xian: '泽山咸', GuaName.heng: '雷风恒', GuaName.dun: '天山遁',
+      GuaName.daZhuang: '雷天大壮', GuaName.jin: '火地晋', GuaName.mingYi: '地火明夷',
+      GuaName.jiaRen: '风火家人', GuaName.kui: '火泽睽', GuaName.jian: '水山蹇',
+      GuaName.jie: '雷水解', GuaName.sun: '山泽损', GuaName.yi2: '风雷益',
+      GuaName.guai: '泽天夬', GuaName.gou: '天风姤', GuaName.cui: '泽地萃',
+      GuaName.sheng: '地风升', GuaName.kun2: '泽水困', GuaName.jing: '水风井',
+      GuaName.ge: '泽火革', GuaName.ding: '火风鼎', GuaName.zhen: '震为雷',
+      GuaName.gen: '艮为山', GuaName.jian2: '风山渐', GuaName.guiMei: '雷泽归妹',
+      GuaName.feng: '雷火丰', GuaName.lv2: '火山旅', GuaName.xun: '巽为风',
+      GuaName.dui: '兑为泽', GuaName.huan: '风水涣', GuaName.jie2: '水泽节',
+      GuaName.zhongFu: '风泽中孚', GuaName.xiaoGuo: '雷山小过', GuaName.jiJi: '水火既济',
+      GuaName.weiJi: '火水未济',
+    };
+    final gongCN = <GuaGong, String>{
+      GuaGong.qian: '乾', GuaGong.dui: '兑', GuaGong.li: '离',
+      GuaGong.zhen: '震', GuaGong.xun: '巽', GuaGong.kan: '坎',
+      GuaGong.gen: '艮', GuaGong.kun: '坤',
+    };
+    final wxCN = <WuXing, String>{
+      WuXing.jin: '金', WuXing.mu: '木', WuXing.shui: '水', WuXing.huo: '火', WuXing.tu: '土',
+    };
+
+    final bn = guaCN[result.benGua.name] ?? result.benGua.name.name;
+    final bg = gongCN[result.benGua.gong] ?? '';
+    final bw = wxCN[result.benGua.wuXing] ?? '';
+    final timeStr = '${result.paipanTime.year}/${result.paipanTime.month}/${result.paipanTime.day} ${result.paipanTime.hour}:${result.paipanTime.minute.toString().padLeft(2, '0')}';
+    final yaosStr = result.benGua.yaos.map((y) =>
+      '${y.positionName}爻 ${y.yinYang == YaoYinYang.yang ? '———' : '— —'}${y.isMoving ? ' ⚡动' : ''}'
+    ).toList().reversed.join('\n');
+
+    final buf = StringBuffer()
+      ..writeln('【落·乾坤】排盘结果')
+      ..writeln('━━━━━━━━━━━━━━')
+      ..writeln('卦名：$bn')
+      ..writeln('宫位：${bg}宫 · 五行 $bw')
+      ..writeln('方式：${result.method}')
+      ..writeln('时间：$timeStr')
+      ..writeln('━━━━━━━━━━━━━━')
+      ..writeln(yaosStr);
+    if (result.bianGua != null) {
+      final bn2 = guaCN[result.bianGua!.name] ?? result.bianGua!.name.name;
+      buf.writeln('━━━━━━━━━━━━━━');
+      buf.writeln('▸ 变卦：$bn2');
+    }
+    if (result.huGua != null) {
+      final bn3 = guaCN[result.huGua!.name] ?? result.huGua!.name.name;
+      buf.writeln('▸ 互卦：$bn3');
+    }
+    buf.writeln('━━━━━━━━━━━━━━');
+    buf.writeln('—— 来自「落·乾坤」');
+
+    Share.share(buf.toString());
+    _log.info('分享排盘结果: $bn');
   }
 
   Widget _numField(String label, TextEditingController ctrl, String hint) {
