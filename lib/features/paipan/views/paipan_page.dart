@@ -1,7 +1,7 @@
 // 排盘主页 — 全功能版
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/utils/logger.dart';
@@ -14,6 +14,32 @@ import '../models/paipan_result.dart';
 import '../models/gua_model.dart';
 import '../models/yao_model.dart';
 import 'gua_widget.dart';
+
+// ============ 中文卦名映射 ============
+const _guaNameCN = <GuaName, String>{
+  GuaName.qian: '乾为天', GuaName.kun: '坤为地', GuaName.zhun: '水雷屯',
+  GuaName.meng: '山水蒙', GuaName.xu: '水天需', GuaName.song: '天水讼',
+  GuaName.shi: '地水师', GuaName.bi: '水地比', GuaName.xiaoXu: '风天小畜',
+  GuaName.lv: '天泽履', GuaName.tai: '地天泰', GuaName.pi: '天地否',
+  GuaName.tongRen: '天火同人', GuaName.daYou: '火天大有', GuaName.qian2: '地山谦',
+  GuaName.yu: '雷地豫', GuaName.sui: '泽雷随', GuaName.gu: '山风蛊',
+  GuaName.lin: '地泽临', GuaName.guan: '风地观', GuaName.shiHe: '火雷噬嗑',
+  GuaName.bi2: '山火贲', GuaName.bo: '山地剥', GuaName.fu: '地雷复',
+  GuaName.wuWang: '天雷无妄', GuaName.daXu: '山天大畜', GuaName.yi: '山雷颐',
+  GuaName.daGuo: '泽风大过', GuaName.kan: '坎为水', GuaName.li: '离为火',
+  GuaName.xian: '泽山咸', GuaName.heng: '雷风恒', GuaName.dun: '天山遁',
+  GuaName.daZhuang: '雷天大壮', GuaName.jin: '火地晋', GuaName.mingYi: '地火明夷',
+  GuaName.jiaRen: '风火家人', GuaName.kui: '火泽睽', GuaName.jian: '水山蹇',
+  GuaName.jie: '雷水解', GuaName.sun: '山泽损', GuaName.yi2: '风雷益',
+  GuaName.guai: '泽天夬', GuaName.gou: '天风姤', GuaName.cui: '泽地萃',
+  GuaName.sheng: '地风升', GuaName.kun2: '泽水困', GuaName.jing: '水风井',
+  GuaName.ge: '泽火革', GuaName.ding: '火风鼎', GuaName.zhen: '震为雷',
+  GuaName.gen: '艮为山', GuaName.jian2: '风山渐', GuaName.guiMei: '雷泽归妹',
+  GuaName.feng: '雷火丰', GuaName.lv2: '火山旅', GuaName.xun: '巽为风',
+  GuaName.dui: '兑为泽', GuaName.huan: '风水涣', GuaName.jie2: '水泽节',
+  GuaName.zhongFu: '风泽中孚', GuaName.xiaoGuo: '雷山小过', GuaName.jiJi: '水火既济',
+  GuaName.weiJi: '火水未济',
+};
 
 enum _YaoInput { shaoYin, shaoYang, laoYin, laoYang }
 
@@ -192,9 +218,9 @@ class _PaipanPageState extends State<PaipanPage> {
               ),
               const SizedBox(width: 12),
               TextButton.icon(
-                onPressed: () => _shareResult(pr.liuyaoResult!),
-                icon: const Icon(Icons.share_outlined, size: 16),
-                label: const Text('分享'),
+                onPressed: () => _shareResult(context, pr.liuyaoResult!),
+                icon: const Icon(Icons.copy_outlined, size: 16),
+                label: const Text('复制结果'),
                 style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
               ),
               const SizedBox(width: 12),
@@ -397,41 +423,9 @@ class _PaipanPageState extends State<PaipanPage> {
         ),
         const SizedBox(height: 12),
 
-        if (pr.meihuaResult != null) ...[
-          _guaCard('本卦', pr.meihuaResult!.benGua),
-          if (pr.meihuaResult!.bianGua != null)
-            _guaCard('变卦', pr.meihuaResult!.bianGua!),
-          if (pr.meihuaResult!.huGua != null)
-            _guaCard('互卦', pr.meihuaResult!.huGua!),
-          if (pr.meihuaResult!.benGua.yaos.length >= 6)
-            _buildTiYong(pr.meihuaResult!),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextButton.icon(
-                onPressed: () => pr.clearMeihua(),
-                icon: const Icon(Icons.refresh, size: 16),
-                label: const Text('清空排盘'),
-                style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
-              ),
-              const SizedBox(width: 12),
-              TextButton.icon(
-                onPressed: () => _shareResult(pr.meihuaResult!),
-                icon: const Icon(Icons.share_outlined, size: 16),
-                label: const Text('分享'),
-                style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
-              ),
-              const SizedBox(width: 12),
-              TextButton.icon(
-                onPressed: () => _saveCurrentResult(context, pr, pr.meihuaResult!),
-                icon: const Icon(Icons.bookmark_add_outlined, size: 16),
-                label: const Text('保存卦例'),
-                style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
-              ),
-            ],
-          ),
-        ] else
+        if (pr.meihuaResult != null)
+          _meihuaResultSection(context, pr, pr.meihuaResult!, p, t, b, c, dark)
+        else
           _emptyHint(p, t),
       ],
     );
@@ -531,31 +525,7 @@ class _PaipanPageState extends State<PaipanPage> {
     );
   }
 
-  void _shareResult(PaipanResult result) {
-    final guaCN = <GuaName, String>{
-      GuaName.qian: '乾为天', GuaName.kun: '坤为地', GuaName.zhun: '水雷屯',
-      GuaName.meng: '山水蒙', GuaName.xu: '水天需', GuaName.song: '天水讼',
-      GuaName.shi: '地水师', GuaName.bi: '水地比', GuaName.xiaoXu: '风天小畜',
-      GuaName.lv: '天泽履', GuaName.tai: '地天泰', GuaName.pi: '天地否',
-      GuaName.tongRen: '天火同人', GuaName.daYou: '火天大有', GuaName.qian2: '地山谦',
-      GuaName.yu: '雷地豫', GuaName.sui: '泽雷随', GuaName.gu: '山风蛊',
-      GuaName.lin: '地泽临', GuaName.guan: '风地观', GuaName.shiHe: '火雷噬嗑',
-      GuaName.bi2: '山火贲', GuaName.bo: '山地剥', GuaName.fu: '地雷复',
-      GuaName.wuWang: '天雷无妄', GuaName.daXu: '山天大畜', GuaName.yi: '山雷颐',
-      GuaName.daGuo: '泽风大过', GuaName.kan: '坎为水', GuaName.li: '离为火',
-      GuaName.xian: '泽山咸', GuaName.heng: '雷风恒', GuaName.dun: '天山遁',
-      GuaName.daZhuang: '雷天大壮', GuaName.jin: '火地晋', GuaName.mingYi: '地火明夷',
-      GuaName.jiaRen: '风火家人', GuaName.kui: '火泽睽', GuaName.jian: '水山蹇',
-      GuaName.jie: '雷水解', GuaName.sun: '山泽损', GuaName.yi2: '风雷益',
-      GuaName.guai: '泽天夬', GuaName.gou: '天风姤', GuaName.cui: '泽地萃',
-      GuaName.sheng: '地风升', GuaName.kun2: '泽水困', GuaName.jing: '水风井',
-      GuaName.ge: '泽火革', GuaName.ding: '火风鼎', GuaName.zhen: '震为雷',
-      GuaName.gen: '艮为山', GuaName.jian2: '风山渐', GuaName.guiMei: '雷泽归妹',
-      GuaName.feng: '雷火丰', GuaName.lv2: '火山旅', GuaName.xun: '巽为风',
-      GuaName.dui: '兑为泽', GuaName.huan: '风水涣', GuaName.jie2: '水泽节',
-      GuaName.zhongFu: '风泽中孚', GuaName.xiaoGuo: '雷山小过', GuaName.jiJi: '水火既济',
-      GuaName.weiJi: '火水未济',
-    };
+  void _shareResult(BuildContext ctx, PaipanResult result) {
     final gongCN = <GuaGong, String>{
       GuaGong.qian: '乾', GuaGong.dui: '兑', GuaGong.li: '离',
       GuaGong.zhen: '震', GuaGong.xun: '巽', GuaGong.kan: '坎',
@@ -565,7 +535,7 @@ class _PaipanPageState extends State<PaipanPage> {
       WuXing.jin: '金', WuXing.mu: '木', WuXing.shui: '水', WuXing.huo: '火', WuXing.tu: '土',
     };
 
-    final bn = guaCN[result.benGua.name] ?? result.benGua.name.name;
+    final bn = _guaNameCN[result.benGua.name] ?? result.benGua.name.name;
     final bg = gongCN[result.benGua.gong] ?? '';
     final bw = wxCN[result.benGua.wuXing] ?? '';
     final timeStr = '${result.paipanTime.year}/${result.paipanTime.month}/${result.paipanTime.day} ${result.paipanTime.hour}:${result.paipanTime.minute.toString().padLeft(2, '0')}';
@@ -583,19 +553,27 @@ class _PaipanPageState extends State<PaipanPage> {
       ..writeln('━━━━━━━━━━━━━━')
       ..writeln(yaosStr);
     if (result.bianGua != null) {
-      final bn2 = guaCN[result.bianGua!.name] ?? result.bianGua!.name.name;
+      final bn2 = _guaNameCN[result.bianGua!.name] ?? result.bianGua!.name.name;
       buf.writeln('━━━━━━━━━━━━━━');
       buf.writeln('▸ 变卦：$bn2');
     }
     if (result.huGua != null) {
-      final bn3 = guaCN[result.huGua!.name] ?? result.huGua!.name.name;
+      final bn3 = _guaNameCN[result.huGua!.name] ?? result.huGua!.name.name;
       buf.writeln('▸ 互卦：$bn3');
     }
     buf.writeln('━━━━━━━━━━━━━━');
     buf.writeln('—— 来自「落·乾坤」');
 
-    Share.share(buf.toString());
-    _log.info('分享排盘结果: $bn');
+    Clipboard.setData(ClipboardData(text: buf.toString()));
+    _log.info('排盘结果已复制到剪贴板: $bn');
+    if (ctx.mounted) {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        SnackBar(
+          content: const Text('排盘结果已复制到剪贴板'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Widget _numField(String label, TextEditingController ctrl, String hint) {
@@ -686,6 +664,248 @@ class _PaipanPageState extends State<PaipanPage> {
         const SizedBox(height: 12),
         Text('选择排盘方式后点「起卦」', style: TextStyle(fontSize: 14, color: t.withAlpha(180))),
       ]),
+    );
+  }
+
+  /// 梅花易数结果区域 — 三卦并排 + 体用生克
+  Widget _meihuaResultSection(BuildContext context, PaipanProvider pr,
+      PaipanResult result, Color p, Color t, Color b, Color c, bool dark) {
+    final gongCN = <GuaGong, String>{
+      GuaGong.qian: '乾', GuaGong.dui: '兑', GuaGong.li: '离',
+      GuaGong.zhen: '震', GuaGong.xun: '巽', GuaGong.kan: '坎',
+      GuaGong.gen: '艮', GuaGong.kun: '坤',
+    };
+    final wxCN = <WuXing, String>{
+      WuXing.jin: '金', WuXing.mu: '木', WuXing.shui: '水', WuXing.huo: '火', WuXing.tu: '土',
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ── 装饰标题 ──
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: p.withAlpha(60))),
+          ),
+          child: Row(
+            children: [
+              Text('🔮 ', style: TextStyle(fontSize: 18, color: p)),
+              Text('梅花易数 · 排盘结果',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: t)),
+            ],
+          ),
+        ),
+
+        // ── 三卦并排 ──
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _miniGuaCard('本卦', result.benGua, p, t, c, dark),
+            const SizedBox(width: 8),
+            if (result.bianGua != null) ...[
+              _miniGuaCard('变卦', result.bianGua!, p, t, c, dark),
+              const SizedBox(width: 8),
+            ],
+            if (result.huGua != null)
+              _miniGuaCard('互卦', result.huGua!, p, t, c, dark),
+          ].map((w) => Expanded(child: w)).toList(),
+        ),
+
+        const SizedBox(height: 14),
+
+        // ── 体用生克 ──
+        if (result.benGua.yaos.length >= 6) ...[
+          _buildTiYongEnhanced(result, p, t, c, gongCN, wxCN),
+          const SizedBox(height: 12),
+        ],
+
+        // ── 操作按钮 ──
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextButton.icon(
+              onPressed: () => pr.clearMeihua(),
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('清空排盘'),
+              style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+            ),
+            const SizedBox(width: 12),
+            TextButton.icon(
+              onPressed: () => _shareResult(context, result),
+              icon: const Icon(Icons.copy_outlined, size: 16),
+              label: const Text('复制结果'),
+              style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+            ),
+            const SizedBox(width: 12),
+            TextButton.icon(
+              onPressed: () => _saveCurrentResult(context, pr, result),
+              icon: const Icon(Icons.bookmark_add_outlined, size: 16),
+              label: const Text('保存卦例'),
+              style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// 迷你卦卡 — 用于梅花三卦并排
+  Widget _miniGuaCard(String label, GuaModel gua, Color p, Color t, Color c, bool dark) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label,
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: p)),
+        const SizedBox(height: 4),
+        Container(
+          decoration: BoxDecoration(
+            color: c,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: p.withAlpha(60)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          child: GuaWidget(gua: gua, showFooter: false),
+        ),
+        const SizedBox(height: 4),
+        Text(_guaNameCN[gua.name] ?? gua.name.name,
+          style: TextStyle(fontSize: 11, color: t.withAlpha(200)),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  /// 增强版体用生克卡片
+  Widget _buildTiYongEnhanced(PaipanResult result, Color p, Color t, Color c,
+      Map<GuaGong, String> gongCN, Map<WuXing, String> wxCN) {
+    final desc = MeihuaEngine.getTiYong(result);
+    final wxNameCN = wxCN;
+
+    Color bgC;
+    Color borderC;
+    Color txtC;
+    IconData icon;
+    String relationLabel;
+
+    if (desc.contains('比和')) {
+      bgC = const Color(0xFFE8F5E9);
+      borderC = const Color(0xFF2E7D32);
+      txtC = const Color(0xFF2E7D32);
+      icon = Icons.check_circle_outline;
+      relationLabel = '体用比和 · 顺遂';
+    } else if (desc.contains('用生体') || desc.contains('进益')) {
+      bgC = const Color(0xFFE8F5E9);
+      borderC = const Color(0xFF2E7D32);
+      txtC = const Color(0xFF2E7D32);
+      icon = Icons.trending_up;
+      relationLabel = '用生体 · 进益之喜';
+    } else if (desc.contains('用克体') || desc.contains('凶险')) {
+      bgC = const Color(0xFFFFEBEE);
+      borderC = const Color(0xFFD32F2F);
+      txtC = const Color(0xFFD32F2F);
+      icon = Icons.warning_amber_outlined;
+      relationLabel = '用克体 · 凶险多阻';
+    } else if (desc.contains('体克用')) {
+      bgC = const Color(0xFFFFF3E0);
+      borderC = const Color(0xFFEF6C00);
+      txtC = const Color(0xFFEF6C00);
+      icon = Icons.auto_fix_high;
+      relationLabel = '体克用 · 费力可成';
+    } else if (desc.contains('体生用')) {
+      bgC = const Color(0xFFE3F2FD);
+      borderC = const Color(0xFF1565C0);
+      txtC = const Color(0xFF1565C0);
+      icon = Icons.call_made;
+      relationLabel = '体生用 · 有耗损';
+    } else {
+      bgC = const Color(0xFFF5F5F5);
+      borderC = const Color(0xFFE0E0E0);
+      txtC = const Color(0xFF4A3728);
+      icon = Icons.info_outline;
+      relationLabel = desc;
+    }
+
+    // 解析体用字符串
+    String tiPart = '';
+    String yongPart = '';
+    final tiMatch = RegExp(r'体卦：(.+?)[）)]').firstMatch(desc);
+    final yongMatch = RegExp(r'用卦：(.+?)[—]').firstMatch(desc);
+    if (tiMatch != null) tiPart = tiMatch.group(1) ?? '';
+    if (yongMatch != null) yongPart = yongMatch.group(1) ?? '';
+    // fallback
+    if (tiPart.isEmpty && desc.contains('体卦：')) {
+      tiPart = desc.split('体卦：')[1].split(' ')[0];
+    }
+    if (yongPart.isEmpty && desc.contains('用卦：')) {
+      yongPart = desc.split('用卦：')[1].split(' —')[0];
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: bgC,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderC.withAlpha(80), width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: txtC, size: 20),
+              const SizedBox(width: 8),
+              Text('体用生克',
+                style: TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.bold, color: txtC)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // 体卦 / 用卦 标签
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: txtC.withAlpha(20),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(tiPart,
+                    style: TextStyle(fontSize: 12, color: txtC, fontWeight: FontWeight.w500),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Icon(Icons.swap_horiz, color: txtC.withAlpha(120), size: 18),
+              ),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: txtC.withAlpha(20),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(yongPart,
+                    style: TextStyle(fontSize: 12, color: txtC, fontWeight: FontWeight.w500),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Center(
+            child: Text(relationLabel,
+              style: TextStyle(
+                fontSize: 15, fontWeight: FontWeight.bold, color: txtC)),
+          ),
+        ],
+      ),
     );
   }
 }
