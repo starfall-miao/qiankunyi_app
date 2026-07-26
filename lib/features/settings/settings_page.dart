@@ -221,7 +221,7 @@ class _SettingsPageState extends State<SettingsPage> {
             runSpacing: 8,
             children: ColorSchemeType.values.map((type) {
               final selected = type == current;
-              final p = type.primaryColor;
+              final p = type.primary;
               return GestureDetector(
                 onTap: () {
                   tp.setColorScheme(type);
@@ -256,8 +256,8 @@ class _SettingsPageState extends State<SettingsPage> {
         title: '亚克力效果',
         subtitle: '毛玻璃视觉效果（实验性）',
         trailing: Switch(
-          value: tp.useAcrylic,
-          onChanged: (v) => tp.setAcrylic(v),
+          value: tp.acrylicEffect,
+          onChanged: (v) => tp.setAcrylicEffect(v),
         ),
       ),
     );
@@ -432,8 +432,8 @@ class _SettingsPageState extends State<SettingsPage> {
             itemCount: log.logs.length,
             itemBuilder: (_, i) {
               final e = log.logs[i];
-              final color = e.level == 'ERROR' ? Colors.red :
-                  e.level == 'WARN' ? Colors.orange : Colors.grey;
+              final color = e.level == LogLevel.error ? Colors.red :
+                  e.level == LogLevel.warn ? Colors.orange : Colors.grey;
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 1),
                 child: Row(
@@ -445,12 +445,12 @@ class _SettingsPageState extends State<SettingsPage> {
                         color: color.withAlpha(30),
                         borderRadius: BorderRadius.circular(3),
                       ),
-                      child: Text(e.level, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold)),
+                      child: Text(e.levelTag, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold)),
                     ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        '[${e.time.substring(11, 19)}] ${e.message}',
+                        '[${e.time.hour.toString().padLeft(2,'0')}:${e.time.minute.toString().padLeft(2,'0')}:${e.time.second.toString().padLeft(2,'0')}] ${e.message}',
                         style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
                       ),
                     ),
