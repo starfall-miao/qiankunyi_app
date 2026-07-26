@@ -1,4 +1,4 @@
-/// 落·乾坤 - 设置持久化与状态管理
+// 落·乾坤 - 设置持久化与状态管理
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -85,10 +85,10 @@ class SettingsProvider extends ChangeNotifier {
     _chenMuTuYao = _prefs!.getBool('paipan_chenMuTuYao') ?? false;
     final ds = _prefs!.getString('paipan_display');
     if (ds != null) {
-      _display = DisplaySettings.fromMap(Map<String, dynamic>.from(
-          ds.split('&').map((e) {
+      _display = DisplaySettings.fromMap(
+          Map.fromEntries(ds.split('&').map((e) {
             final p = e.split('=');
-            return MapEntry(p[0], p[1] == 'true');
+            return MapEntry<String, dynamic>(p[0], p[1] == 'true');
           })));
     }
     _loaded = true;
