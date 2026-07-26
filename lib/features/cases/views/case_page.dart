@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../core/utils/logger.dart';
 import '../providers/case_provider.dart';
 import '../models/case_models.dart';
 import '../../paipan/models/paipan_result.dart';
@@ -62,11 +63,18 @@ class _CasePageState extends State<CasePage> {
               ),
             );
           }
-          return ListView.separated(
-            padding: const EdgeInsets.all(12),
-            itemCount: cases.length,
-            separatorBuilder: (_, __) => const Divider(height: 4),
-            itemBuilder: (ctx, i) => _buildCaseCard(ctx, cases[i], theme),
+          return Column(
+            children: [
+              _buildStatsCard(provider.allCases, theme),
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                  itemCount: cases.length,
+                  separatorBuilder: (_, __) => const Divider(height: 4),
+                  itemBuilder: (ctx, i) => _buildCaseCard(ctx, cases[i], theme),
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -225,6 +233,13 @@ class _CasePageState extends State<CasePage> {
                   },
                 ),
                 IconButton(
+                  icon: const Icon(Icons.edit_outlined, size: 20),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _showEditDialog(context, c);
+                  },
+                ),
+                IconButton(
                   icon: const Icon(Icons.close, size: 20),
                   onPressed: () => Navigator.pop(ctx),
                 ),
@@ -250,6 +265,9 @@ class _CasePageState extends State<CasePage> {
                   child: Text(c.notes!,
                       style: TextStyle(fontSize: 13, color: t)),
                 ),
+              ] else ...[
+                const SizedBox(height: 8),
+                Text('暂无备注', style: TextStyle(fontSize: 12, color: t.withAlpha(100))),
               ],
               const SizedBox(height: 16),
               // 排盘结果
@@ -354,5 +372,177 @@ class _CasePageState extends State<CasePage> {
     if (ke[a] == b) return '体${_wxCN[a]}克用${_wxCN[b]}，虽胜有劳，事费力。';
     if (ke[b] == a) return '用${_wxCN[b]}克体${_wxCN[a]}，凶，事多阻逆。';
     return '体生用，泄气；用生体，吉。';
+  }
+
+  /// 编辑卦例对话框
+  void _showEditDialog(BuildContext context, CaseModel c) {
+    final titleCtl = TextEditingController(text: c.title);
+    final notesCtl = TextEditingController(text: c.notes ?? '');
+    final tagCtl = TextEditingController();
+    final provider = context.read<CaseProvider>();
+    final theme = Theme.of(context);
+    List<String> tags = List.from(c.tags);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(builder: (ctx, setSheetState) {
+          return Padding(
+            padding: EdgeInsets.fromLTRB(
+              20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Text('编辑卦例', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(ctx).colorScheme.primary)),
+                  const Spacer(),
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                ]),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: titleCtl,
+                  decoration: const InputDecoration(labelText: '标题', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesCtl,
+                  maxLines: 3,
+                  decoration: const InputDecoration(labelText: '备注', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: tagCtl,
+                        decoration: const InputDecoration(labelText: '添加标签', border: OutlineInputBorder()),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline),
+                      onPressed: () {
+                        final t = tagCtl.text.trim();
+                        if (t.isNotEmpty && !tags.contains(t)) {
+                          setSheetState(() => tags.add(t));
+                          tagCtl.clear();
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                if (tags.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6, runSpacing: 4,
+                    children: tags.map((t) => Chip(
+                      label: Text(t, style: const TextStyle(fontSize: 12)),
+                      deleteIcon: const Icon(Icons.close, size: 16),
+                      onDeleted: () => setSheetState(() => tags.remove(t)),
+                    )).toList(),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () {
+                      final updated = c.copyWith(
+                        title: titleCtl.text.trim().isEmpty ? c.title : titleCtl.text.trim(),
+                        notes: notesCtl.text.trim().isEmpty ? null : notesCtl.text.trim(),
+                        tags: tags,
+                      );
+                      provider.updateCase(updated);
+                      Logger.instance.info('卦例已更新', '${c.title} → ${updated.title}');
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('保存'),
+                  ),
+                ),
+              ],
+            ),
+          );
+        });
+      },
+    );
+  }
+
+  /// 构建统计摘要卡片
+  Widget _buildStatsCard(List<CaseModel> allCases, ThemeData theme) {
+    final total = allCases.length;
+    if (total == 0) return const SizedBox.shrink();
+
+    // 按方法分组统计
+    final methodCounts = <String, int>{};
+    final guaCounts = <String, int>{};
+    for (final c in allCases) {
+      methodCounts[c.method] = (methodCounts[c.method] ?? 0) + 1;
+      guaCounts[c.guaName] = (guaCounts[c.guaName] ?? 0) + 1;
+    }
+    // 最常出现的卦（top 3）
+    final topGua = guaCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final top3 = topGua.take(3).toList();
+
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Icon(Icons.analytics_outlined, size: 18, color: theme.colorScheme.primary),
+              const SizedBox(width: 6),
+              Text('统计概要', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: theme.colorScheme.primary)),
+            ]),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                _statItem(theme, '共 $total 例', Icons.bookmark, null),
+                const SizedBox(width: 16),
+                ...methodCounts.entries.map((e) => Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: _statItem(theme, '${e.value}例', null, e.key),
+                )),
+              ],
+            ),
+            if (top3.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text('常见卦：', style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 8,
+                children: top3.map((e) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.secondaryContainer.withAlpha(80),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text('${e.key} ×${e.value}', style: TextStyle(fontSize: 11, color: theme.colorScheme.onSecondaryContainer)),
+                )).toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statItem(ThemeData theme, String text, IconData? icon, String? label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (icon != null) Icon(icon, size: 14, color: theme.colorScheme.primary),
+        if (label != null) Text(label, style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
+        const SizedBox(width: 2),
+        Text(text, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface)),
+      ],
+    );
   }
 }
