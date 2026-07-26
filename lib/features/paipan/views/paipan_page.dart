@@ -580,7 +580,7 @@ class _PaipanPageState extends State<PaipanPage> {
       ..writeln('【落·乾坤】排盘结果')
       ..writeln('━━━━━━━━━━━━━━')
       ..writeln('卦名：$bn')
-      ..writeln('宫位：${bg}宫 · 五行 $bw')
+      ..writeln('宫位：$bg宫 · 五行 $bw')
       ..writeln('方式：$result.method')
       ..writeln('时间：$timeStr')
       ..writeln('━━━━━━━━━━━━━━')
