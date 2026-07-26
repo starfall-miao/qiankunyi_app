@@ -105,6 +105,7 @@ class _PaipanPageState extends State<PaipanPage> {
 
   Widget _tabBtn(String label, int idx, Color p, bool dark) {
     final sel = _tabIndex == idx;
+    final txtColor = dark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
     return Expanded(
       child: GestureDetector(
         onTap: () {
@@ -119,7 +120,7 @@ class _PaipanPageState extends State<PaipanPage> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: sel ? FontWeight.bold : FontWeight.normal,
-              color: sel ? p : t.withAlpha(160),
+              color: sel ? p : txtColor.withAlpha(160),
             ),
           ),
         ),

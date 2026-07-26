@@ -14,6 +14,7 @@ class ReferencePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return DefaultTabController(
       length: 7,
       child: Scaffold(
