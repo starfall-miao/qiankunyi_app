@@ -28,13 +28,6 @@ class QianKunYiApp extends StatelessWidget {
           darkTheme: AppTheme.darkTheme(tp.colorSchemeType,
               useAcrylic: tp.acrylicEffect, acrylicOpacity: tp.acrylicOpacity),
           themeMode: tp.themeMode,
-          builder: (ctx, child) {
-            final mq = MediaQuery.maybeOf(ctx);
-            return MediaQuery(
-              data: (mq ?? const MediaQueryData()).copyWith(textScaleFactor: scale),
-              child: child!,
-            );
-          },
           home: const MainShell(),
         );
       },
