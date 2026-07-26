@@ -55,4 +55,12 @@ class GuaModel {
     'shiYaoIndex': shiYaoIndex,
     'yingYaoIndex': yingYaoIndex,
   };
+
+  factory GuaModel.fromJson(Map<String, dynamic> j) => GuaModel(
+    name: GuaName.values.firstWhere((e) => e.name == j['name']),
+    gong: GuaGong.values.firstWhere((e) => e.name == j['gong']),
+    yaos: (j['yaos'] as List).map((y) => YaoModel.fromJson(y as Map<String, dynamic>)).toList(),
+    shiYaoIndex: j['shiYaoIndex'] as int,
+    yingYaoIndex: j['yingYaoIndex'] as int,
+  );
 }

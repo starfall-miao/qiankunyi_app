@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/utils/logger.dart';
 import '../providers/paipan_provider.dart';
+import '../../cases/providers/case_provider.dart';
+import '../../cases/models/case_models.dart';
 import '../engines/liuyao_engine.dart';
 import '../engines/meihua_engine.dart';
 import '../models/paipan_result.dart';
@@ -181,13 +183,23 @@ class _PaipanPageState extends State<PaipanPage> {
           if (pr.liuyaoResult!.huGua != null)
             _guaCard('互卦', pr.liuyaoResult!.huGua!),
           const SizedBox(height: 8),
-          Center(
-            child: TextButton.icon(
-              onPressed: () => pr.clearLiuyao(),
-              icon: const Icon(Icons.refresh, size: 16),
-              label: const Text('清空排盘'),
-              style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton.icon(
+                onPressed: () => pr.clearLiuyao(),
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('清空排盘'),
+                style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+              ),
+              const SizedBox(width: 16),
+              TextButton.icon(
+                onPressed: () => _saveCurrentResult(context, pr, pr.liuyaoResult!),
+                icon: const Icon(Icons.bookmark_add_outlined, size: 16),
+                label: const Text('保存卦例'),
+                style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+              ),
+            ],
           ),
         ] else
           _emptyHint(p, t),
@@ -388,13 +400,24 @@ class _PaipanPageState extends State<PaipanPage> {
             _guaCard('互卦', pr.meihuaResult!.huGua!),
           if (pr.meihuaResult!.benGua.yaos.length >= 6)
             _buildTiYong(pr.meihuaResult!),
-          Center(
-            child: TextButton.icon(
-              onPressed: () => pr.clearMeihua(),
-              icon: const Icon(Icons.refresh, size: 16),
-              label: const Text('清空排盘'),
-              style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
-            ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton.icon(
+                onPressed: () => pr.clearMeihua(),
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('清空排盘'),
+                style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+              ),
+              const SizedBox(width: 16),
+              TextButton.icon(
+                onPressed: () => _saveCurrentResult(context, pr, pr.meihuaResult!),
+                icon: const Icon(Icons.bookmark_add_outlined, size: 16),
+                label: const Text('保存卦例'),
+                style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+              ),
+            ],
           ),
         ] else
           _emptyHint(p, t),
@@ -421,6 +444,84 @@ class _PaipanPageState extends State<PaipanPage> {
       pr.setMeihuaResult(MeihuaEngine.fromDateTime(_selectedTime));
       _log.info('梅花起卦: 日期${_selectedTime.year}${_selectedTime.month}${_selectedTime.day}');
     }
+  }
+
+  void _saveCurrentResult(BuildContext context, PaipanProvider pr, PaipanResult result) {
+    final guaCN = <GuaName, String>{
+      GuaName.qian: '乾为天', GuaName.kun: '坤为地', GuaName.zhun: '水雷屯',
+      GuaName.meng: '山水蒙', GuaName.xu: '水天需', GuaName.song: '天水讼',
+      GuaName.shi: '地水师', GuaName.bi: '水地比', GuaName.xiaoXu: '风天小畜',
+      GuaName.lv: '天泽履', GuaName.tai: '地天泰', GuaName.pi: '天地否',
+      GuaName.tongRen: '天火同人', GuaName.daYou: '火天大有', GuaName.qian2: '地山谦',
+      GuaName.yu: '雷地豫', GuaName.sui: '泽雷随', GuaName.gu: '山风蛊',
+      GuaName.lin: '地泽临', GuaName.guan: '风地观', GuaName.shiHe: '火雷噬嗑',
+      GuaName.bi2: '山火贲', GuaName.bo: '山地剥', GuaName.fu: '地雷复',
+      GuaName.wuWang: '天雷无妄', GuaName.daXu: '山天大畜', GuaName.yi: '山雷颐',
+      GuaName.daGuo: '泽风大过', GuaName.kan: '坎为水', GuaName.li: '离为火',
+      GuaName.xian: '泽山咸', GuaName.heng: '雷风恒', GuaName.dun: '天山遁',
+      GuaName.daZhuang: '雷天大壮', GuaName.jin: '火地晋', GuaName.mingYi: '地火明夷',
+      GuaName.jiaRen: '风火家人', GuaName.kui: '火泽睽', GuaName.jian: '水山蹇',
+      GuaName.jie: '雷水解', GuaName.sun: '山泽损', GuaName.yi2: '风雷益',
+      GuaName.guai: '泽天夬', GuaName.gou: '天风姤', GuaName.cui: '泽地萃',
+      GuaName.sheng: '地风升', GuaName.kun2: '泽水困', GuaName.jing: '水风井',
+      GuaName.ge: '泽火革', GuaName.ding: '火风鼎', GuaName.zhen: '震为雷',
+      GuaName.gen: '艮为山', GuaName.jian2: '风山渐', GuaName.guiMei: '雷泽归妹',
+      GuaName.feng: '雷火丰', GuaName.lv2: '火山旅', GuaName.xun: '巽为风',
+      GuaName.dui: '兑为泽', GuaName.huan: '风水涣', GuaName.jie2: '水泽节',
+      GuaName.zhongFu: '风泽中孚', GuaName.xiaoGuo: '雷山小过', GuaName.jiJi: '水火既济',
+      GuaName.weiJi: '火水未济',
+    };
+    final guaNameCN = guaCN[result.benGua.name] ?? result.benGua.name.name;
+    final gongCN = <GuaGong, String>{
+      GuaGong.qian: '乾', GuaGong.dui: '兑', GuaGong.li: '离',
+      GuaGong.zhen: '震', GuaGong.xun: '巽', GuaGong.kan: '坎',
+      GuaGong.gen: '艮', GuaGong.kun: '坤',
+    };
+
+    // Dialog 让用户输入标题
+    final titleCtrl = TextEditingController(text: '$guaNameCN — ${result.method}');
+    final notesCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('保存卦例'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleCtrl,
+              decoration: const InputDecoration(labelText: '标题', hintText: '为卦例取个名字'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: notesCtrl,
+              decoration: const InputDecoration(labelText: '备注（可选）', hintText: '记录占问事项'),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(
+            onPressed: () {
+              if (titleCtrl.text.trim().isEmpty) return;
+              final cm = CaseModel.fromPaipanResult(
+                result: result,
+                title: titleCtrl.text.trim(),
+                notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
+              );
+              context.read<CaseProvider>().addCase(cm);
+              _log.info('保存卦例: ${cm.title}');
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('已保存卦例「${cm.title}」'), duration: const Duration(seconds: 2)),
+              );
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _numField(String label, TextEditingController ctrl, String hint) {

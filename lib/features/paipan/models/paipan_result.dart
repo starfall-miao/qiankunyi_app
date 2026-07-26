@@ -29,4 +29,14 @@ class PaipanResult {
     'shenSha': shenSha,
     'naYin': naYin,
   };
+
+  factory PaipanResult.fromJson(Map<String, dynamic> j) => PaipanResult(
+    benGua: GuaModel.fromJson(j['benGua'] as Map<String, dynamic>),
+    bianGua: j['bianGua'] != null ? GuaModel.fromJson(j['bianGua'] as Map<String, dynamic>) : null,
+    huGua: j['huGua'] != null ? GuaModel.fromJson(j['huGua'] as Map<String, dynamic>) : null,
+    paipanTime: DateTime.parse(j['paipanTime'] as String),
+    method: j['method'] as String,
+    shenSha: (j['shenSha'] as List?)?.cast<String>() ?? [],
+    naYin: j['naYin'] as String?,
+  );
 }

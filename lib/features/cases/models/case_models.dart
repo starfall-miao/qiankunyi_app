@@ -1,4 +1,6 @@
 import 'dart:convert';
+import '../../paipan/models/paipan_result.dart';
+import '../../paipan/models/gua_model.dart';
 
 /// 卦例数据模型
 class CaseModel {
@@ -78,4 +80,31 @@ class CaseModel {
     createdAt: DateTime.parse(map['createdAt'] as String),
     updatedAt: DateTime.parse(map['updatedAt'] as String),
   );
+
+  /// 从排盘结果创建卦例
+  factory CaseModel.fromPaipanResult({
+    required PaipanResult result,
+    required String title,
+    String? notes,
+    List<String>? tags,
+  }) {
+    final guaGongCN = <GuaGong, String>{
+      GuaGong.qian: '乾', GuaGong.dui: '兑', GuaGong.li: '离',
+      GuaGong.zhen: '震', GuaGong.xun: '巽', GuaGong.kan: '坎',
+      GuaGong.gen: '艮', GuaGong.kun: '坤',
+    };
+    final now = DateTime.now();
+    return CaseModel(
+      id: now.millisecondsSinceEpoch ~/ 1000,
+      title: title,
+      guaName: result.benGua.name.name, // raw enum name, frontend renders CN
+      guaGong: guaGongCN[result.benGua.gong] ?? '',
+      method: result.method,
+      paipanData: jsonEncode(result.toJson()),
+      notes: notes,
+      tags: tags ?? [],
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
 }

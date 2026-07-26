@@ -107,6 +107,24 @@ class YaoModel {
     'isHai': isHai,
     'sanHeJu': sanHeJu,
   };
+
+  factory YaoModel.fromJson(Map<String, dynamic> j) => YaoModel(
+    yinYang: YaoYinYang.values.firstWhere((e) => e.name == j['yinYang']),
+    position: YaoPosition.values.firstWhere((e) => e.name == j['position']),
+    isMoving: j['isMoving'] as bool? ?? false,
+    tianGan: j['tianGan'] != null ? TianGan.values.firstWhere((e) => e.name == j['tianGan']) : null,
+    diZhi: j['diZhi'] != null ? DiZhi.values.firstWhere((e) => e.name == j['diZhi']) : null,
+    liuQin: LiuQin.values.firstWhere((e) => e.name == (j['liuQin'] ?? 'none')),
+    liuShen: j['liuShen'] != null ? LiuShen.values.firstWhere((e) => e.name == j['liuShen']) : null,
+    wangShuai: j['wangShuai'] != null ? WangShuaiLevel.values.firstWhere((e) => e.name == j['wangShuai']) : null,
+    isShi: j['isShi'] as bool? ?? false,
+    isYing: j['isYing'] as bool? ?? false,
+    isXing: j['isXing'] as bool? ?? false,
+    isChong: j['isChong'] as bool? ?? false,
+    isHe: j['isHe'] as bool? ?? false,
+    isHai: j['isHai'] as bool? ?? false,
+    sanHeJu: (j['sanHeJu'] as List?)?.cast<String>() ?? [],
+  );
 }
 
 /// 六神中文名
