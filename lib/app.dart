@@ -23,12 +23,15 @@ class QianKunYiApp extends StatelessWidget {
         return MaterialApp(
           title: '落·乾坤',
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme(tp.colorSchemeType, useAcrylic: tp.acrylicEffect, acrylicOpacity: tp.acrylicOpacity),
-          darkTheme: AppTheme.darkTheme(tp.colorSchemeType, useAcrylic: tp.acrylicEffect, acrylicOpacity: tp.acrylicOpacity),
+          theme: AppTheme.lightTheme(tp.colorSchemeType,
+              useAcrylic: tp.acrylicEffect, acrylicOpacity: tp.acrylicOpacity),
+          darkTheme: AppTheme.darkTheme(tp.colorSchemeType,
+              useAcrylic: tp.acrylicEffect, acrylicOpacity: tp.acrylicOpacity),
           themeMode: tp.themeMode,
           builder: (ctx, child) {
+            final mq = MediaQuery.maybeOf(ctx);
             return MediaQuery(
-              data: MediaQuery.of(ctx).copyWith(textScaleFactor: scale),
+              data: (mq ?? const MediaQueryData()).copyWith(textScaleFactor: scale),
               child: child!,
             );
           },
