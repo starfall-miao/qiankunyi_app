@@ -472,11 +472,6 @@ class _PaipanPageState extends State<PaipanPage> {
       GuaName.weiJi: '火水未济',
     };
     final guaNameCN = guaCN[result.benGua.name] ?? result.benGua.name.name;
-    final gongCN = <GuaGong, String>{
-      GuaGong.qian: '乾', GuaGong.dui: '兑', GuaGong.li: '离',
-      GuaGong.zhen: '震', GuaGong.xun: '巽', GuaGong.kan: '坎',
-      GuaGong.gen: '艮', GuaGong.kun: '坤',
-    };
 
     // Dialog 让用户输入标题
     final titleCtrl = TextEditingController(text: '$guaNameCN — ${result.method}');
