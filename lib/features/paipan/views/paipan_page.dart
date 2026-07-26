@@ -606,56 +606,6 @@ class _PaipanPageState extends State<PaipanPage> {
     );
   }
 
-  Widget _buildTiYong(PaipanResult result) {
-    final tiYong = MeihuaEngine.getTiYong(result);
-    Color bgColor;
-    Color borderColor;
-    Color textColor;
-    IconData icon;
-
-    if (tiYong.contains('比和')) {
-      bgColor = const Color(0xFFE8F5E9);
-      borderColor = const Color(0xFF2E7D32);
-      textColor = const Color(0xFF2E7D32);
-      icon = Icons.check_circle_outline;
-    } else if (tiYong.contains('用生体') || tiYong.contains('进益')) {
-      bgColor = const Color(0xFFE8F5E9);
-      borderColor = const Color(0xFF2E7D32);
-      textColor = const Color(0xFF2E7D32);
-      icon = Icons.trending_up;
-    } else if (tiYong.contains('用克体') || tiYong.contains('凶险')) {
-      bgColor = const Color(0xFFFFEBEE);
-      borderColor = const Color(0xFFD32F2F);
-      textColor = const Color(0xFFD32F2F);
-      icon = Icons.warning_amber_outlined;
-    } else if (tiYong.contains('体克用')) {
-      bgColor = const Color(0xFFFFF3E0);
-      borderColor = const Color(0xFFEF6C00);
-      textColor = const Color(0xFFEF6C00);
-      icon = Icons.auto_fix_high;
-    } else {
-      bgColor = const Color(0xFFF5F5F5);
-      borderColor = const Color(0xFFE0E0E0);
-      textColor = const Color(0xFF4A3728);
-      icon = Icons.info_outline;
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: borderColor.withAlpha(80)),
-      ),
-      child: Row(children: [
-        Icon(icon, color: textColor, size: 22),
-        const SizedBox(width: 10),
-        Expanded(child: Text(tiYong, style: TextStyle(fontSize: 13, color: textColor))),
-      ]),
-    );
-  }
-
   Widget _emptyHint(Color p, Color t) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 60),
@@ -781,7 +731,6 @@ class _PaipanPageState extends State<PaipanPage> {
   Widget _buildTiYongEnhanced(PaipanResult result, Color p, Color t, Color c,
       Map<GuaGong, String> gongCN, Map<WuXing, String> wxCN) {
     final desc = MeihuaEngine.getTiYong(result);
-    final wxNameCN = wxCN;
 
     Color bgC;
     Color borderC;
