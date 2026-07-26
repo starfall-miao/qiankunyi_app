@@ -276,36 +276,42 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
   }
 
   void _submitLiuyao(PaipanProvider pr) {
+    if (_isLoading) return; // 防止重复点击
     setState(() => _isLoading = true);
     _animCtrl.reset();
 
-    PaipanResult r;
-    if (_liuyaoMethod == 0) {
-      final ys = <YaoModel>[];
-      for (int i = 0; i < 6; i++) {
-        final v = _manualYaos[i];
-        ys.add(YaoModel(
-          yinYang: (v == _YaoInput.shaoYang || v == _YaoInput.laoYang)
-              ? YaoYinYang.yang : YaoYinYang.yin,
-          position: YaoPosition.values[5 - i],
-          isMoving: v == _YaoInput.laoYin || v == _YaoInput.laoYang,
-        ));
+    try {
+      PaipanResult r;
+      if (_liuyaoMethod == 0) {
+        final ys = <YaoModel>[];
+        for (int i = 0; i < 6; i++) {
+          final v = _manualYaos[i];
+          ys.add(YaoModel(
+            yinYang: (v == _YaoInput.shaoYang || v == _YaoInput.laoYang)
+                ? YaoYinYang.yang : YaoYinYang.yin,
+            position: YaoPosition.values[5 - i],
+            isMoving: v == _YaoInput.laoYin || v == _YaoInput.laoYang,
+          ));
+        }
+        r = LiuYaoEngine.fromYaos(ys, time: _selectedTime);
+      } else if (_liuyaoMethod == 1) {
+        r = LiuYaoEngine.manual();
+      } else {
+        r = LiuYaoEngine.byTime(_selectedTime);
       }
-      r = LiuYaoEngine.fromYaos(ys, time: _selectedTime);
-    } else if (_liuyaoMethod == 1) {
-      r = LiuYaoEngine.manual();
-    } else {
-      r = LiuYaoEngine.byTime(_selectedTime);
-    }
 
-    // 模拟短加载延迟（增强仪式感）
-    Future.delayed(const Duration(milliseconds: 300), () {
-      pr.setLiuyaoResult(r);
+      // 模拟短加载延迟（增强仪式感）
+      Future.delayed(const Duration(milliseconds: 300), () {
+        pr.setLiuyaoResult(r);
+        _animCtrl.forward();
+        setState(() => _isLoading = false);
+        final names = ['手工摇卦', '机器摇卦', '时间起卦'];
+        _log.info('六爻起卦: ${names[_liuyaoMethod]}', '${r.benGua.name}');
+      });
+    } catch (e, st) {
+      _log.error('六爻起卦失败', '$e\n$st');
       setState(() => _isLoading = false);
-      _animCtrl.forward();
-      final names = ['手工摇卦', '机器摇卦', '时间起卦'];
-      _log.info('六爻起卦: ${names[_liuyaoMethod]}', '${r.benGua.name}');
-    });
+    }
   }
 
   // ═══════════════════ 手工摇面板（国风卦签样式） ═══════════════════
@@ -486,37 +492,43 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
   }
 
   void _submitMeihua(PaipanProvider pr) {
+    if (_isLoading) return; // 防止重复点击
     setState(() => _isLoading = true);
     _animCtrl.reset();
 
-    if (_meihuaMethod == 0) {
-      final aText = _numACtrl.text.trim();
-      final bText = _numBCtrl.text.trim();
-      final cText = _numCCtrl.text.trim();
-      if (aText.isEmpty || bText.isEmpty || cText.isEmpty) {
-        setState(() {
-          _isLoading = false;
-          _emptyInputWarn = true;
+    try {
+      if (_meihuaMethod == 0) {
+        final aText = _numACtrl.text.trim();
+        final bText = _numBCtrl.text.trim();
+        final cText = _numCCtrl.text.trim();
+        if (aText.isEmpty || bText.isEmpty || cText.isEmpty) {
+          setState(() {
+            _isLoading = false;
+            _emptyInputWarn = true;
+          });
+          return;
+        }
+        setState(() => _emptyInputWarn = false);
+        final a = int.tryParse(aText) ?? 0;
+        final b = int.tryParse(bText) ?? 0;
+        final c = int.tryParse(cText) ?? 0;
+        Future.delayed(const Duration(milliseconds: 300), () {
+          pr.setMeihuaResult(MeihuaEngine.fromNumbers(a, b, c));
+          _animCtrl.forward();
+          setState(() => _isLoading = false);
+          _log.info('梅花起卦: 三数($a,$b,$c)');
         });
-        return;
+      } else {
+        Future.delayed(const Duration(milliseconds: 300), () {
+          pr.setMeihuaResult(MeihuaEngine.fromDateTime(_selectedTime));
+          _animCtrl.forward();
+          setState(() => _isLoading = false);
+          _log.info('梅花起卦: 日期${_selectedTime.year}${_selectedTime.month}${_selectedTime.day}');
+        });
       }
-      setState(() => _emptyInputWarn = false);
-      final a = int.tryParse(aText) ?? 0;
-      final b = int.tryParse(bText) ?? 0;
-      final c = int.tryParse(cText) ?? 0;
-      Future.delayed(const Duration(milliseconds: 300), () {
-        pr.setMeihuaResult(MeihuaEngine.fromNumbers(a, b, c));
-        setState(() => _isLoading = false);
-        _animCtrl.forward();
-        _log.info('梅花起卦: 三数($a,$b,$c)');
-      });
-    } else {
-      Future.delayed(const Duration(milliseconds: 300), () {
-        pr.setMeihuaResult(MeihuaEngine.fromDateTime(_selectedTime));
-        setState(() => _isLoading = false);
-        _animCtrl.forward();
-        _log.info('梅花起卦: 日期${_selectedTime.year}${_selectedTime.month}${_selectedTime.day}');
-      });
+    } catch (e, st) {
+      _log.error('梅花起卦失败', '$e\n$st');
+      setState(() => _isLoading = false);
     }
   }
 
