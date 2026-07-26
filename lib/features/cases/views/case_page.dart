@@ -10,6 +10,7 @@ import '../providers/case_provider.dart';
 import '../models/case_models.dart';
 import '../../paipan/models/paipan_result.dart';
 import '../../paipan/models/gua_model.dart';
+import '../../paipan/models/yao_model.dart';
 import '../../paipan/views/gua_widget.dart';
 
 class CasePage extends StatefulWidget {
@@ -230,7 +231,7 @@ class _CasePageState extends State<CasePage> {
               ]),
               const SizedBox(height: 4),
               Row(children: [
-                _infoTag(c.guaName, theme.colorScheme.primary),
+                _infoTag(c.guaName, Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
                 _infoTag(c.guaGong, t.withAlpha(180)),
                 const Spacer(),
@@ -294,7 +295,6 @@ class _CasePageState extends State<CasePage> {
   Widget _buildTiYongDetail(PaipanResult result, Color t, bool isDark) {
     // 简版体用生克
     final tiYao = result.benGua.yaos[result.benGua.shiYaoIndex];
-    final yongYao = result.benGua.yaos[result.benGua.yingYaoIndex];
     final tiWx = result.benGua.wuXing;
     final yongWx = _diZhiWuXing(tiYao.diZhi);
     final relation = _shengKeRelation(tiWx, yongWx);
