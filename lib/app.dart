@@ -9,6 +9,7 @@ import 'features/paipan/views/paipan_page.dart';
 import 'features/cases/views/case_page.dart';
 import 'features/reference/views/reference_page.dart';
 import 'features/settings/settings_page.dart';
+import 'features/settings/settings_provider.dart';
 
 /// 落·乾坤 应用入口 Widget
 class QianKunYiApp extends StatelessWidget {
@@ -16,14 +17,21 @@ class QianKunYiApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(
-      builder: (context, provider, _) {
+    return Consumer2<ThemeProvider, SettingsProvider>(
+      builder: (context, tp, sp, _) {
+        final scale = sp.loaded ? sp.fontSize / 16.0 : 1.0;
         return MaterialApp(
           title: '落·乾坤',
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme(provider.colorSchemeType, useAcrylic: provider.acrylicEffect, acrylicOpacity: provider.acrylicOpacity),
-          darkTheme: AppTheme.darkTheme(provider.colorSchemeType, useAcrylic: provider.acrylicEffect, acrylicOpacity: provider.acrylicOpacity),
-          themeMode: provider.themeMode,
+          theme: AppTheme.lightTheme(tp.colorSchemeType, useAcrylic: tp.acrylicEffect, acrylicOpacity: tp.acrylicOpacity),
+          darkTheme: AppTheme.darkTheme(tp.colorSchemeType, useAcrylic: tp.acrylicEffect, acrylicOpacity: tp.acrylicOpacity),
+          themeMode: tp.themeMode,
+          builder: (ctx, child) {
+            return MediaQuery(
+              data: MediaQuery.of(ctx).copyWith(textScaleFactor: scale),
+              child: child!,
+            );
+          },
           home: const MainShell(),
         );
       },

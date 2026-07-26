@@ -22,8 +22,9 @@ class ReferencePage extends StatelessWidget {
           title: const Text('参考资料'),
           bottom: TabBar(
             isScrollable: true,
+            tabAlignment: TabAlignment.start,
             labelColor: theme.colorScheme.primary,
-            unselectedLabelColor: null, // 使用默认 Text color
+            unselectedLabelColor: null,
             indicatorColor: theme.colorScheme.primary,
             tabs: [
               Tab(text: '六十四卦'),
@@ -264,13 +265,24 @@ class _NaYinTab extends StatelessWidget {
           color: theme.colorScheme.primaryContainer,
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.info_outline, color: theme.colorScheme.onPrimaryContainer),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text('纳音五行是中国传统命理学术语，将六十甲子分为三十组，每组配以五行属性，用于命理分析和择吉。',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onPrimaryContainer)),
+                Row(
+                  children: [
+                    Icon(Icons.info_outline, color: theme.colorScheme.onPrimaryContainer),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text('纳音释义',
+                        style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onPrimaryContainer)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '纳音五行将六十甲子分为三十组，每组以其意象配属五行。'
+                  '点击每条可查看详细释义，了解该纳音的命理象征含义。',
+                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onPrimaryContainer.withAlpha(200)),
                 ),
               ],
             ),
@@ -294,8 +306,10 @@ class _NaYinTab extends StatelessWidget {
               ),
             ),
             ...grouped[wx]!.map((e) => Card(
-              child: ListTile(
+              child: ExpansionTile(
                 dense: true,
+                tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                 leading: Container(
                   width: 80,
                   padding: const EdgeInsets.symmetric(vertical: 4),
@@ -308,7 +322,10 @@ class _NaYinTab extends StatelessWidget {
                 ),
                 title: Text(e.naYin, style: TextStyle(fontWeight: FontWeight.w600, color: _wxColor2(wx))),
                 subtitle: Text('五行属${e.wuXing}'),
-                trailing: const Icon(Icons.chevron_right, size: 18),
+                children: [
+                  Text(e.description.isNotEmpty ? e.description : '暂无详细解释',
+                      style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withAlpha(180))),
+                ],
               ),
             )),
           ],
