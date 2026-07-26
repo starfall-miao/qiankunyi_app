@@ -35,7 +35,7 @@ void main() {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, size: 64, Color(0xFFB71C1C)),
+                  const Icon(Icons.error_outline, size: 64, color: Color(0xFFB71C1C)),
                   const SizedBox(height: 16),
                   const Text('⚠ 渲染异常',
                       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF4A3728))),
