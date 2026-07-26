@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/theme_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/logger.dart';
 import 'settings_model.dart';
 import 'views/about_page.dart';
 
@@ -23,16 +24,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late bool _wanZiShi;
   late bool _chenMuTuYao;
   late DisplaySettings _display;
-  bool _autoLog = true;
-
-  final _logs = <String>[];
-
-  void _addLog(String msg) {
-    if (!_autoLog) return;
-    final ts = DateTime.now().toString().substring(11, 19);
-    _logs.insert(0, '[$ts] $msg');
-    if (_logs.length > 200) _logs.removeLast();
-  }
+  final _log = Logger.instance;
 
   @override
   void initState() {
@@ -43,7 +35,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _wanZiShi = false;
     _chenMuTuYao = false;
     _display = DisplaySettings();
-    _addLog('设置页面已加载');
+    _log.info('设置页面已加载');
   }
 
   @override
@@ -152,29 +144,37 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _modeChip(IconData icon, String label, ThemeMode target, ThemeMode current, ThemeProvider provider) {
     final selected = current == target;
     final theme = Theme.of(context);
-    final chipTextColor = theme.brightness == Brightness.dark
+    final isDark = theme.brightness == Brightness.dark;
+    final chipTextColor = isDark
         ? const Color(0xFFE0D5C8)
         : const Color(0xFF4A3728);
     final chipIconColor = selected
         ? theme.colorScheme.primary
-        : chipTextColor.withAlpha(150);
+        : chipTextColor.withAlpha(180);
+    final chipBg = selected
+        ? theme.colorScheme.primary.withAlpha(20)
+        : (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2));
     return Expanded(
       child: InkWell(
-        onTap: () => provider.setThemeMode(target),
+        onTap: () {
+          provider.setThemeMode(target);
+          Logger.instance.info('主题模式: $label');
+        },
         borderRadius: BorderRadius.circular(8),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: selected ? theme.colorScheme.primaryContainer : Colors.transparent,
+            color: chipBg,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: selected ? theme.colorScheme.primary : chipTextColor.withAlpha(50),
+              color: selected ? theme.colorScheme.primary : chipTextColor.withAlpha(60),
               width: selected ? 1.5 : 1,
             ),
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 20, color: chipIconColor),
+              Icon(icon, size: 22, color: chipIconColor),
               const SizedBox(height: 4),
               Text(label, style: TextStyle(fontSize: 12, color: chipTextColor)),
             ],
@@ -422,16 +422,13 @@ class _SettingsPageState extends State<SettingsPage> {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSwitchRow('自动记录日志', '页面加载、排盘操作等事件自动写入日志', _autoLog, (v) {
-            setState(() {
-              _autoLog = v;
-              if (v) _addLog('日志记录已启用');
-            });
+          _buildSwitchRow('自动记录日志', '页面加载、排盘操作、异常等事件自动写入日志', _log.enabled, (v) {
+            _log.setEnabled(v);
           }),
           const Divider(height: 16),
           _buildSwitchRow('渲染检测', '页面顶部显示渲染状态标记，辅助排查显示问题', context.watch<ThemeProvider>().renderDebug, (v) {
             context.read<ThemeProvider>().setRenderDebug(v);
-            _addLog(v ? '渲染检测已开启' : '渲染检测已关闭');
+            _log.info(v ? '渲染检测已开启' : '渲染检测已关闭');
           }),
           const Divider(height: 16),
           SizedBox(
@@ -452,8 +449,10 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showLogDialog(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final bg = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB);
+    final entries = _log.logs;
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -466,22 +465,24 @@ class _SettingsPageState extends State<SettingsPage> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: Row(children: [
-                Icon(Icons.list_alt, size: 20, color: Theme.of(context).colorScheme.primary),
+                Icon(Icons.list_alt, size: 20, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
                 const Text('运行日志', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const Spacer(),
+                Text('${entries.length}条', style: TextStyle(fontSize: 12, color: theme.colorScheme.primary)),
+                const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, size: 20),
                   tooltip: '清空日志',
                   onPressed: () {
-                    setState(() { _logs.clear(); });
+                    _log.clear();
                     Navigator.pop(ctx);
                   },
                 ),
               ]),
             ),
             const Divider(height: 1),
-            if (_logs.isEmpty)
+            if (entries.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(32),
                 child: Center(child: Text('暂无日志', style: TextStyle(color: Colors.grey))),
@@ -490,13 +491,51 @@ class _SettingsPageState extends State<SettingsPage> {
               Flexible(
                 child: ListView.builder(
                   shrinkWrap: true,
-                  itemCount: _logs.length,
+                  itemCount: entries.length,
                   padding: const EdgeInsets.all(12),
-                  itemBuilder: (_, i) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(_logs[i],
-                        style: TextStyle(fontSize: 11, color: isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728))),
-                  ),
+                  itemBuilder: (_, i) {
+                    final e = entries[i];
+                    Color levelColor;
+                    switch (e.level) {
+                      case LogLevel.error:
+                        levelColor = const Color(0xFFD32F2F);
+                      case LogLevel.warn:
+                        levelColor = const Color(0xFFEF6C00);
+                      case LogLevel.info:
+                        levelColor = theme.colorScheme.primary;
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: levelColor.withAlpha(25),
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                              child: Text(e.levelTag,
+                                  style: TextStyle(fontSize: 9, color: levelColor, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(e.formatted.substring(e.formatted.indexOf(']', 9) + 2),
+                                  style: TextStyle(fontSize: 11,
+                                      color: isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728))),
+                            ),
+                          ]),
+                          if (e.detail != null && e.detail!.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 50, top: 2),
+                              child: Text(e.detail!,
+                                  style: TextStyle(fontSize: 10, color: levelColor.withAlpha(180))),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ),
             Padding(
@@ -513,7 +552,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ),
     );
-    _addLog('查看日志');
+    _log.info('查看日志');
   }
 
   // ──────────────── 关于 ────────────────

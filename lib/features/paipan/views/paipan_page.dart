@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/theme_provider.dart';
+import '../../../core/utils/logger.dart';
 import '../providers/paipan_provider.dart';
 import '../engines/liuyao_engine.dart';
 import '../engines/meihua_engine.dart';
@@ -20,6 +21,7 @@ class PaipanPage extends StatefulWidget {
 }
 
 class _PaipanPageState extends State<PaipanPage> {
+  final _log = Logger.instance;
   int _tabIndex = 0;
   int _liuyaoMethod = 0;
   final _manualYaos = List<_YaoInput>.filled(6, _YaoInput.shaoYin);
@@ -105,7 +107,10 @@ class _PaipanPageState extends State<PaipanPage> {
     final sel = _tabIndex == idx;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _tabIndex = idx),
+        onTap: () {
+          setState(() => _tabIndex = idx);
+          _log.info('切换选项卡: ${idx == 0 ? "六爻" : "梅花"}');
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           color: sel ? p.withAlpha(20) : Colors.transparent,
@@ -204,6 +209,8 @@ class _PaipanPageState extends State<PaipanPage> {
       r = LiuYaoEngine.byTime(_selectedTime);
     }
     pr.setLiuyaoResult(r);
+    final names = ['手工摇卦', '机器摇卦', '时间起卦'];
+    _log.info('六爻起卦: ${names[_liuyaoMethod]}', '${r.benGua.name}');
   }
 
   // ═══════════════════ 手工摇面板（国风卦签样式） ═══════════════════
@@ -402,8 +409,10 @@ class _PaipanPageState extends State<PaipanPage> {
       final b = int.tryParse(bText) ?? 0;
       final c = int.tryParse(cText) ?? 0;
       pr.setMeihuaResult(MeihuaEngine.fromNumbers(a, b, c));
+      _log.info('梅花起卦: 三数($a,$b,$c)');
     } else {
       pr.setMeihuaResult(MeihuaEngine.fromDateTime(_selectedTime));
+      _log.info('梅花起卦: 日期${_selectedTime.year}${_selectedTime.month}${_selectedTime.day}');
     }
   }
 
