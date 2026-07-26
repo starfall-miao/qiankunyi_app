@@ -489,7 +489,7 @@ class _PaipanPageState extends State<PaipanPage> {
     final guaNameCN = guaCN[result.benGua.name] ?? result.benGua.name.name;
 
     // Dialog 让用户输入标题
-    final titleCtrl = TextEditingController(text: '$guaNameCN — ${result.method}');
+    final titleCtrl = TextEditingController(text: '$guaNameCN — $result.method');
     final notesCtrl = TextEditingController();
     showDialog(
       context: context,
@@ -581,7 +581,7 @@ class _PaipanPageState extends State<PaipanPage> {
       ..writeln('━━━━━━━━━━━━━━')
       ..writeln('卦名：$bn')
       ..writeln('宫位：${bg}宫 · 五行 $bw')
-      ..writeln('方式：${result.method}')
+      ..writeln('方式：$result.method')
       ..writeln('时间：$timeStr')
       ..writeln('━━━━━━━━━━━━━━')
       ..writeln(yaosStr);
