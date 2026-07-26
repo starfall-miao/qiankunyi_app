@@ -225,7 +225,7 @@ class _SettingsPageState extends State<SettingsPage> {
               return GestureDetector(
                 onTap: () {
                   tp.setColorScheme(type);
-                  Logger.instance.info('配色方案: ${type.name}');
+                  Logger.instance.info('配色方案: ${type.label}');
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -234,10 +234,24 @@ class _SettingsPageState extends State<SettingsPage> {
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: selected ? p : (isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8))),
                   ),
-                  child: Text(type.name,
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: selected ? Colors.white : (isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728)))),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 12, height: 12,
+                        decoration: BoxDecoration(
+                          color: p,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: selected ? Colors.white : Colors.transparent, width: 1),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(type.label,
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: selected ? Colors.white : (isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728)))),
+                    ],
+                  ),
                 ),
               );
             }).toList(),
