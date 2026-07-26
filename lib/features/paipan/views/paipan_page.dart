@@ -616,20 +616,6 @@ class _PaipanPageState extends State<PaipanPage> {
 
   // ═══════════════════ 通用 ═══════════════════
 
-  Widget _guaCard(String label, GuaModel gua) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 4),
-          GuaWidget(gua: gua, showFooter: true),
-        ],
-      ),
-    );
-  }
-
   Widget _emptyHint(Color p, Color t) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 60),
