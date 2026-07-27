@@ -95,7 +95,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB),
       appBar: AppBar(
-        title: Text('排盘 · ${_tabIndex == 0 ? "六爻" : "梅花"}',
+        title: Text('排盘 · ${_tabIndex == 0 ? "六爻" : _tabIndex == 1 ? "梅花" : "八字"}',
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
@@ -125,6 +125,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
             child: Row(children: [
               _tabBtn('六爻（铜钱）', 0, p, isDark),
               _tabBtn('梅花易数', 1, p, isDark),
+              _tabBtn('八字', 2, p, isDark),
             ]),
           ),
           // 内容区域
@@ -136,7 +137,9 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                   padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 12),
                   child: _tabIndex == 0
                       ? _liuyaoContent(context, pr, p, t, b, c, isDark)
-                      : _meihuaContent(context, pr, p, t, b, c, isDark),
+                      : _tabIndex == 1
+                          ? _meihuaContent(context, pr, p, t, b, c, isDark)
+                          : const BaziPage(),
                 );
               },
             ),

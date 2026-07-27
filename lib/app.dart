@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'features/paipan/views/paipan_page.dart';
+import 'features/paipan/views/bazi_page.dart';
 import 'features/cases/views/case_page.dart';
 import 'features/reference/views/reference_page.dart';
 import 'features/settings/settings_page.dart';
