@@ -5,6 +5,7 @@ library;
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/utils/logger.dart';
 import '../providers/case_provider.dart';
@@ -37,6 +38,16 @@ class _CasePageState extends State<CasePage> {
       appBar: AppBar(
         title: const Text('卦例库'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined),
+            tooltip: '导出卦例',
+            onPressed: () => _exportCases(context),
+          ),
+          IconButton(
+            icon: const Icon(Icons.file_upload_outlined),
+            tooltip: '导入卦例',
+            onPressed: () => _importCases(context),
+          ),
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () => _showSearch(context),
@@ -189,6 +200,84 @@ class _CasePageState extends State<CasePage> {
           ],
         );
       },
+    );
+  }
+
+  /// 导出卦例（全部 → JSON → 剪贴板）
+  void _exportCases(BuildContext context) {
+    final provider = context.read<CaseProvider>();
+    final all = provider.allCases;
+    if (all.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('暂无卦例可导出')),
+      );
+      return;
+    }
+    final jsonStr = const JsonEncoder.withIndent('  ').convert(all.map((c) => c.toMap()).toList());
+    Clipboard.setData(ClipboardData(text: jsonStr));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('已导出 ${all.length} 条卦例到剪贴板'), duration: const Duration(seconds: 2)),
+    );
+    Logger.instance.info('卦例导出', '共 $all.length 条');
+  }
+
+  /// 导入卦例（从剪贴板 JSON 合并）
+  void _importCases(BuildContext context) {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('导入卦例'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('请粘贴卦例 JSON（已复制到剪贴板可直接粘贴）',
+                  style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(180))),
+              const SizedBox(height: 8),
+              TextField(
+                controller: ctrl,
+                maxLines: 6,
+                decoration: const InputDecoration(
+                  hintText: '在此粘贴 JSON…',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(onPressed: () async {
+            final text = ctrl.text.trim();
+            if (text.isEmpty) return;
+            try {
+              final parsed = jsonDecode(text);
+              final list = (parsed as List).map((e) =>
+                  CaseModel.fromMap(e as Map<String, dynamic>)).toList();
+              final provider = context.read<CaseProvider>();
+              for (final c in list) {
+                // 避免重复（按 id 去重）
+                final exists = provider.allCases.any((e) => e.id == c.id);
+                if (!exists) {
+                  provider.addCase(c);
+                }
+              }
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('成功导入 ${list.length} 条卦例')),
+              );
+              Logger.instance.info('卦例导入', '导入 ${list.length} 条');
+            } catch (e) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('导入失败: $e'), backgroundColor: Colors.red.shade300),
+              );
+            }
+          }, child: const Text('导入')),
+        ],
+      ),
     );
   }
 
