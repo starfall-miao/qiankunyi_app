@@ -507,67 +507,124 @@ class _XiangYiTabState extends State<_XiangYiTab> {
   String _selectedGua = '乾';
   String? _selectedCategory;
 
+  static const _guaSymbols = {'乾': '☰', '兑': '☱', '离': '☲', '震': '☳',
+                               '巽': '☴', '坎': '☵', '艮': '☶', '坤': '☷'};
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final p = theme.colorScheme.primary;
+    final t = theme.colorScheme.onSurface;
     final guaNames = baguaXiangYi.keys.toList();
     final categories = baguaXiangYi[_selectedGua]!.keys.toList();
 
     return Column(
       children: [
-        SizedBox(
-          height: 48,
-          child: ListView(
+        // ── 第一行：八卦选择 ──
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            children: guaNames.map((name) {
-              final sel = name == _selectedGua;
-              return Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: FilterChip(
-                  label: Text(name, style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: sel ? FontWeight.bold : FontWeight.normal,
-                    color: sel ? theme.colorScheme.primary : null,
-                  )),
-                  selected: sel,
-                  selectedColor: theme.colorScheme.primary.withAlpha(30),
-                  backgroundColor: theme.colorScheme.surface,
-                  side: BorderSide(color: sel ? theme.colorScheme.primary : theme.colorScheme.outlineVariant, width: sel ? 1.5 : 1),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  onSelected: (_) => setState(() { _selectedGua = name; _selectedCategory = null; }),
-                ),
-              );
-            }).toList(),
+            child: Row(
+              children: guaNames.map((name) {
+                final sel = name == _selectedGua;
+                final sym = _guaSymbols[name] ?? '';
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: () => setState(() { _selectedGua = name; _selectedCategory = null; }),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: sel ? p.withAlpha(25) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: sel ? p.withAlpha(120) : t.withAlpha(40),
+                            width: sel ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(sym, style: TextStyle(fontSize: 16, color: sel ? p : t.withAlpha(160))),
+                            const SizedBox(width: 4),
+                            Text(name, style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: sel ? FontWeight.bold : FontWeight.normal,
+                              color: sel ? p : t.withAlpha(180),
+                            )),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
           ),
         ),
-        const Divider(height: 1),
+        const Divider(height: 1, indent: 8, endIndent: 8),
+
+        // ── 第二行：分类筛选（轻量标签，非选中模式） ──
         SizedBox(
           height: 40,
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            children: categories.map((cat) {
-              final sel = cat == _selectedCategory;
-              return Padding(
+            children: [
+              // "全部" 标签
+              Padding(
                 padding: const EdgeInsets.only(right: 6),
-                child: ChoiceChip(
-                  label: Text(cat, style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: sel ? FontWeight.bold : FontWeight.normal,
-                    color: sel ? theme.colorScheme.primary : null,
-                  )),
-                  selected: sel,
-                  selectedColor: theme.colorScheme.primary.withAlpha(30),
-                  backgroundColor: theme.colorScheme.surface,
-                  side: BorderSide(color: sel ? theme.colorScheme.primary : theme.colorScheme.outlineVariant, width: sel ? 1.5 : 1),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  onSelected: (_) => setState(() => _selectedCategory = sel ? null : cat),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => setState(() => _selectedCategory = null),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: _selectedCategory == null ? p.withAlpha(20) : t.withAlpha(10),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: _selectedCategory == null ? p.withAlpha(100) : t.withAlpha(30)),
+                    ),
+                    child: Text('全部', style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: _selectedCategory == null ? FontWeight.bold : FontWeight.normal,
+                      color: _selectedCategory == null ? p : t.withAlpha(140),
+                    )),
+                  ),
                 ),
-              );
-            }).toList(),
+              ),
+              ...categories.map((cat) {
+                final sel = cat == _selectedCategory;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => setState(() => _selectedCategory = sel ? null : cat),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: sel ? p.withAlpha(20) : t.withAlpha(10),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: sel ? p.withAlpha(100) : t.withAlpha(30)),
+                      ),
+                      child: Text(cat, style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: sel ? FontWeight.bold : FontWeight.normal,
+                        color: sel ? p : t.withAlpha(140),
+                      )),
+                    ),
+                  ),
+                );
+              }),
+            ],
           ),
         ),
+
+        // ── 内容区域 ──
         Expanded(
           child: _selectedCategory == null
               ? _buildAllCategories(theme, guaNames)
@@ -578,29 +635,61 @@ class _XiangYiTabState extends State<_XiangYiTab> {
   }
 
   Widget _buildAllCategories(ThemeData theme, List<String> guaNames) {
+    final p = theme.colorScheme.primary;
+    final t = theme.colorScheme.onSurface;
     return ListView(
       padding: const EdgeInsets.all(12),
       children: guaNames.map((guaName) {
         final data = baguaXiangYi[guaName]!;
+        final sym = _guaSymbols[guaName] ?? '';
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: t.withAlpha(15)),
+          ),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(guaName, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
-                const Divider(),
+                Row(children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: p.withAlpha(20),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text('$sym $guaName',
+                        style: TextStyle(fontWeight: FontWeight.bold,
+                            fontSize: 16, color: p)),
+                  ),
+                ]),
+                const SizedBox(height: 8),
                 ...data.entries.map((e) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${e.key}: ', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant)),
-                      ...e.value.map((v) => Padding(
-                        padding: const EdgeInsets.only(right: 4),
-                        child: Chip(label: Text(v, style: const TextStyle(fontSize: 12)), materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: VisualDensity.compact),
+                      Text(e.key, style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: p.withAlpha(200),
                       )),
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: e.value.map((v) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: t.withAlpha(8),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: t.withAlpha(20)),
+                          ),
+                          child: Text(v, style: TextStyle(fontSize: 12, color: t.withAlpha(200))),
+                        )).toList(),
+                      ),
                     ],
                   ),
                 )),
@@ -613,23 +702,52 @@ class _XiangYiTabState extends State<_XiangYiTab> {
   }
 
   Widget _buildCategoryDetail(ThemeData theme, String category) {
+    final p = theme.colorScheme.primary;
+    final t = theme.colorScheme.onSurface;
     return ListView(
       padding: const EdgeInsets.all(12),
-      children: baguaXiangYi.entries.map((e) {
-        final items = e.value[category];
-        if (items == null || items.isEmpty) return const SizedBox.shrink();
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: theme.colorScheme.primaryContainer,
-              child: Text(e.key, style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onPrimaryContainer)),
-            ),
-            title: Text(category),
-            subtitle: Text(items.join('、')),
+      children: [
+        Card(
+          color: p.withAlpha(10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(children: [
+              Icon(Icons.filter_alt_outlined, size: 18, color: p),
+              const SizedBox(width: 8),
+              Text('分类：', style: TextStyle(fontSize: 13, color: t.withAlpha(160))),
+              Text(category, style: TextStyle(fontSize: 14,
+                  fontWeight: FontWeight.bold, color: p)),
+            ]),
           ),
-        );
-      }).toList(),
+        ),
+        const SizedBox(height: 8),
+        ...baguaXiangYi.entries.map((e) {
+          final items = e.value[category];
+          if (items == null || items.isEmpty) return const SizedBox.shrink();
+          final sym = _guaSymbols[e.key] ?? '';
+          return Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: BorderSide(color: t.withAlpha(15)),
+            ),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: p.withAlpha(20),
+                child: Text(sym, style: TextStyle(fontWeight: FontWeight.bold,
+                    fontSize: 16, color: p)),
+              ),
+              title: Text('${e.key} · $category',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: t.withAlpha(220))),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(items.join('、'),
+                    style: TextStyle(fontSize: 12, color: t.withAlpha(160))),
+              ),
+            ),
+          );
+        }),
+      ],
     );
   }
 }
