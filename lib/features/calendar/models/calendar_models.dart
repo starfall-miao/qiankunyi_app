@@ -62,6 +62,6 @@ class CalendarDayInfo {
     required this.isToday,
   });
 
-  String get weekdayName => '周${_weekdayNames[weekday]}';
-  static const _weekdayNames = ['一','二','三','四','五','六','日'];
+  String get weekdayName => '周${weekdayNames[weekday]}';
+  static const weekdayNames = ['一','二','三','四','五','六','日'];
 }

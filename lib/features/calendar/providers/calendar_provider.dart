@@ -6,8 +6,8 @@ import 'package:tyme/tyme.dart' as tyme;
 import '../models/calendar_models.dart';
 
 class CalendarProvider extends ChangeNotifier {
-  int _year;
-  int _month;
+  late int _year;
+  late int _month;
   List<CalendarDayInfo> _days = [];
   CalendarDayInfo? _selectedDay;
 
@@ -78,7 +78,7 @@ class CalendarProvider extends ChangeNotifier {
       String? termName;
       try {
         final termDay = solar.getTermDay();
-        if (termDay.getDay() == 0) {
+        if (termDay.dayIndex == 0) {
           termName = termDay.getSolarTerm().getName();
         }
       } catch (_) {}

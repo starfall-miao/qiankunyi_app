@@ -464,7 +464,7 @@ class _DayDetailPanel extends StatelessWidget {
   }
 
   Widget _buildHeader(tyme.SolarDay solarDay, tyme.LunarDay lunarDay) {
-    final weekName = CalendarDayInfo._weekdayNames[day.weekday];
+    final weekName = CalendarDayInfo.weekdayNames[day.weekday];
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
