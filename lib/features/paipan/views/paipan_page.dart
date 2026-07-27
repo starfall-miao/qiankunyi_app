@@ -1045,3 +1045,109 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     );
   }
 }
+/// ──────────────── 八字参考 Tab ────────────────
+
+class _BaziRefTab extends StatelessWidget {
+  const _BaziRefTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final p = theme.colorScheme.primary;
+    final t = theme.colorScheme.onSurface.withAlpha(200);
+
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        _sectionHeader(p, '八字基础'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text('八字命理，又称四柱预测，是以人出生的年、月、日、时四柱（每柱天干地支，共八个字）推算命运。日柱天干代表"日元"，是命局的核心。',
+                style: TextStyle(fontSize: 13, color: t.withAlpha(180))),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        _sectionHeader(p, '十天干'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Table(
+              columnWidths: const {0: FlexColumnWidth(1), 1: FlexColumnWidth(1), 2: FlexColumnWidth(1)},
+              children: [
+                TableRow(decoration: BoxDecoration(color: p.withAlpha(20)),
+                  children: ['天干', '五行', '阴阳'].map((h) => _cell(h, p)).toList()),
+                ...tianGanTable.map((row) => TableRow(
+                  children: ['天干', '五行', '阴阳'].map((k) => _cell(row[k] ?? '', t)).toList(),
+                )),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        _sectionHeader(p, '十二地支'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Table(
+              columnWidths: const {0: FlexColumnWidth(1), 1: FlexColumnWidth(1), 2: FlexColumnWidth(1), 3: FlexColumnWidth(1)},
+              children: [
+                TableRow(decoration: BoxDecoration(color: p.withAlpha(20)),
+                  children: ['地支', '生肖', '五行', '月份'].map((h) => _cell(h, p)).toList()),
+                ...diZhiTable.map((row) => TableRow(
+                  children: ['地支', '生肖', '五行', '月份'].map((k) => _cell(row[k] ?? '', t)).toList(),
+                )),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        _sectionHeader(p, '十神表（以日干为基准）'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Table(
+              columnWidths: const {0: FlexColumnWidth(1), 1: FlexColumnWidth(1), 2: FlexColumnWidth(1)},
+              children: [
+                TableRow(decoration: BoxDecoration(color: p.withAlpha(20)),
+                  children: ['同我', '生我', '我生'].map((h) => _cell(h, p)).toList()),
+                TableRow(children: [
+                  _cell('比肩', t),
+                  _cell('偏印', t),
+                  _cell('食神', t),
+                ]),
+                TableRow(children: [
+                  _cell('劫财', t),
+                  _cell('正印', t),
+                  _cell('伤官', t),
+                ]),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        _sectionHeader(p, '藏干表'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Table(
+              columnWidths: const {0: FlexColumnWidth(1), 1: FlexColumnWidth(1), 2: FlexColumnWidth(1), 3: FlexColumnWidth(1)},
+              children: [
+                TableRow(decoration: BoxDecoration(color: p.withAlpha(20)),
+                  children: ['地支', '本气', '中气', '余气'].map((h) => _cell(h, p)).toList()),
+                ...cangGanTable.map((row) => TableRow(
+                  children: ['地支', '本气', '中气', '余气'].map((k) => _cell(row[k] ?? '', t)).toList(),
+                )),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+}
