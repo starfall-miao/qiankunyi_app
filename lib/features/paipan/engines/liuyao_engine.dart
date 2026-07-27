@@ -260,7 +260,7 @@ class LiuYaoEngine {
         isMoving: isMoving,
       ));
     }
-    return _buildResult(yaos, 'manual', school: school);
+    return _buildResult(yaos, '机器摇卦', school: school);
   }
 
   /// 从爻列表构建排盘结果（手工输入用）
@@ -283,7 +283,7 @@ class LiuYaoEngine {
     final lowerIdx = _toTrigramIndex(shiChen);
     final movingIdx = (year + month + day + shiChen) % 6;
 
-    return _buildFromTrigrams(upperIdx, lowerIdx, movingIdx, 'time', school: school);
+    return _buildFromTrigrams(upperIdx, lowerIdx, movingIdx, '时间起卦', school: school);
   }
 
   /// 数字起卦
@@ -292,7 +292,7 @@ class LiuYaoEngine {
     final upperIdx = _toTrigramIndex(a);
     final lowerIdx = _toTrigramIndex(b);
     final movingIdx = (c - 1) % 6; // c为动爻序号（1-6），转为0-based
-    return _buildFromTrigrams(upperIdx, lowerIdx, movingIdx, 'number', school: school);
+    return _buildFromTrigrams(upperIdx, lowerIdx, movingIdx, '数字起卦', school: school);
   }
 
   /// 数字 → 八卦索引（0=乾 ~ 7=坤）
