@@ -74,6 +74,12 @@ class YaoModel {
     this.sanHeJu = const [],
   });
 
+  /// 爻位中文名
+  String get positionName {
+    const names = ['初', '二', '三', '四', '五', '上'];
+    return names[position.index];
+  }
+
   Map<String, dynamic> toJson() => {
     'yinYang': yinYang.name,
     'position': position.name,
