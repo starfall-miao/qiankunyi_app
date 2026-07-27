@@ -67,6 +67,7 @@ class CaseModel {
   final String method;         // 起卦方式（中文）
   final String paipanData;     // 排盘JSON数据
   final String? notes;         // 用户备注
+  final String? duanYu;        // 人工断语
   final List<String> tags;     // 标签
   final DateTime createdAt;    // 创建时间
   final DateTime updatedAt;    // 更新时间
@@ -79,6 +80,7 @@ class CaseModel {
     required this.method,
     required this.paipanData,
     this.notes,
+    this.duanYu,
     this.tags = const [],
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -93,6 +95,7 @@ class CaseModel {
     String? method,
     String? paipanData,
     String? notes,
+    String? duanYu,
     List<String>? tags,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -105,6 +108,7 @@ class CaseModel {
       method: method ?? this.method,
       paipanData: paipanData ?? this.paipanData,
       notes: notes ?? this.notes,
+      duanYu: duanYu ?? this.duanYu,
       tags: tags ?? this.tags,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -119,6 +123,7 @@ class CaseModel {
     'method': method,
     'paipanData': paipanData,
     'notes': notes,
+    'duanYu': duanYu,
     'tags': jsonEncode(tags),
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
@@ -132,6 +137,7 @@ class CaseModel {
     method: map['method'] as String,
     paipanData: map['paipanData'] as String,
     notes: map['notes'] as String?,
+    duanYu: map['duanYu'] as String?,
     tags: (map['tags'] != null) ? (jsonDecode(map['tags'] as String) as List).cast<String>() : [],
     createdAt: DateTime.parse(map['createdAt'] as String),
     updatedAt: DateTime.parse(map['updatedAt'] as String),
@@ -142,6 +148,7 @@ class CaseModel {
     required PaipanResult result,
     required String title,
     String? notes,
+    String? duanYu,
     List<String>? tags,
   }) {
     final now = DateTime.now();
@@ -153,6 +160,7 @@ class CaseModel {
       method: methodToCN(result.method),
       paipanData: jsonEncode(result.toJson()),
       notes: notes,
+      duanYu: duanYu,
       tags: tags ?? [],
       createdAt: now,
       updatedAt: now,

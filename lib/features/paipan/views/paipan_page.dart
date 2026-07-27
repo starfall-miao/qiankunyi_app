@@ -62,6 +62,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
   final DateTime _selectedTime = DateTime.now();
   bool _emptyInputWarn = false;
   bool _isLoading = false;
+  String _duanYuText = '';
   late final AnimationController _animCtrl;
   late final Animation<double> _fadeAnim;
 
@@ -356,8 +357,8 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
               ),
             ],
           ),
-        ],
-      )
+          const SizedBox(height: 12),
+          _buildDuanYuSection(pr.liuyaoResult!, p, t),
         : _emptyHint(p, t),
         ),
       ],
@@ -651,6 +652,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     // Dialog 让用户输入标题
     final titleCtrl = TextEditingController(text: '$guaNameCN — ${methodToCN(result.method)}');
     final notesCtrl = TextEditingController();
+    final duanYuCtrl = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -668,6 +670,12 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
               decoration: const InputDecoration(labelText: '备注（可选）', hintText: '记录占问事项'),
               maxLines: 2,
             ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: duanYuCtrl,
+              decoration: const InputDecoration(labelText: '断语（可选）', hintText: '输入你的分析判断'),
+              maxLines: 3,
+            ),
           ],
         ),
         actions: [
@@ -679,6 +687,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                 result: result,
                 title: titleCtrl.text.trim(),
                 notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
+                duanYu: duanYuCtrl.text.trim().isEmpty ? null : duanYuCtrl.text.trim(),
               );
               context.read<CaseProvider>().addCase(cm);
               _log.info('保存卦例: ${cm.title}');
@@ -870,6 +879,8 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
             ),
           ],
         ),
+        const SizedBox(height: 12),
+        _buildDuanYuSection(result, p, t),
       ],
     );
   }
@@ -1150,4 +1161,75 @@ class _BaziRefTab extends StatelessWidget {
       ],
     );
   }
+}
+/// 断语编辑区域
+Widget _buildDuanYuSection(PaipanResult result, Color p, Color t) {
+  final ctrl = TextEditingController(text: _duanYuText);
+  return Card(
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(Icons.edit_note, size: 18, color: p),
+            const SizedBox(width: 6),
+            Text('断语（AI 辅助分析）', style: TextStyle(fontSize: 14,
+                fontWeight: FontWeight.bold, color: t)),
+          ]),
+          const SizedBox(height: 8),
+          TextField(
+            controller: ctrl,
+            maxLines: 3,
+            onChanged: (v) => _duanYuText = v,
+            decoration: InputDecoration(
+              hintText: '输入你的分析判断…',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton.icon(
+                onPressed: () {
+                  if (_duanYuText.isEmpty) return;
+                  final hint = _buildDuanYuHint(result, t);
+                  ctrl.text = '$_duanYuText\n\n【AI 辅助分析】\n$hint';
+                  _duanYuText = ctrl.text;
+                },
+                icon: const Icon(Icons.auto_awesome, size: 16),
+                label: const Text('AI 辅助解卦'),
+                style: TextButton.styleFrom(foregroundColor: p),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// AI 辅助解卦模板
+String _buildDuanYuHint(PaipanResult result, Color t) {
+  final guaCN = <GuaName, String>{
+    GuaName.qian: '乾为天', GuaName.kun: '坤为地', GuaName.tai: '地天泰',
+    GuaName.pi: '天地否', GuaName.shi: '地水师', GuaName.bi: '水地比',
+    GuaName.xiaoXu: '风天小畜', GuaName.tongRen: '天火同人',
+    GuaName.daYou: '火天大有', GuaName.gu: '山风蛊',
+    GuaName.lin: '地泽临', GuaName.guan: '风地观',
+    GuaName.fu: '地雷复', GuaName.wuWang: '天雷无妄', GuaName.jiJi: '水火既济',
+    GuaName.weiJi: '火水未济',
+  };
+  final gongCN = <GuaGong, String>{
+    GuaGong.qian: '乾', GuaGong.kun: '坤', GuaGong.zhen: '震',
+  };
+  final nameCN = guaCN[result.benGua.name] ?? result.benGua.name.name;
+  final movingCount = result.benGua.yaos.where((y) => y.isMoving).length;
+  final gong = gongCN[result.benGua.gong] ?? '';
+
+  return '「$nameCN」解卦分析：\n'
+      '${gong}宫  动爻 ${movingCount} 位\n'
+      '此卦${movingCount > 0 ? '有动爻，变动至${result.bianGua != null ? guaCN[result.bianGua!.name] ?? "" : ""}' : '为静卦'}\n'
+      '请根据爻位六亲关系自行判断吉凶。';
 }
