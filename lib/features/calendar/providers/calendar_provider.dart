@@ -20,7 +20,18 @@ class CalendarProvider extends ChangeNotifier {
   int get month => _currentDate.month;
 
   CalendarProvider() {
-    loadMonth(_currentDate.year, _currentDate.month);
+    _initToday();
+  }
+
+  void _initToday() {
+    final now = DateTime.now();
+    _monthData = CalendarEngine.buildMonthData(now.year, now.month);
+    _currentDate = DateTime(now.year, now.month, 1);
+    _selectedDay = _monthData!.days.firstWhere(
+      (d) => d.isToday,
+      orElse: () => _monthData!.days.first,
+    );
+    notifyListeners();
   }
 
   void loadMonth(int year, int month) {
@@ -30,6 +41,8 @@ class CalendarProvider extends ChangeNotifier {
     try {
       _monthData = CalendarEngine.buildMonthData(year, month);
       _currentDate = DateTime(year, month, 1);
+      // 切换月份后选中当前月第一天
+      _selectedDay = _monthData!.days.first;
     } catch (e) {
       debugPrint('万年历加载失败: $e');
     } finally {
@@ -58,12 +71,13 @@ class CalendarProvider extends ChangeNotifier {
 
   void goToToday() {
     final now = DateTime.now();
-    loadMonth(now.year, now.month);
-    final todayInfo = _monthData?.days.firstWhere(
+    _monthData = CalendarEngine.buildMonthData(now.year, now.month);
+    _currentDate = DateTime(now.year, now.month, 1);
+    _selectedDay = _monthData!.days.firstWhere(
       (d) => d.isToday,
       orElse: () => _monthData!.days.first,
     );
-    _selectedDay = todayInfo;
+    _isLoading = false;
     notifyListeners();
   }
 
