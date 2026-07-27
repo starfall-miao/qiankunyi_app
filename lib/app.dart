@@ -10,6 +10,7 @@ import 'features/cases/views/case_page.dart';
 import 'features/reference/views/reference_page.dart';
 import 'features/settings/settings_page.dart';
 import 'features/settings/settings_provider.dart';
+import 'features/calendar/views/calendar_page.dart';
 
 /// 落·乾坤 应用入口 Widget
 class QianKunYiApp extends StatelessWidget {
@@ -67,6 +68,7 @@ class _MainShellState extends State<MainShell> {
   final _pages = const [
     PaipanPage(),
     CasePage(),
+    CalendarPage(),
     ReferencePage(),
     SettingsPage(),
   ];
@@ -84,6 +86,7 @@ class _MainShellState extends State<MainShell> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.change_circle_outlined), label: '排盘'),
           NavigationDestination(icon: Icon(Icons.bookmark_border), label: '卦例'),
+          NavigationDestination(icon: Icon(Icons.calendar_month_outlined), label: '日历'),
           NavigationDestination(icon: Icon(Icons.menu_book_outlined), label: '参考'),
           NavigationDestination(icon: Icon(Icons.settings_outlined), label: '设置'),
         ],
