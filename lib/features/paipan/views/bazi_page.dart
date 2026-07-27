@@ -244,10 +244,12 @@ class _BaziPageState extends State<BaziPage> {
             child: Row(children: [
               const Icon(Icons.calendar_month_outlined, size: 18, color: Colors.deepOrange),
               const SizedBox(width: 8),
-              Text('${(r.birth.year + 27)}年', style: TextStyle(fontSize: 14, color: t)),
-              const SizedBox(width: 8),
-              Text(r.liuNian!, style: TextStyle(fontSize: 18,
-                  fontWeight: FontWeight.bold, color: Colors.deepOrange)),
+              if (r.liuNian != null) ...[
+                Text('当年流年：', style: TextStyle(fontSize: 13, color: t)),
+                Text(r.liuNian!, style: TextStyle(fontSize: 16,
+                    fontWeight: FontWeight.bold, color: Colors.deepOrange)),
+              ] else
+                Text('当年流年', style: TextStyle(fontSize: 14, color: t)),
             ]),
           ),
         ],

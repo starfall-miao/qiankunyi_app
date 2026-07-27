@@ -53,25 +53,25 @@ const _cangGanMap = {
 };
 
 /// 计算大运（顺排/逆排）
-List<DaYun> _calcDaYun(String dayGan, String monthZhi, bool isMale) {
+List<DaYun> _calcDaYun(String yearGan, String monthGan, String monthZhi, bool isMale) {
   // 阳年/阴年判定（年干阴阳）
   final yangGan = ['甲','丙','戊','庚','壬'];
-  final isYangYear = yangGan.contains(dayGan[0]); // 以日干代表年柱天干简化
-  final monthZhiIdx = _diZhiCN.indexOf(monthZhi);
+  final isYangYear = yangGan.contains(yearGan);
 
   // 顺排：阳男阴女，逆排：阴男阳女
-  final shunNi = isYangYear ^ isMale; // true=顺排
+  final shunNi = isYangYear ^ !isMale; // 阳男阴女顺排
 
-  // 简化大运：以月柱推算（实际以节气，这里简化）
+  // 简化大运
   final result = <DaYun>[];
-  final baseGanIdx = _tianGanCN.indexOf(dayGan[0]);
+  final baseGanIdx = _tianGanCN.indexOf(monthGan);
+  final baseZhiIdx = _diZhiCN.indexOf(monthZhi);
 
   for (var i = 0; i < 8; i++) {
-    final idx = shunNi ? (baseGanIdx + i) % 10 : (baseGanIdx - i + 10) % 10;
-    final zhiOffset = shunNi ? (monthZhiIdx + i) % 12 : (monthZhiIdx - i + 12) % 12;
-    final gan = _tianGanCN[idx];
-    final zhi = _diZhiCN[zhiOffset];
-    final startAge = shunNi ? (i * 10) : (i * 10);
+    final ganIdx = shunNi ? (baseGanIdx + i) % 10 : (baseGanIdx - i + 10) % 10;
+    final zhiIdx = shunNi ? (baseZhiIdx + i) % 12 : (baseZhiIdx - i + 12) % 12;
+    final gan = _tianGanCN[ganIdx];
+    final zhi = _diZhiCN[zhiIdx];
+    final startAge = (i + 1) * 10;
     result.add(DaYun(
       startAge: startAge,
       ganZhi: '$gan$zhi',
@@ -144,7 +144,7 @@ class BaiZiEngine {
     );
 
     // 大运
-    final daYun = _calcDaYun(dayGan, monthGZ, isMale);
+    final daYun = _calcDaYun(yearGan, monthGan, monthZhi, isMale);
 
     // 流年（当年）
     final now = DateTime.now();
@@ -165,12 +165,14 @@ class BaiZiEngine {
 
   /// 获取时辰干支
   static String _getHourGanZhi(String dayGanZhi, List hours, int hourIndex) {
-    // 用户选择的时辰索引（0=子时，1=丑时...）
-    final selectedHour = hours.firstWhere(
-      (h) => (h as dynamic).getIndex() == hourIndex,
-      orElse: () => hours[0],
-    );
-    final sc = (selectedHour as dynamic).getSixtyCycle() as String;
-    return sc;
+    if (hours.isEmpty) return dayGanZhi;
+    final idx = hourIndex.clamp(0, hours.length - 1);
+    final selected = hours[idx];
+    try {
+      final sc = (selected as dynamic).getSixtyCycle();
+      return sc is String ? sc : dayGanZhi;
+    } catch (_) {
+      return dayGanZhi;
+    }
   }
 }
