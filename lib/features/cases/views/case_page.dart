@@ -104,7 +104,7 @@ class _CasePageState extends State<CasePage> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: theme.colorScheme.primary.withAlpha(60)),
                     ),
-                    child: Text(c.guaName,
+                    child: Text(_displayGuaName(c.guaName),
                         style: TextStyle(fontWeight: FontWeight.bold,
                             fontSize: 13, color: theme.colorScheme.primary)),
                   ),
@@ -129,7 +129,7 @@ class _CasePageState extends State<CasePage> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  _chip(theme, c.method),
+                  _chip(theme, methodToCN(c.method)),
                   if (c.tags.isNotEmpty)
                     ...c.tags.map((tag) => _chip(theme, tag)),
                 ],
@@ -246,11 +246,11 @@ class _CasePageState extends State<CasePage> {
               ]),
               const SizedBox(height: 4),
               Row(children: [
-                _infoTag(c.guaName, Theme.of(context).colorScheme.primary),
+                _infoTag(_displayGuaName(c.guaName), Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
                 _infoTag(c.guaGong, t.withAlpha(180)),
                 const Spacer(),
-                Text('${c.method} · ${c.createdAt.month}/${c.createdAt.day}',
+                Text('${methodToCN(c.method)} · ${c.createdAt.month}/${c.createdAt.day}',
                     style: TextStyle(fontSize: 12, color: t.withAlpha(120))),
               ]),
               if (c.notes != null && c.notes!.isNotEmpty) ...[
@@ -268,6 +268,33 @@ class _CasePageState extends State<CasePage> {
               ] else ...[
                 const SizedBox(height: 8),
                 Text('暂无备注', style: TextStyle(fontSize: 12, color: t.withAlpha(100))),
+              ],
+              // 月令/日令/空亡
+              if (result != null && (result.monthGanZhi != null || result.dayGanZhi != null)) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withAlpha(12),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Theme.of(context).colorScheme.primary.withAlpha(30)),
+                  ),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      if (result.monthGanZhi != null)
+                        _detailInfoTag('月', result.monthGanZhi!, t),
+                      if (result.dayGanZhi != null)
+                        _detailInfoTag('日', result.dayGanZhi!, t),
+                      if (result.kongWang != null && result.kongWang!.isNotEmpty)
+                        _detailInfoTag('空', '旬空: ${result.kongWang!.join(" ")}', t),
+                      _detailInfoTag('派',
+                          result.school == LiuyaoSchool.jingFangJianBan ? '京房简版' : '京房正宗', t),
+                    ],
+                  ),
+                ),
               ],
               const SizedBox(height: 16),
               // 排盘结果
@@ -307,6 +334,54 @@ class _CasePageState extends State<CasePage> {
         border: Border.all(color: color.withAlpha(80)),
       ),
       child: Text(text, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w500)),
+    );
+  }
+
+  /// 兼容旧数据：GuaName 枚举名 → 中文卦名
+  static const _enumNameToGuaCN = <String, String>{
+    'qian': '乾为天', 'kun': '坤为地', 'zhun': '水雷屯',
+    'meng': '山水蒙', 'xu': '水天需', 'song': '天水讼',
+    'shi': '地水师', 'bi': '水地比', 'xiaoXu': '风天小畜',
+    'lv': '天泽履', 'tai': '地天泰', 'pi': '天地否',
+    'tongRen': '天火同人', 'daYou': '火天大有', 'qian2': '地山谦',
+    'yu': '雷地豫', 'sui': '泽雷随', 'gu': '山风蛊',
+    'lin': '地泽临', 'guan': '风地观', 'shiHe': '火雷噬嗑',
+    'bi2': '山火贲', 'bo': '山地剥', 'fu': '地雷复',
+    'wuWang': '天雷无妄', 'daXu': '山天大畜', 'yi': '山雷颐',
+    'daGuo': '泽风大过', 'kan': '坎为水', 'li': '离为火',
+    'xian': '泽山咸', 'heng': '雷风恒', 'dun': '天山遁',
+    'daZhuang': '雷天大壮', 'jin': '火地晋', 'mingYi': '地火明夷',
+    'jiaRen': '风火家人', 'kui': '火泽睽', 'jian': '水山蹇',
+    'jie': '雷水解', 'sun': '山泽损', 'yi2': '风雷益',
+    'guai': '泽天夬', 'gou': '天风姤', 'cui': '泽地萃',
+    'sheng': '地风升', 'kun2': '泽水困', 'jing': '水风井',
+    'ge': '泽火革', 'ding': '火风鼎', 'zhen': '震为雷',
+    'gen': '艮为山', 'jian2': '风山渐', 'guiMei': '雷泽归妹',
+    'feng': '雷火丰', 'lv2': '火山旅', 'xun': '巽为风',
+    'dui': '兑为泽', 'huan': '风水涣', 'jie2': '水泽节',
+    'zhongFu': '风泽中孚', 'xiaoGuo': '雷山小过', 'jiJi': '水火既济',
+    'weiJi': '火水未济',
+  };
+
+  /// 显示卦名（兼容新旧数据）
+  String _displayGuaName(String name) {
+    // 新格式已经是中文
+    if (name.contains(RegExp(r'[\u4e00-\u9fff]'))) return name;
+    // 旧格式是枚举名 → 映射中文
+    return _enumNameToGuaCN[name] ?? name;
+  }
+
+  /// 详情页小标签（月令/日令/空亡）
+  Widget _detailInfoTag(String icon, String text, Color t) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: t.withAlpha(15),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: t.withAlpha(25)),
+      ),
+      child: Text('$icon $text',
+          style: TextStyle(fontSize: 11, color: t.withAlpha(200))),
     );
   }
 
@@ -480,8 +555,10 @@ class _CasePageState extends State<CasePage> {
     final methodCounts = <String, int>{};
     final guaCounts = <String, int>{};
     for (final c in allCases) {
-      methodCounts[c.method] = (methodCounts[c.method] ?? 0) + 1;
-      guaCounts[c.guaName] = (guaCounts[c.guaName] ?? 0) + 1;
+      final m = methodToCN(c.method);
+      methodCounts[m] = (methodCounts[m] ?? 0) + 1;
+      final gn = _displayGuaName(c.guaName);
+      guaCounts[gn] = (guaCounts[gn] ?? 0) + 1;
     }
     // 最常出现的卦（top 3）
     final topGua = guaCounts.entries.toList()

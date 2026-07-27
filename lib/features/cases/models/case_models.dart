@@ -2,13 +2,69 @@ import 'dart:convert';
 import '../../paipan/models/paipan_result.dart';
 import '../../paipan/models/gua_model.dart';
 
+/// 起卦方式中文映射
+const methodCN = <String, String>{
+  'manual': '机器摇卦',
+  '手工摇卦': '手工摇卦',
+  'time': '时间起卦',
+  'number': '数字起卦',
+  '数字起卦': '数字起卦',
+  '机器摇卦': '机器摇卦',
+  '时间起卦': '时间起卦',
+};
+
+/// 卦名中文映射
+const guaNameCN = <GuaName, String>{
+  GuaName.qian: '乾为天', GuaName.kun: '坤为地', GuaName.zhun: '水雷屯',
+  GuaName.meng: '山水蒙', GuaName.xu: '水天需', GuaName.song: '天水讼',
+  GuaName.shi: '地水师', GuaName.bi: '水地比', GuaName.xiaoXu: '风天小畜',
+  GuaName.lv: '天泽履', GuaName.tai: '地天泰', GuaName.pi: '天地否',
+  GuaName.tongRen: '天火同人', GuaName.daYou: '火天大有', GuaName.qian2: '地山谦',
+  GuaName.yu: '雷地豫', GuaName.sui: '泽雷随', GuaName.gu: '山风蛊',
+  GuaName.lin: '地泽临', GuaName.guan: '风地观', GuaName.shiHe: '火雷噬嗑',
+  GuaName.bi2: '山火贲', GuaName.bo: '山地剥', GuaName.fu: '地雷复',
+  GuaName.wuWang: '天雷无妄', GuaName.daXu: '山天大畜', GuaName.yi: '山雷颐',
+  GuaName.daGuo: '泽风大过', GuaName.kan: '坎为水', GuaName.li: '离为火',
+  GuaName.xian: '泽山咸', GuaName.heng: '雷风恒', GuaName.dun: '天山遁',
+  GuaName.daZhuang: '雷天大壮', GuaName.jin: '火地晋', GuaName.mingYi: '地火明夷',
+  GuaName.jiaRen: '风火家人', GuaName.kui: '火泽睽', GuaName.jian: '水山蹇',
+  GuaName.jie: '雷水解', GuaName.sun: '山泽损', GuaName.yi2: '风雷益',
+  GuaName.guai: '泽天夬', GuaName.gou: '天风姤', GuaName.cui: '泽地萃',
+  GuaName.sheng: '地风升', GuaName.kun2: '泽水困', GuaName.jing: '水风井',
+  GuaName.ge: '泽火革', GuaName.ding: '火风鼎', GuaName.zhen: '震为雷',
+  GuaName.gen: '艮为山', GuaName.jian2: '风山渐', GuaName.guiMei: '雷泽归妹',
+  GuaName.feng: '雷火丰', GuaName.lv2: '火山旅', GuaName.xun: '巽为风',
+  GuaName.dui: '兑为泽', GuaName.huan: '风水涣', GuaName.jie2: '水泽节',
+  GuaName.zhongFu: '风泽中孚', GuaName.xiaoGuo: '雷山小过', GuaName.jiJi: '水火既济',
+  GuaName.weiJi: '火水未济',
+};
+
+/// 卦宫中文映射
+const guaGongCN = <GuaGong, String>{
+  GuaGong.qian: '乾', GuaGong.dui: '兑', GuaGong.li: '离',
+  GuaGong.zhen: '震', GuaGong.xun: '巽', GuaGong.kan: '坎',
+  GuaGong.gen: '艮', GuaGong.kun: '坤',
+};
+
+/// 八卦中文名映射
+const trigramCN = <int, String>{
+  0: '乾', 1: '兑', 2: '离', 3: '震',
+  4: '巽', 5: '坎', 6: '艮', 7: '坤',
+};
+
+/// 获取中文起卦方式
+String methodToCN(String method) => methodCN[method] ?? method;
+
+/// 获取中文卦名
+String guaNameToCN(GuaName name) => guaNameCN[name] ?? name.name;
+
 /// 卦例数据模型
 class CaseModel {
   final int? id;
   final String title;
-  final String guaName;        // 卦名
+  final String guaName;        // 卦名（中文）
   final String guaGong;        // 卦宫
-  final String method;         // 起卦方式
+  final String method;         // 起卦方式（中文）
   final String paipanData;     // 排盘JSON数据
   final String? notes;         // 用户备注
   final List<String> tags;     // 标签
@@ -81,25 +137,20 @@ class CaseModel {
     updatedAt: DateTime.parse(map['updatedAt'] as String),
   );
 
-  /// 从排盘结果创建卦例
+  /// 从排盘结果创建卦例（中文名存储）
   factory CaseModel.fromPaipanResult({
     required PaipanResult result,
     required String title,
     String? notes,
     List<String>? tags,
   }) {
-    final guaGongCN = <GuaGong, String>{
-      GuaGong.qian: '乾', GuaGong.dui: '兑', GuaGong.li: '离',
-      GuaGong.zhen: '震', GuaGong.xun: '巽', GuaGong.kan: '坎',
-      GuaGong.gen: '艮', GuaGong.kun: '坤',
-    };
     final now = DateTime.now();
     return CaseModel(
       id: now.millisecondsSinceEpoch ~/ 1000,
       title: title,
-      guaName: result.benGua.name.name, // raw enum name, frontend renders CN
+      guaName: guaNameToCN(result.benGua.name),
       guaGong: guaGongCN[result.benGua.gong] ?? '',
-      method: result.method,
+      method: methodToCN(result.method),
       paipanData: jsonEncode(result.toJson()),
       notes: notes,
       tags: tags ?? [],

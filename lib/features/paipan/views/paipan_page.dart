@@ -68,7 +68,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _animCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    _animCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 400), value: 1.0);
     _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
   }
 
@@ -629,7 +629,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     final guaNameCN = guaCN[result.benGua.name] ?? result.benGua.name.name;
 
     // Dialog 让用户输入标题
-    final titleCtrl = TextEditingController(text: '$guaNameCN — $result.method');
+    final titleCtrl = TextEditingController(text: '$guaNameCN — ${methodToCN(result.method)}');
     final notesCtrl = TextEditingController();
     showDialog(
       context: context,
