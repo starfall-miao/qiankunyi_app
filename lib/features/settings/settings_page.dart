@@ -31,6 +31,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB);
+    final sp = context.watch<SettingsProvider>(); // 确保显示要素重建
 
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
