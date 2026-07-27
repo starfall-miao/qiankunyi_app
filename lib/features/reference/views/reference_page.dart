@@ -10,6 +10,7 @@ import '../data/shensha_dictionary.dart';
 import '../data/dongbian_dictionary.dart';
 import '../data/yaoci_data.dart';
 import '../data/meihua_data.dart';
+import '../data/liuyao_reference_data.dart';
 import '../../paipan/models/gua_model.dart';
 
 class ReferencePage extends StatelessWidget {
@@ -19,7 +20,7 @@ class ReferencePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return DefaultTabController(
-      length: 8,
+      length: 9,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('参考资料'),
@@ -38,6 +39,7 @@ class ReferencePage extends StatelessWidget {
               Tab(text: '神煞象义'),
               Tab(text: '动变含义'),
               Tab(text: '梅花易数'),
+              Tab(text: '六爻纳甲'),
             ],
           ),
         ),
@@ -51,6 +53,7 @@ class ReferencePage extends StatelessWidget {
             _ShenShaTab(),
             _DongBianTab(),
             _MeiHuaTab(),
+            _LiuYaoRefTab(),
           ],
         ),
       ),
@@ -975,6 +978,195 @@ class _ShenShaTabState extends State<_ShenShaTab> {
   }
 }
 
+/// ──────────────── 六爻纳甲 Tab ────────────────
+
+class _LiuYaoRefTab extends StatelessWidget {
+  const _LiuYaoRefTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final p = theme.colorScheme.primary;
+    final t = theme.colorScheme.onSurface.withAlpha(200);
+
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        _sectionHeader(p, '六神详解'),
+        ...liuShenList.map((s) => Card(
+          margin: const EdgeInsets.only(bottom: 6),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Container(
+                  width: 4, height: 36,
+                  decoration: BoxDecoration(
+                    color: Color(int.parse(s.colorHex.replaceFirst('#', '0xFF'))),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Text(s.name, style: TextStyle(fontWeight: FontWeight.bold,
+                            fontSize: 15, color: Color(int.parse(s.colorHex.replaceFirst('#', '0xFF'))))),
+                        const SizedBox(width: 8),
+                        Text('${s.wuXing} · ${s.season}',
+                            style: TextStyle(fontSize: 11, color: t.withAlpha(120))),
+                      ]),
+                      const SizedBox(height: 2),
+                      Text(s.meaning, style: TextStyle(fontSize: 12, color: t.withAlpha(180))),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        )),
+        const SizedBox(height: 12),
+
+        _sectionHeader(p, '六亲含义'),
+        ...liuQinMeanings.map((m) => Card(
+          margin: const EdgeInsets.only(bottom: 6),
+          child: ListTile(
+            dense: true,
+            leading: CircleAvatar(
+              radius: 14,
+              backgroundColor: p.withAlpha(20),
+              child: Text(m['亲']!, style: TextStyle(fontSize: 12,
+                  fontWeight: FontWeight.bold, color: p)),
+            ),
+            title: Text(m['含义']!, style: TextStyle(fontSize: 13, color: t.withAlpha(220))),
+          ),
+        )),
+        const SizedBox(height: 12),
+
+        _sectionHeader(p, '旬空表'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Table(
+              columnWidths: const {0: FlexColumnWidth(1), 1: FlexColumnWidth(1)},
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: p.withAlpha(20)),
+                  children: ['甲子旬', '空亡地支'].map((h) =>
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                      child: Text(h, textAlign: TextAlign.center,
+                          style: TextStyle(fontWeight: FontWeight.bold,
+                              fontSize: 13, color: p)),
+                    ),
+                  ).toList(),
+                ),
+                ...xunKongTable.map((e) => TableRow(
+                  children: [
+                    Padding(padding: const EdgeInsets.all(6),
+                        child: Text(e.jiaZi, textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 13, color: t))),
+                    Padding(padding: const EdgeInsets.all(6),
+                        child: Text(e.kongWang, textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 13, color: t))),
+                  ],
+                )),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        _sectionHeader(p, '五行旺衰表（月建）'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Table(
+              columnWidths: const {
+                0: FlexColumnWidth(2), 1: FlexColumnWidth(1),
+                2: FlexColumnWidth(1), 3: FlexColumnWidth(1),
+                4: FlexColumnWidth(1), 5: FlexColumnWidth(1),
+              },
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: p.withAlpha(20)),
+                  children: ['月建', '旺', '相', '休', '囚', '死'].map((h) =>
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                      child: Text(h, textAlign: TextAlign.center,
+                          style: TextStyle(fontWeight: FontWeight.bold,
+                              fontSize: 12, color: p)),
+                    ),
+                  ).toList(),
+                ),
+                ...wangShuaiTable.map((row) => TableRow(
+                  children: ['月建', '旺', '相', '休', '囚', '死'].map((k) =>
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 2),
+                      child: Text(row[k] ?? '', textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 12, color: t)),
+                    ),
+                  ).toList(),
+                )),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        _sectionHeader(p, '纳甲表'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Table(
+              columnWidths: const {
+                0: FlexColumnWidth(1), 1: FlexColumnWidth(1), 2: FlexColumnWidth(1),
+              },
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: p.withAlpha(20)),
+                  children: ['八卦', '内卦纳甲', '外卦纳甲'].map((h) =>
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                      child: Text(h, textAlign: TextAlign.center,
+                          style: TextStyle(fontWeight: FontWeight.bold,
+                              fontSize: 13, color: p)),
+                    ),
+                  ).toList(),
+                ),
+                ...naJiaTable.map((e) => TableRow(
+                  children: [
+                    Padding(padding: const EdgeInsets.all(5),
+                        child: Text(e.gua, textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 13, color: t))),
+                    Padding(padding: const EdgeInsets.all(5),
+                        child: Text(e.innerGan, textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 13, color: t))),
+                    Padding(padding: const EdgeInsets.all(5),
+                        child: Text(e.outerGan, textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 13, color: t))),
+                  ],
+                )),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _sectionHeader(Color primary, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6, top: 4),
+      child: Text(title, style: TextStyle(fontSize: 15,
+          fontWeight: FontWeight.bold, color: primary)),
+    );
+  }
+}
+
 class _MeiHuaTab extends StatelessWidget {
   const _MeiHuaTab();
 
@@ -1229,6 +1421,195 @@ class _DongBianTabState extends State<_DongBianTab> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// ──────────────── 六爻纳甲 Tab ────────────────
+
+class _LiuYaoRefTab extends StatelessWidget {
+  const _LiuYaoRefTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final p = theme.colorScheme.primary;
+    final t = theme.colorScheme.onSurface.withAlpha(200);
+
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        _sectionHeader(p, '六神详解'),
+        ...liuShenList.map((s) => Card(
+          margin: const EdgeInsets.only(bottom: 6),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Container(
+                  width: 4, height: 36,
+                  decoration: BoxDecoration(
+                    color: Color(int.parse(s.colorHex.replaceFirst('#', '0xFF'))),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Text(s.name, style: TextStyle(fontWeight: FontWeight.bold,
+                            fontSize: 15, color: Color(int.parse(s.colorHex.replaceFirst('#', '0xFF'))))),
+                        const SizedBox(width: 8),
+                        Text('${s.wuXing} · ${s.season}',
+                            style: TextStyle(fontSize: 11, color: t.withAlpha(120))),
+                      ]),
+                      const SizedBox(height: 2),
+                      Text(s.meaning, style: TextStyle(fontSize: 12, color: t.withAlpha(180))),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        )),
+        const SizedBox(height: 12),
+
+        _sectionHeader(p, '六亲含义'),
+        ...liuQinMeanings.map((m) => Card(
+          margin: const EdgeInsets.only(bottom: 6),
+          child: ListTile(
+            dense: true,
+            leading: CircleAvatar(
+              radius: 14,
+              backgroundColor: p.withAlpha(20),
+              child: Text(m['亲']!, style: TextStyle(fontSize: 12,
+                  fontWeight: FontWeight.bold, color: p)),
+            ),
+            title: Text(m['含义']!, style: TextStyle(fontSize: 13, color: t.withAlpha(220))),
+          ),
+        )),
+        const SizedBox(height: 12),
+
+        _sectionHeader(p, '旬空表'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Table(
+              columnWidths: const {0: FlexColumnWidth(1), 1: FlexColumnWidth(1)},
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: p.withAlpha(20)),
+                  children: ['甲子旬', '空亡地支'].map((h) =>
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                      child: Text(h, textAlign: TextAlign.center,
+                          style: TextStyle(fontWeight: FontWeight.bold,
+                              fontSize: 13, color: p)),
+                    ),
+                  ).toList(),
+                ),
+                ...xunKongTable.map((e) => TableRow(
+                  children: [
+                    Padding(padding: const EdgeInsets.all(6),
+                        child: Text(e.jiaZi, textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 13, color: t))),
+                    Padding(padding: const EdgeInsets.all(6),
+                        child: Text(e.kongWang, textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 13, color: t))),
+                  ],
+                )),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        _sectionHeader(p, '五行旺衰表（月建）'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Table(
+              columnWidths: const {
+                0: FlexColumnWidth(2), 1: FlexColumnWidth(1),
+                2: FlexColumnWidth(1), 3: FlexColumnWidth(1),
+                4: FlexColumnWidth(1), 5: FlexColumnWidth(1),
+              },
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: p.withAlpha(20)),
+                  children: ['月建', '旺', '相', '休', '囚', '死'].map((h) =>
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                      child: Text(h, textAlign: TextAlign.center,
+                          style: TextStyle(fontWeight: FontWeight.bold,
+                              fontSize: 12, color: p)),
+                    ),
+                  ).toList(),
+                ),
+                ...wangShuaiTable.map((row) => TableRow(
+                  children: ['月建', '旺', '相', '休', '囚', '死'].map((k) =>
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 2),
+                      child: Text(row[k] ?? '', textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 12, color: t)),
+                    ),
+                  ).toList(),
+                )),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        _sectionHeader(p, '纳甲表'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Table(
+              columnWidths: const {
+                0: FlexColumnWidth(1), 1: FlexColumnWidth(1), 2: FlexColumnWidth(1),
+              },
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: p.withAlpha(20)),
+                  children: ['八卦', '内卦纳甲', '外卦纳甲'].map((h) =>
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                      child: Text(h, textAlign: TextAlign.center,
+                          style: TextStyle(fontWeight: FontWeight.bold,
+                              fontSize: 13, color: p)),
+                    ),
+                  ).toList(),
+                ),
+                ...naJiaTable.map((e) => TableRow(
+                  children: [
+                    Padding(padding: const EdgeInsets.all(5),
+                        child: Text(e.gua, textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 13, color: t))),
+                    Padding(padding: const EdgeInsets.all(5),
+                        child: Text(e.innerGan, textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 13, color: t))),
+                    Padding(padding: const EdgeInsets.all(5),
+                        child: Text(e.outerGan, textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 13, color: t))),
+                  ],
+                )),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _sectionHeader(Color primary, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6, top: 4),
+      child: Text(title, style: TextStyle(fontSize: 15,
+          fontWeight: FontWeight.bold, color: primary)),
     );
   }
 }
