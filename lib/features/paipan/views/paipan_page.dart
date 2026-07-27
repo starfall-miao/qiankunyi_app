@@ -268,7 +268,9 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                 style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
               ),
             ],
-          )
+          ),
+        ],
+      )
         : _emptyHint(p, t),
         ),
       ],

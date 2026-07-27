@@ -9,6 +9,7 @@ import '../data/qinxing_data.dart';
 import '../data/shensha_dictionary.dart';
 import '../data/dongbian_dictionary.dart';
 import '../data/yaoci_data.dart';
+import '../../paipan/models/gua_model.dart';
 
 class ReferencePage extends StatelessWidget {
   const ReferencePage({super.key});

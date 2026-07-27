@@ -32,7 +32,6 @@ class _CasePageState extends State<CasePage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('卦例库'),
@@ -380,7 +379,6 @@ class _CasePageState extends State<CasePage> {
     final notesCtl = TextEditingController(text: c.notes ?? '');
     final tagCtl = TextEditingController();
     final provider = context.read<CaseProvider>();
-    final theme = Theme.of(context);
     List<String> tags = List.from(c.tags);
 
     showModalBottomSheet(
