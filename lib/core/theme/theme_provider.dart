@@ -83,10 +83,7 @@ class ThemeProvider extends ChangeNotifier {
   Future<void> setRenderDebug(bool value) async {
     _renderDebug = value;
     notifyListeners();
-<<<<<<< HEAD
-=======
     Logger.instance.info('渲染检测: ${value ? "开启" : "关闭"}');
->>>>>>> 3ef53e2 (feat(calendar): integrate tyme4dart with rich huangli info and responsive layout)
   }
 
   static ThemeMode _parseMode(String value) {
