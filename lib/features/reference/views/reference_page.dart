@@ -9,6 +9,7 @@ import '../data/qinxing_data.dart';
 import '../data/shensha_dictionary.dart';
 import '../data/dongbian_dictionary.dart';
 import '../data/yaoci_data.dart';
+import '../data/meihua_data.dart';
 import '../../paipan/models/gua_model.dart';
 
 class ReferencePage extends StatelessWidget {
@@ -18,7 +19,7 @@ class ReferencePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return DefaultTabController(
-      length: 7,
+      length: 8,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('参考资料'),
@@ -36,6 +37,7 @@ class ReferencePage extends StatelessWidget {
               Tab(text: '禽星关系'),
               Tab(text: '神煞象义'),
               Tab(text: '动变含义'),
+              Tab(text: '梅花易数'),
             ],
           ),
         ),
@@ -48,6 +50,7 @@ class ReferencePage extends StatelessWidget {
             _QinXingTab(),
             _ShenShaTab(),
             _DongBianTab(),
+            _MeiHuaTab(),
           ],
         ),
       ),
@@ -854,6 +857,181 @@ class _ShenShaTabState extends State<_ShenShaTab> {
   }
 }
 
+/// ──────────────── 梅花易数 ────────────────
+
+class _MeiHuaTab extends StatelessWidget {
+  const _MeiHuaTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final p = t.colorScheme.primary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F0EB);
+
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        // ── 标题 ──
+        Card(
+          color: p.withAlpha(15),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(children: [
+              Text('🌸', style: TextStyle(fontSize: 28)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('梅花易数', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: p)),
+                    const SizedBox(height: 4),
+                    Text('宋代邵雍（康节）所创，以数起卦、以象断事',
+                        style: TextStyle(fontSize: 12, color: t.withAlpha(180))),
+                  ],
+                ),
+              ),
+            ]),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // ── 起卦方法 ──
+        _sectionHeader(t, '起卦方法'),
+        ...qiGuaMethods.map((m) => Card(
+          margin: const EdgeInsets.only(bottom: 6),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('• ', style: TextStyle(color: p, fontWeight: FontWeight.bold)),
+                Expanded(child: Text(m, style: TextStyle(fontSize: 13, color: t.withAlpha(220)))),
+              ],
+            ),
+          ),
+        )),
+        const SizedBox(height: 12),
+
+        // ── 体用生克 ──
+        _sectionHeader(t, '体用生克'),
+        ...tiYongRules.map((r) => Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Icon(r.icon, color: r.color, size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(r.name, style: TextStyle(fontWeight: FontWeight.bold,
+                          fontSize: 14, color: r.color)),
+                      const SizedBox(height: 2),
+                      Text(r.description, style: TextStyle(fontSize: 12, color: t.withAlpha(180))),
+                      const SizedBox(height: 2),
+                      Text('→ ${r.verdict}', style: TextStyle(fontSize: 12,
+                          color: r.color.withAlpha(200), fontStyle: FontStyle.italic)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        )),
+        const SizedBox(height: 12),
+
+        // ── 八卦五行表 ──
+        _sectionHeader(t, '八卦五行属性'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Table(
+              columnWidths: const {0: FlexColumnWidth(1), 1: FlexColumnWidth(1),
+                2: FlexColumnWidth(1), 3: FlexColumnWidth(1), 4: FlexColumnWidth(1)},
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: p.withAlpha(20)),
+                  children: ['卦名', '符号', '五行', '数', '阴阳'].map((h) =>
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      child: Text(h, textAlign: TextAlign.center,
+                          style: TextStyle(fontWeight: FontWeight.bold,
+                              fontSize: 13, color: p)),
+                    ),
+                  ).toList(),
+                ),
+                ...trigramInfos.map((tr) => TableRow(
+                  children: [
+                    _cell(tr.name, t),
+                    _cell(tr.symbol, t),
+                    _cell(tr.wuXing, t),
+                    _cell('${tr.number}', t),
+                    _cell(tr.yinYang, t),
+                  ],
+                )),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // ── 五行生克 ──
+        _sectionHeader(t, '五行生克'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('相生：', style: TextStyle(fontWeight: FontWeight.bold,
+                    fontSize: 13, color: const Color(0xFF2E7D32))),
+                const SizedBox(height: 4),
+                Text(wuXingShengKe[0], style: TextStyle(fontSize: 13, color: t.withAlpha(220))),
+                const SizedBox(height: 12),
+                Text('相克：', style: TextStyle(fontWeight: FontWeight.bold,
+                    fontSize: 13, color: const Color(0xFFD32F2F))),
+                const SizedBox(height: 4),
+                Text(wuXingShengKe[1], style: TextStyle(fontSize: 13, color: t.withAlpha(220))),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // ── 卦气旺衰 ──
+        _sectionHeader(t, '卦气旺衰（时令旺相休囚死）'),
+        ...guaQiWangShuai.map((s) => Card(
+          margin: const EdgeInsets.only(bottom: 6),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Text(s, style: TextStyle(fontSize: 12, color: t.withAlpha(220))),
+          ),
+        )),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _sectionHeader(ThemeData t, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6, top: 4),
+      child: Text(title, style: TextStyle(fontSize: 15,
+          fontWeight: FontWeight.bold, color: t.colorScheme.primary)),
+    );
+  }
+
+  Widget _cell(String text, Color t) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      child: Text(text, textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 13, color: t.withAlpha(220))),
+    );
+  }
+}
+
 /// ──────────────── 动变含义 Tab ────────────────
 
 class _DongBianTab extends StatefulWidget {
@@ -936,6 +1114,181 @@ class _DongBianTabState extends State<_DongBianTab> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// ──────────────── 梅花易数 ────────────────
+
+class _MeiHuaTab extends StatelessWidget {
+  const _MeiHuaTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final p = t.colorScheme.primary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F0EB);
+
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        // ── 标题 ──
+        Card(
+          color: p.withAlpha(15),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(children: [
+              Text('🌸', style: TextStyle(fontSize: 28)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('梅花易数', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: p)),
+                    const SizedBox(height: 4),
+                    Text('宋代邵雍（康节）所创，以数起卦、以象断事',
+                        style: TextStyle(fontSize: 12, color: t.withAlpha(180))),
+                  ],
+                ),
+              ),
+            ]),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // ── 起卦方法 ──
+        _sectionHeader(t, '起卦方法'),
+        ...qiGuaMethods.map((m) => Card(
+          margin: const EdgeInsets.only(bottom: 6),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('• ', style: TextStyle(color: p, fontWeight: FontWeight.bold)),
+                Expanded(child: Text(m, style: TextStyle(fontSize: 13, color: t.withAlpha(220)))),
+              ],
+            ),
+          ),
+        )),
+        const SizedBox(height: 12),
+
+        // ── 体用生克 ──
+        _sectionHeader(t, '体用生克'),
+        ...tiYongRules.map((r) => Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Icon(r.icon, color: r.color, size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(r.name, style: TextStyle(fontWeight: FontWeight.bold,
+                          fontSize: 14, color: r.color)),
+                      const SizedBox(height: 2),
+                      Text(r.description, style: TextStyle(fontSize: 12, color: t.withAlpha(180))),
+                      const SizedBox(height: 2),
+                      Text('→ ${r.verdict}', style: TextStyle(fontSize: 12,
+                          color: r.color.withAlpha(200), fontStyle: FontStyle.italic)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        )),
+        const SizedBox(height: 12),
+
+        // ── 八卦五行表 ──
+        _sectionHeader(t, '八卦五行属性'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Table(
+              columnWidths: const {0: FlexColumnWidth(1), 1: FlexColumnWidth(1),
+                2: FlexColumnWidth(1), 3: FlexColumnWidth(1), 4: FlexColumnWidth(1)},
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: p.withAlpha(20)),
+                  children: ['卦名', '符号', '五行', '数', '阴阳'].map((h) =>
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      child: Text(h, textAlign: TextAlign.center,
+                          style: TextStyle(fontWeight: FontWeight.bold,
+                              fontSize: 13, color: p)),
+                    ),
+                  ).toList(),
+                ),
+                ...trigramInfos.map((tr) => TableRow(
+                  children: [
+                    _cell(tr.name, t),
+                    _cell(tr.symbol, t),
+                    _cell(tr.wuXing, t),
+                    _cell('${tr.number}', t),
+                    _cell(tr.yinYang, t),
+                  ],
+                )),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // ── 五行生克 ──
+        _sectionHeader(t, '五行生克'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('相生：', style: TextStyle(fontWeight: FontWeight.bold,
+                    fontSize: 13, color: const Color(0xFF2E7D32))),
+                const SizedBox(height: 4),
+                Text(wuXingShengKe[0], style: TextStyle(fontSize: 13, color: t.withAlpha(220))),
+                const SizedBox(height: 12),
+                Text('相克：', style: TextStyle(fontWeight: FontWeight.bold,
+                    fontSize: 13, color: const Color(0xFFD32F2F))),
+                const SizedBox(height: 4),
+                Text(wuXingShengKe[1], style: TextStyle(fontSize: 13, color: t.withAlpha(220))),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // ── 卦气旺衰 ──
+        _sectionHeader(t, '卦气旺衰（时令旺相休囚死）'),
+        ...guaQiWangShuai.map((s) => Card(
+          margin: const EdgeInsets.only(bottom: 6),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Text(s, style: TextStyle(fontSize: 12, color: t.withAlpha(220))),
+          ),
+        )),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _sectionHeader(ThemeData t, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6, top: 4),
+      child: Text(title, style: TextStyle(fontSize: 15,
+          fontWeight: FontWeight.bold, color: t.colorScheme.primary)),
+    );
+  }
+
+  Widget _cell(String text, Color t) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      child: Text(text, textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 13, color: t.withAlpha(220))),
     );
   }
 }
