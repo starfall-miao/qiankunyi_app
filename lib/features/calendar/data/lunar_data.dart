@@ -265,8 +265,12 @@ int getLunarMonthDays(int year, int month) {
 /// 获取农历年总天数
 int getLunarYearDays(int year) {
   int sum = 0;
-  for (int m = 1; m <= 12; m++) sum += getLunarMonthDays(year, m);
+  for (int m = 1; m <= 12; m++) {
+    sum += getLunarMonthDays(year, m);
+  }
   final leap = getLeapMonth(year);
-  if (leap > 0) sum += getLeapMonthDays(year);
+  if (leap > 0) {
+    sum += getLeapMonthDays(year);
+  }
   return sum;
 }

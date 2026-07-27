@@ -57,7 +57,7 @@ class _CalendarPageState extends State<CalendarPage> {
             body: Column(
               children: [
                 // 星期表头
-                _buildWeekdayHeader(p, t, c, isDark),
+                _buildWeekdayHeader(p, t, b, c, isDark),
                 // 月视图网格
                 Expanded(
                   child: _buildMonthGrid(
@@ -109,7 +109,7 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   /// 星期表头
-  Widget _buildWeekdayHeader(Color p, Color t, Color c, bool isDark) {
+  Widget _buildWeekdayHeader(Color p, Color t, Color b, Color c, bool isDark) {
     const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
     return Container(
       decoration: BoxDecoration(
@@ -118,7 +118,9 @@ class _CalendarPageState extends State<CalendarPage> {
       ),
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
-        children: weekdays.mapIndexed((i, name) {
+        children: weekdays.asMap().entries.map((e) {
+          final i = e.key;
+          final name = e.value;
           final isWeekend = i >= 5;
           return Expanded(
             child: Center(
@@ -241,7 +243,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 _infoRow('日', day.daySB.fullName, null, p, t),
                 const SizedBox(height: 4),
                 Text(
-                  '星期${CalendarDayInfo._weekdayNames[day.weekday]}  '
+                  '星期${CalendarDayInfo.weekdayNames[day.weekday]}  '
                   '第${day.dayOfYear}天',
                   style: TextStyle(fontSize: 12, color: t.withAlpha(150)),
                 ),
@@ -297,7 +299,7 @@ class _CalendarPageState extends State<CalendarPage> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<int>(
-                        value: y,
+                        initialValue: y,
                         decoration: const InputDecoration(labelText: '年'),
                         items: List.generate(
                           201,
@@ -312,7 +314,7 @@ class _CalendarPageState extends State<CalendarPage> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: DropdownButtonFormField<int>(
-                        value: m,
+                        initialValue: m,
                         decoration: const InputDecoration(labelText: '月'),
                         items: List.generate(
                           12,

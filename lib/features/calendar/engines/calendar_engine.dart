@@ -211,7 +211,7 @@ class CalendarEngine {
       final daySB = getDayStemBranch(date);
       final dayOfYear = date.difference(firstDayOfYear).inDays + 1;
       final wd = (date.weekday + 6) % 7;
-      final isT = date.year == today!.year &&
+      final isT = date.year == today.year &&
           date.month == today.month &&
           date.day == today.day;
 

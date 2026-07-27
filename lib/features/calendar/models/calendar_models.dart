@@ -66,6 +66,21 @@ class StemBranch {
   ];
 }
 
+/// 二十四节气
+class SolarTerm {
+  final String name;
+  final DateTime date;
+
+  const SolarTerm({required this.name, required this.date});
+
+  static const names = [
+    '立春', '雨水', '惊蛰', '春分', '清明', '谷雨',
+    '立夏', '小满', '芒种', '夏至', '小暑', '大暑',
+    '立秋', '处暑', '白露', '秋分', '寒露', '霜降',
+    '立冬', '小雪', '大雪', '冬至', '小寒', '大寒',
+  ];
+}
+
 /// 单日完整信息
 class CalendarDayInfo {
   final DateTime gregorianDate;
@@ -92,8 +107,8 @@ class CalendarDayInfo {
     required this.isCurrentMonth,
   });
 
-  String get weekdayName => '周${_weekdayNames[weekday]}';
-  static const _weekdayNames = ['一', '二', '三', '四', '五', '六', '日'];
+  String get weekdayName => '周${weekdayNames[weekday]}';
+  static const weekdayNames = ['一', '二', '三', '四', '五', '六', '日'];
 }
 
 /// 月视图数据
