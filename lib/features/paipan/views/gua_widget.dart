@@ -191,53 +191,56 @@ class GuaWidget extends StatelessWidget {
         ? (isDark ? Colors.white.withAlpha(8) : Colors.white.withAlpha(120))
         : Colors.transparent;
 
-    return Container(
-      decoration: BoxDecoration(color: rowBg),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Row(
-        children: [
-          // 六神（窄竖条）
-          if (ds.showLiuShen) _buildLiuShenTag(yao, theme),
-          if (ds.showLiuShen) const SizedBox(width: 4),
-          // 世应标记
-          if (ds.showShiYing) SizedBox(width: 18, child: _buildShiYingMark(yao, theme)),
-          // 爻画
-          SizedBox(width: 40, child: _buildYaoLine(yao, theme)),
-          const SizedBox(width: 6),
-          // 天干
-          if (ds.showTianGan) Text(
-            _tianGanCN[yao.tianGan] ?? '',
-            style: TextStyle(fontSize: 13, color: textColor.withAlpha(220)),
-          ),
-          if (ds.showTianGan) const SizedBox(width: 2),
-          // 地支
-          Text(
-            _diZhiCN[yao.diZhi] ?? '',
-            style: TextStyle(fontSize: 13, color: textColor),
-          ),
-          const SizedBox(width: 2),
-          // 五行小标记
-          if (yao.diZhi != null)
-            _diZhiWuXingBadge(yao.diZhi!, theme),
-          const SizedBox(width: 4),
-          // 六亲
-          if (yao.liuQin != LiuQin.none)
-            _liuQinBadge(yao, theme),
-          // 旺衰
-          if (ds.showWangShuai && yao.wangShuai != null) ...[
-            const SizedBox(width: 4),
-            _wangShuaiBadge(yao.wangShuai!, theme),
-          ],
-          const Spacer(),
-          // 刑冲合害标记
-          if (ds.showXingChong) _buildSpecialMarks(yao, theme),
-          // 动爻标记
-          if (yao.isMoving)
-            Padding(
-              padding: const EdgeInsets.only(left: 4),
-              child: Icon(Icons.bolt, size: 14, color: Colors.orange.shade700),
+    return InkWell(
+      onTap: () => _showYaoRef(context, yao, theme),
+      child: Container(
+        decoration: BoxDecoration(color: rowBg),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
+          children: [
+            // 六神（窄竖条）
+            if (ds.showLiuShen) _buildLiuShenTag(yao, theme),
+            if (ds.showLiuShen) const SizedBox(width: 4),
+            // 世应标记
+            if (ds.showShiYing) _buildShiYingMark(yao, theme),
+            // 爻画
+            SizedBox(width: 40, child: _buildYaoLine(yao, theme)),
+            const SizedBox(width: 6),
+            // 天干
+            if (ds.showTianGan) Text(
+              _tianGanCN[yao.tianGan] ?? '',
+              style: TextStyle(fontSize: 13, color: textColor.withAlpha(220)),
             ),
-        ],
+            if (ds.showTianGan) const SizedBox(width: 2),
+            // 地支
+            Text(
+              _diZhiCN[yao.diZhi] ?? '',
+              style: TextStyle(fontSize: 13, color: textColor),
+            ),
+            const SizedBox(width: 2),
+            // 五行小标记
+            if (yao.diZhi != null)
+              _diZhiWuXingBadge(yao.diZhi!, theme),
+            const SizedBox(width: 4),
+            // 六亲
+            if (yao.liuQin != LiuQin.none)
+              _liuQinBadge(yao, theme),
+            // 旺衰
+            if (ds.showWangShuai && yao.wangShuai != null) ...[
+              const SizedBox(width: 4),
+              _wangShuaiBadge(yao.wangShuai!, theme),
+            ],
+            const Spacer(),
+            // 刑冲合害标记
+            if (ds.showXingChong) _buildSpecialMarks(yao, theme),
+            // 动爻标记
+            if (yao.isMoving)
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Icon(Icons.bolt, size: 14, color: Colors.orange.shade700),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -429,6 +432,64 @@ class GuaWidget extends StatelessWidget {
     final shiCN = _yaoPosCN[gua.yaos[gua.shiYaoIndex].position] ?? '';
     final yingCN = _yaoPosCN[gua.yaos[gua.yingYaoIndex].position] ?? '';
     return '世在$shiCN爻 · 应在$yingCN爻';
+  }
+
+  /// 爻位参考资料弹窗
+  void _showYaoRef(BuildContext context, YaoModel yao, ThemeData theme) {
+    final pos = _yaoPosCN[yao.position] ?? yao.positionName;
+    final lines = <String>[
+      '$pos爻 · ${yao.yinYang == YaoYinYang.yang ? '阳爻' : '阴爻'}${yao.isMoving ? '（动爻）' : ''}',
+    ];
+    if (yao.tianGan != null && yao.diZhi != null) {
+      final tianGan = _tianGanCN[yao.tianGan!];
+      final diZhi = _diZhiCN[yao.diZhi!];
+      lines.add('天干：$tianGan  地支：$diZhi');
+      final wx = _diZhiWuXing(yao.diZhi!);
+      lines.add('五行：${_wuXingCN[wx]}');
+    }
+    if (yao.liuShen != null) {
+      lines.add('六神：${_liuShenCN[yao.liuShen]}');
+    }
+    if (yao.liuQin != LiuQin.none) {
+      lines.add('六亲：${_liuQinCN[yao.liuQin]}');
+    }
+    if (yao.isShi) lines.add('世爻');
+    if (yao.isYing) lines.add('应爻');
+    if (yao.wangShuai != null) lines.add('旺衰：${_wangShuaiCN[yao.wangShuai]}');
+    if (yao.isKongWang) lines.add('旬空');
+    if (yao.isXing) lines.add('刑');
+    if (yao.isChong) lines.add('冲');
+    if (yao.isHe) lines.add('合');
+    if (yao.isHai) lines.add('害');
+    if (yao.sanHeJu.isNotEmpty) lines.add('三合：${yao.sanHeJu.join("、")}');
+
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('爻位详解 · $pos爻',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+            const SizedBox(height: 8),
+            ...lines.map((l) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Text(l, style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurface)),
+            )),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('关闭'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ============ 辅助函数 ============
