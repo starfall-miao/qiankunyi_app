@@ -2,9 +2,11 @@
 // 纯 Dart 实现，所有术数规则硬编码，离线运行
 
 import 'dart:math';
+import 'package:tyme/tyme.dart' as tyme;
 import '../models/yao_model.dart';
 import '../models/gua_model.dart';
 import '../models/paipan_result.dart';
+import 'liuyao_date_helper.dart';
 
 /// 64 卦映射表 [上卦索引][下卦索引] → GuaName
 const _hexagramMap = <int, List<GuaName>>{
@@ -247,7 +249,7 @@ class LiuYaoEngine {
   static final _random = Random();
 
   /// 手动摇卦
-  static PaipanResult manual() {
+  static PaipanResult manual({LiuyaoSchool school = LiuyaoSchool.jingFangJianBan}) {
     final yaos = <YaoModel>[];
     for (int i = 0; i < 6; i++) {
       final isYang = _random.nextBool();
@@ -258,16 +260,18 @@ class LiuYaoEngine {
         isMoving: isMoving,
       ));
     }
-    return _buildResult(yaos, 'manual');
+    return _buildResult(yaos, 'manual', school: school);
   }
 
   /// 从爻列表构建排盘结果（手工输入用）
-  static PaipanResult fromYaos(List<YaoModel> yaos, {DateTime? time}) {
-    return _buildResult(yaos, '手工摇卦', time);
+  static PaipanResult fromYaos(List<YaoModel> yaos,
+      {DateTime? time, LiuyaoSchool school = LiuyaoSchool.jingFangJianBan}) {
+    return _buildResult(yaos, '手工摇卦', dt: time, school: school);
   }
 
   /// 时间起卦
-  static PaipanResult byTime(DateTime time) {
+  static PaipanResult byTime(DateTime time,
+      {LiuyaoSchool school = LiuyaoSchool.jingFangJianBan}) {
     final year = time.year % 100;
     final month = time.month;
     final day = time.day;
@@ -279,15 +283,16 @@ class LiuYaoEngine {
     final lowerIdx = _toTrigramIndex(shiChen);
     final movingIdx = (year + month + day + shiChen) % 6;
 
-    return _buildFromTrigrams(upperIdx, lowerIdx, movingIdx, 'time');
+    return _buildFromTrigrams(upperIdx, lowerIdx, movingIdx, 'time', school: school);
   }
 
   /// 数字起卦
-  static PaipanResult byNumbers(int a, int b, int c) {
+  static PaipanResult byNumbers(int a, int b, int c,
+      {LiuyaoSchool school = LiuyaoSchool.jingFangJianBan}) {
     final upperIdx = _toTrigramIndex(a);
     final lowerIdx = _toTrigramIndex(b);
     final movingIdx = (c - 1) % 6; // c为动爻序号（1-6），转为0-based
-    return _buildFromTrigrams(upperIdx, lowerIdx, movingIdx, 'number');
+    return _buildFromTrigrams(upperIdx, lowerIdx, movingIdx, 'number', school: school);
   }
 
   /// 数字 → 八卦索引（0=乾 ~ 7=坤）
@@ -298,7 +303,8 @@ class LiuYaoEngine {
 
   /// 由上下卦构建排盘结果
   static PaipanResult _buildFromTrigrams(
-      int upperIdx, int lowerIdx, int movingYaoIdx, String method) {
+      int upperIdx, int lowerIdx, int movingYaoIdx, String method,
+      {DateTime? dt, LiuyaoSchool school = LiuyaoSchool.jingFangJianBan}) {
     // 八卦爻模式：从初爻到上爻（0~2为下卦/内卦，3~5为上卦/外卦）
     const triPatterns = [
       [1, 1, 1], // 0乾
@@ -324,11 +330,12 @@ class LiuYaoEngine {
       );
     });
 
-    return _buildResult(yaos, method);
+    return _buildResult(yaos, method, dt: dt, school: school);
   }
 
   /// 从爻数据构建完整排盘结果
-  static PaipanResult _buildResult(List<YaoModel> yaos, String method, [DateTime? dt]) {
+  static PaipanResult _buildResult(List<YaoModel> yaos, String method,
+      {DateTime? dt, LiuyaoSchool school = LiuyaoSchool.jingFangJianBan}) {
     dt ??= DateTime.now();
     // 从六个爻反推上下卦掩码
     final upperMask = _yaosToMask(yaos.sublist(0, 3).reversed.toList());
@@ -369,6 +376,24 @@ class LiuYaoEngine {
 
     // 六亲排布
     _applyLiuQin(yaos, guaGongWuXing[gong]!);
+
+    // ───── 月令/日令/空亡（基于 tyme4dart） ─────
+    final solarDay = tyme.SolarDay.fromYmd(dt.year, dt.month, dt.day);
+    final monthZhi = monthZhiSimple(dt.month); // 月建地支
+    final dayGanZhi = dayGanZhiFromTyme(solarDay); // 日柱干支
+    final monthGanZhi = monthGanZhiFromTyme(solarDay); // 月柱干支
+    final dayGzIdx = dayGanZhiIndex(solarDay); // 日干支索引
+    final kongWangList = calcKongWang(dayGzIdx); // 旬空列表
+
+    // 标记空亡
+    for (final yao in yaos) {
+      if (yao.diZhi != null) {
+        final dzName = _diZhiMap.entries
+            .firstWhere((e) => e.value == yao.diZhi, orElse: () => MapEntry('', DiZhi.zi))
+            .key;
+        yao.isKongWang = kongWangList.contains(dzName);
+      }
+    }
 
     // 六神（根据日干）
     _applyLiuShen(yaos, _dayGanIndex(dt));
@@ -422,6 +447,11 @@ class LiuYaoEngine {
       bianGua: bianGua,
       paipanTime: dt,
       method: method,
+      school: school,
+      monthZhi: monthZhi,
+      monthGanZhi: monthGanZhi,
+      dayGanZhi: dayGanZhi,
+      kongWang: kongWangList,
     );
   }
 

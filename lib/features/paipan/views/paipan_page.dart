@@ -53,6 +53,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
   final _log = Logger.instance;
   int _tabIndex = 0;
   int _liuyaoMethod = 0;
+  LiuyaoSchool _liuyaoSchool = LiuyaoSchool.jingFangJianBan;
   final _manualYaos = List<_YaoInput>.filled(6, _YaoInput.shaoYin);
   int _meihuaMethod = 0;
   final _numACtrl = TextEditingController();
@@ -192,6 +193,41 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         ),
         const SizedBox(height: 8),
 
+        // 流派选择
+        Row(
+          children: [
+            Icon(Icons.school_outlined, size: 14, color: p.withAlpha(180)),
+            const SizedBox(width: 4),
+            Text('流派: ', style: TextStyle(fontSize: 12, color: t.withAlpha(200))),
+            Expanded(
+              child: ToggleButtons(
+                isSelected: [
+                  _liuyaoSchool == LiuyaoSchool.jingFangJianBan,
+                  _liuyaoSchool == LiuyaoSchool.jingFangZhengZong,
+                ],
+                onPressed: (i) {
+                  setState(() {
+                    _liuyaoSchool = i == 0
+                        ? LiuyaoSchool.jingFangJianBan
+                        : LiuyaoSchool.jingFangZhengZong;
+                  });
+                },
+                constraints: const BoxConstraints(minWidth: 80, minHeight: 28),
+                textStyle: TextStyle(fontSize: 12, color: t),
+                selectedColor: p,
+                fillColor: p.withAlpha(20),
+                color: t.withAlpha(150),
+                borderRadius: BorderRadius.circular(6),
+                children: const [
+                  Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text('京房简版')),
+                  Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text('京房正宗')),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
         // 手工摇——爻位选择面板（国风卦签风格）
         if (_liuyaoMethod == 0) ..._buildManualPanel(p, t, b, c, dark),
 
@@ -230,6 +266,37 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                 Text('☯ ', style: TextStyle(fontSize: 18, color: p)),
                 Text('六爻纳甲 · 排盘结果',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: t)),
+              ],
+            ),
+          ),
+          // ── 月令/日令/空亡/流派信息 ──
+          Container(
+            padding: const EdgeInsets.all(8),
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: p.withAlpha(12),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: p.withAlpha(30)),
+            ),
+            child: Row(
+              children: [
+                if (pr.liuyaoResult!.monthGanZhi != null) ...[
+                  _dateTag('月', pr.liuyaoResult!.monthGanZhi!, p, t),
+                  const SizedBox(width: 8),
+                ],
+                if (pr.liuyaoResult!.dayGanZhi != null) ...[
+                  _dateTag('日', pr.liuyaoResult!.dayGanZhi!, p, t),
+                  const SizedBox(width: 8),
+                ],
+                if (pr.liuyaoResult!.kongWang != null) ...[
+                  _dateTag('空', '旬空: ${pr.liuyaoResult!.kongWang!.join(" ")}', p, t),
+                  const SizedBox(width: 8),
+                ],
+                _dateTag(
+                  '派',
+                  pr.liuyaoResult!.school == LiuyaoSchool.jingFangJianBan ? '京房简版' : '京房正宗',
+                  p, t,
+                ),
               ],
             ),
           ),
@@ -295,11 +362,11 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
             isMoving: v == _YaoInput.laoYin || v == _YaoInput.laoYang,
           ));
         }
-        r = LiuYaoEngine.fromYaos(ys, time: _selectedTime);
+        r = LiuYaoEngine.fromYaos(ys, time: _selectedTime, school: _liuyaoSchool);
       } else if (_liuyaoMethod == 1) {
-        r = LiuYaoEngine.manual();
+        r = LiuYaoEngine.manual(school: _liuyaoSchool);
       } else {
-        r = LiuYaoEngine.byTime(_selectedTime);
+        r = LiuYaoEngine.byTime(_selectedTime, school: _liuyaoSchool);
       }
 
       // 模拟短加载延迟（增强仪式感）
@@ -784,6 +851,20 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
           ],
         ),
       ],
+    );
+  }
+
+  /// 月令/日令/空亡 等日期标签
+  Widget _dateTag(String icon, String text, Color p, Color t) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: p.withAlpha(15),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: p.withAlpha(30)),
+      ),
+      child: Text('$icon $text',
+        style: TextStyle(fontSize: 11, color: t.withAlpha(220)),),
     );
   }
 
