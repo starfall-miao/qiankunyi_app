@@ -29,7 +29,12 @@ class LogEntry {
   String get formatted {
     final ts = '${time.hour.toString().padLeft(2, '0')}:'
         '${time.minute.toString().padLeft(2, '0')}:'
+<<<<<<< HEAD
         '${time.second.toString().padLeft(2, '0')}';
+=======
+        '${time.second.toString().padLeft(2, '0')}.'
+        '${time.millisecond.toString().padLeft(3, '0')}';
+>>>>>>> 3ef53e2 (feat(calendar): integrate tyme4dart with rich huangli info and responsive layout)
     return '[$ts][$levelTag] $message';
   }
 }
@@ -58,7 +63,11 @@ class Logger {
   void _add(LogLevel level, String msg, [String? detail]) {
     if (!_enabled) return;
     _logs.insert(0, LogEntry(time: DateTime.now(), level: level, message: msg, detail: detail));
+<<<<<<< HEAD
     if (_logs.length > 500) _logs.removeLast();
+=======
+    if (_logs.length > 1000) _logs.removeLast();
+>>>>>>> 3ef53e2 (feat(calendar): integrate tyme4dart with rich huangli info and responsive layout)
   }
 
   void clear() {

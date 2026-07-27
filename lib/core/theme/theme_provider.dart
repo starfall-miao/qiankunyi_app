@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app_theme.dart';
+import '../utils/logger.dart';
 
 class ThemeProvider extends ChangeNotifier {
   static const String _modeKey = 'theme_mode';
@@ -42,6 +43,8 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_modeKey, _serializeMode(mode));
+    final label = mode == ThemeMode.light ? '浅色' : mode == ThemeMode.dark ? '深色' : '跟随系统';
+    Logger.instance.info('主题模式: $label');
   }
 
   Future<void> setColorScheme(ColorSchemeType type) async {
@@ -49,6 +52,7 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_colorKey, type.name);
+    Logger.instance.info('配色方案: ${type.label}');
   }
 
   Future<void> setAcrylicEffect(bool value) async {
@@ -56,6 +60,7 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_acrylicKey, value);
+    Logger.instance.info('亚克力效果: ${value ? "开启" : "关闭"}');
   }
 
   Future<void> toggleAcrylic() async {
@@ -67,6 +72,7 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(_opacityKey, _acrylicOpacity);
+    Logger.instance.info('亚克力透明度: ${(value * 100).toInt()}%');
   }
 
   Future<void> toggleTheme() async {
@@ -77,6 +83,10 @@ class ThemeProvider extends ChangeNotifier {
   Future<void> setRenderDebug(bool value) async {
     _renderDebug = value;
     notifyListeners();
+<<<<<<< HEAD
+=======
+    Logger.instance.info('渲染检测: ${value ? "开启" : "关闭"}');
+>>>>>>> 3ef53e2 (feat(calendar): integrate tyme4dart with rich huangli info and responsive layout)
   }
 
   static ThemeMode _parseMode(String value) {

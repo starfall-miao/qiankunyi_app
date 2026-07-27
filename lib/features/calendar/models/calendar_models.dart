@@ -1,12 +1,21 @@
 /// 万年历数据模型
 library;
 
+<<<<<<< HEAD
 /// 农历日期
 class LunarDate {
   final int year;       // 农历年
   final int month;      // 农历月（1-12）
   final int day;        // 农历日（1-29/30）
   final bool isLeap;    // 是否闰月
+=======
+/// 农历日期（轻量版，用于网格展示）
+class LunarDate {
+  final int year;
+  final int month;   // 1-12
+  final int day;     // 1-29/30
+  final bool isLeap;
+>>>>>>> 3ef53e2 (feat(calendar): integrate tyme4dart with rich huangli info and responsive layout)
 
   const LunarDate({
     required this.year,
@@ -16,6 +25,7 @@ class LunarDate {
   });
 
   String get monthChinese {
+<<<<<<< HEAD
     final idx = isLeap ? month - 1 : month - 1;
     if (idx < 0 || idx >= _lunarMonths.length) return '?月';
     return '${isLeap ? "闰" : ""}${_lunarMonths[idx]}月';
@@ -24,10 +34,27 @@ class LunarDate {
   String get dayChinese {
     if (day < 1 || day > 30) return '?日';
     return _lunarDays[day - 1];
+=======
+    const months = ['正','二','三','四','五','六','七','八','九','十','冬','腊'];
+    final idx = month - 1;
+    if (idx < 0 || idx >= months.length) return '?月';
+    return '${isLeap ? "闰" : ""}${months[idx]}月';
+  }
+
+  String get dayChinese {
+    const days = [
+      '初一','初二','初三','初四','初五','初六','初七','初八','初九','初十',
+      '十一','十二','十三','十四','十五','十六','十七','十八','十九','二十',
+      '廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十',
+    ];
+    if (day < 1 || day > 30) return '?日';
+    return days[day - 1];
+>>>>>>> 3ef53e2 (feat(calendar): integrate tyme4dart with rich huangli info and responsive layout)
   }
 
   @override
   String toString() => '$year年$monthChinese$dayChinese';
+<<<<<<< HEAD
 
   static const _lunarMonths = [
     '正', '二', '三', '四', '五', '六',
@@ -88,22 +115,45 @@ class CalendarDayInfo {
   final StemBranch yearSB;
   final StemBranch monthSB;
   final StemBranch daySB;
+=======
+}
+
+/// 网格日期信息
+class CalendarDayInfo {
+  final DateTime gregorianDate;
+  final LunarDate lunarDate;
+  final String yearGanZhi;
+  final String monthGanZhi;
+  final String dayGanZhi;
+  final String zodiac;
+>>>>>>> 3ef53e2 (feat(calendar): integrate tyme4dart with rich huangli info and responsive layout)
   final String? solarTerm;
   final int dayOfYear;
   final int weekday; // 0=周一, 6=周日
   final bool isToday;
+<<<<<<< HEAD
   final bool isCurrentMonth;
+=======
+>>>>>>> 3ef53e2 (feat(calendar): integrate tyme4dart with rich huangli info and responsive layout)
 
   const CalendarDayInfo({
     required this.gregorianDate,
     required this.lunarDate,
+<<<<<<< HEAD
     required this.yearSB,
     required this.monthSB,
     required this.daySB,
+=======
+    required this.yearGanZhi,
+    required this.monthGanZhi,
+    required this.dayGanZhi,
+    required this.zodiac,
+>>>>>>> 3ef53e2 (feat(calendar): integrate tyme4dart with rich huangli info and responsive layout)
     this.solarTerm,
     required this.dayOfYear,
     required this.weekday,
     required this.isToday,
+<<<<<<< HEAD
     required this.isCurrentMonth,
   });
 
@@ -126,4 +176,10 @@ class MonthData {
     required this.firstWeekday,
     required this.totalDays,
   });
+=======
+  });
+
+  String get weekdayName => '周${_weekdayNames[weekday]}';
+  static const _weekdayNames = ['一','二','三','四','五','六','日'];
+>>>>>>> 3ef53e2 (feat(calendar): integrate tyme4dart with rich huangli info and responsive layout)
 }
