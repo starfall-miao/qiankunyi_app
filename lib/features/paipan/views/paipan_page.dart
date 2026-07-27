@@ -129,11 +129,16 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
           ),
           // 内容区域
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(12),
-              child: _tabIndex == 0
-                  ? _liuyaoContent(context, pr, p, t, b, c, isDark)
-                  : _meihuaContent(context, pr, p, t, b, c, isDark),
+            child: LayoutBuilder(
+              builder: (ctx, constraints) {
+                final horizontalPadding = constraints.maxWidth >= 600 ? 32.0 : 12.0;
+                return SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 12),
+                  child: _tabIndex == 0
+                      ? _liuyaoContent(context, pr, p, t, b, c, isDark)
+                      : _meihuaContent(context, pr, p, t, b, c, isDark),
+                );
+              },
             ),
           ),
         ],
@@ -301,15 +306,27 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
             ),
           ),
           // ── 六爻三卦 ──
-          _miniGuaCard('本卦', pr.liuyaoResult!.benGua, p, t, c, dark),
-          if (pr.liuyaoResult!.bianGua != null) ...[
-            const SizedBox(height: 8),
-            _miniGuaCard('变卦', pr.liuyaoResult!.bianGua!, p, t, c, dark),
-          ],
-          if (pr.liuyaoResult!.huGua != null) ...[
-            const SizedBox(height: 8),
-            _miniGuaCard('互卦', pr.liuyaoResult!.huGua!, p, t, c, dark),
-          ],
+          LayoutBuilder(
+            builder: (ctx2, constraints) {
+              final isWide = constraints.maxWidth >= 500;
+              final cards = <Widget>[
+                _miniGuaCard('本卦', pr.liuyaoResult!.benGua, p, t, c, dark),
+                if (pr.liuyaoResult!.bianGua != null)
+                  _miniGuaCard('变卦', pr.liuyaoResult!.bianGua!, p, t, c, dark),
+                if (pr.liuyaoResult!.huGua != null)
+                  _miniGuaCard('互卦', pr.liuyaoResult!.huGua!, p, t, c, dark),
+              ];
+              if (isWide) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: cards.expand((w) => [Expanded(child: w), const SizedBox(width: 8)]).toList()..removeLast(),
+                );
+              }
+              return Column(
+                children: cards.expand((w) => [w, const SizedBox(height: 8)]).toList()..removeLast(),
+              );
+            },
+          ),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
