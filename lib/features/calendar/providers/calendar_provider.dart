@@ -32,7 +32,6 @@ class CalendarProvider extends ChangeNotifier {
   }
 
   void _selectToday() {
-    final now = DateTime.now();
     for (final d in _days) {
       if (d.isToday) {
         _selectedDay = d;

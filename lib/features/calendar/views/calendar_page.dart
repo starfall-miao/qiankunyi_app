@@ -686,8 +686,8 @@ class _DayDetailPanel extends StatelessWidget {
         _infoRow('值神', duty, p, t),
         _infoRow('六曜', sixStar, p, t),
         _infoRow('二十八宿', star28, p, t),
-        _infoRow('冲煞', '冲${oppositeZodiac}(${tyme.EarthBranch(oppositeBranchIndex).getName()})', p, t),
-        if (fetusDay != null) _infoRow('胎神', fetusDay.getName(), p, t),
+        _infoRow('冲煞', '冲$oppositeZodiac(${tyme.EarthBranch(oppositeBranchIndex).getName()})', p, t),
+        _infoRow('胎神', fetusDay.getName(), p, t),
         _infoRow('彭祖百忌', pengZu, p, t),
         if (gods.isNotEmpty)
           Padding(
