@@ -1244,7 +1244,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     sb.writeln('你是一位精通六爻纳甲筮法的资深易学大师。请根据以下卦象信息为用户解卦：');
     sb.writeln();
     sb.writeln('【起卦信息】');
-    sb.writeln('本卦：$nameCN（${gong}宫）');
+    sb.writeln('本卦：$nameCN（$gong宫）');
     sb.writeln('动爻：$movingCount 位');
     if (result.bianGua != null) {
       final bianCN = guaCN[result.bianGua!.name] ?? '';

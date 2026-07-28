@@ -559,22 +559,27 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _selectModel(BuildContext context, SettingsProvider sp) {
+    final models = ['qwen-turbo', 'qwen-plus', 'qwen-max', 'deepseek-v3', 'deepseek-r1'];
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('选择 AI 模型'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ['qwen-turbo', 'qwen-plus', 'qwen-max', 'deepseek-v3', 'deepseek-r1'].map((m) =>
-            RadioListTile<String>(
-              title: Text(m),
-              value: m,
-              groupValue: sp.aiModel,
-              onChanged: (v) { sp.aiModel = v!; Navigator.pop(ctx); },
-            ),
-          ).toList(),
-        ),
-      ),
+      builder: (ctx) {
+        final theme2 = Theme.of(ctx);
+        return AlertDialog(
+          title: const Text('选择 AI 模型'),
+          content: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: models.map((m) {
+              final sel = sp.aiModel == m;
+              return ChoiceChip(
+                label: Text(m, style: TextStyle(fontSize: 13, color: sel ? theme2.colorScheme.primary : null)),
+                selected: sel,
+                onSelected: (_) { sp.aiModel = m; Navigator.pop(ctx); },
+              );
+            }).toList(),
+          ),
+        );
+      },
     );
   }
 

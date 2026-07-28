@@ -556,7 +556,7 @@ class GuaWidget extends StatelessWidget {
                   if (yao.isHe) _refRow('合', '✅ 相合', '相合代表合作、和合、阻碍，事情可能被绊住', textColor),
                   if (yao.isHai) _refRow('害', '✅ 相害', '相害代表损害、暗中伤害，需防小人', textColor),
                   if (yao.sanHeJu.isNotEmpty)
-                    _refRow('三合', '${yao.sanHeJu.join("、")}',
+                    _refRow('三合', yao.sanHeJu.join('、'),
                         '三合代表三方合作、汇聚力量，大吉之象', textColor),
                 ], cardColor, textColor, theme.colorScheme.primary),
               ],
