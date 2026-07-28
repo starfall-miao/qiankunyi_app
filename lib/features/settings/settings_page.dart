@@ -490,7 +490,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _buildAISettings(ThemeData theme) {
     // 提供商选择弹窗
-    void _selectProvider(BuildContext ctx, SettingsProvider sp) {
+    void selectProviderDialog(BuildContext ctx, SettingsProvider sp) {
       showDialog(
         context: ctx,
         builder: (dialogCtx) {
@@ -579,7 +579,7 @@ class _SettingsPageState extends State<SettingsPage> {
               icon: Icons.cloud,
               title: '提供商',
               subtitle: sp.aiProviderName,
-              onTap: () => _selectProvider(context, sp),
+              onTap: () => selectProviderDialog(context, sp),
             ),
           ),
           const Divider(height: 1),

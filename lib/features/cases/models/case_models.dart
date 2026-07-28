@@ -224,8 +224,8 @@ class CaseModel {
     return CaseModel(
       id: now.millisecondsSinceEpoch ~/ 1000,
       title: title,
-      guaName: result.yearZhu.tianGan + result.yearZhu.diZhi + '年',
-      guaGong: result.dayZhu.tianGan + result.dayZhu.diZhi,
+      guaName: '${result.yearZhu.ganZhi}年',
+      guaGong: result.dayZhu.ganZhi,
       method: '八字排盘',
       paipanData: jsonEncode(result.toJson()),
       notes: notes,

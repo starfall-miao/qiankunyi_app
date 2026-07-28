@@ -1,8 +1,6 @@
 /// 八字排盘页面 — 国风卡片风格，与六爻/梅花一致
 library;
 
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
