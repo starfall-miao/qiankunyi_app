@@ -3,9 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../core/utils/logger.dart';
 import '../providers/bazi_provider.dart';
-import '../providers/paipan_provider.dart';
 import '../models/bazi_models.dart';
 
 class BaziPage extends StatefulWidget {
