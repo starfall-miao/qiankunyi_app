@@ -489,18 +489,97 @@ class _SettingsPageState extends State<SettingsPage> {
   // ──────────────── AI 解卦配置 ────────────────
 
   Widget _buildAISettings(ThemeData theme) {
+    // 提供商选择弹窗
+    void _selectProvider(BuildContext ctx, SettingsProvider sp) {
+      showDialog(
+        context: ctx,
+        builder: (dialogCtx) {
+          final t = Theme.of(dialogCtx);
+          return AlertDialog(
+            title: const Text('选择 AI 提供商'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 预设提供商
+                  ...SettingsProvider.aiPresets.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final preset = entry.value;
+                    final isSelected = sp.aiPresetIndex == i;
+                    return ListTile(
+                      leading: Icon(
+                        isSelected
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_unchecked,
+                        color: isSelected ? t.colorScheme.primary : null,
+                      ),
+                      title: Text(preset.name),
+                      subtitle: Text(preset.endpoint,
+                          style: const TextStyle(fontSize: 12)),
+                      dense: true,
+                      onTap: () {
+                        sp.selectAiPreset(i);
+                        Navigator.pop(dialogCtx);
+                      },
+                    );
+                  }),
+                  const Divider(),
+                  // 自定义
+                  ListTile(
+                    leading: Icon(
+                      sp.aiPresetIndex == -1
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked,
+                      color: sp.aiPresetIndex == -1
+                          ? t.colorScheme.primary
+                          : null,
+                    ),
+                    title: const Text('自定义'),
+                    subtitle: const Text('手动输入 API 地址和密钥'),
+                    dense: true,
+                    onTap: () {
+                      sp.aiEndpoint = sp.aiEndpoint;
+                      Navigator.pop(dialogCtx);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(dialogCtx),
+                  child: const Text('取消')),
+            ],
+          );
+        },
+      );
+    }
+
     return _buildCard(
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 总开关
           Consumer<SettingsProvider>(
-            builder: (ctx, sp, _) => SwitchListTile(
-              title: const Text('启用 AI 解卦'),
-              subtitle: const Text('开启后可在排盘页使用 AI 辅助分析'),
-              value: sp.aiEnabled,
-              onChanged: (v) => sp.aiEnabled = v,
-              dense: true,
+            builder: (ctx, sp, _) => _buildSettingRow(
+              icon: Icons.auto_awesome,
+              title: '启用 AI 解卦',
+              subtitle: '开启后可在卦例详情页使用 AI 辅助分析',
+              trailing: Switch(
+                value: sp.aiEnabled,
+                onChanged: (v) => sp.aiEnabled = v,
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          // 提供商
+          Consumer<SettingsProvider>(
+            builder: (ctx, sp, _) => _buildSettingsRow(
+              icon: Icons.cloud,
+              title: '提供商',
+              subtitle: sp.aiProviderName,
+              onTap: () => _selectProvider(context, sp),
             ),
           ),
           const Divider(height: 1),
@@ -510,21 +589,26 @@ class _SettingsPageState extends State<SettingsPage> {
               icon: Icons.link,
               title: 'API 地址',
               subtitle: sp.aiEndpoint,
-              onTap: () => _editText(context, 'API 地址', sp.aiEndpoint, (v) => sp.aiEndpoint = v),
+              onTap: () =>
+                  _editText(context, 'API 地址', sp.aiEndpoint, (v) => sp.aiEndpoint = v),
             ),
           ),
           const Divider(height: 1),
-          // API Key
+          // API 密钥
           Consumer<SettingsProvider>(
             builder: (ctx, sp, _) => _buildSettingsRow(
               icon: Icons.key,
-              title: 'API Key',
-              subtitle: sp.aiApiKey.isEmpty ? '未设置' : '${sp.aiApiKey.substring(0, 8)}...',
-              onTap: () => _editText(context, 'API Key', sp.aiApiKey, (v) => sp.aiApiKey = v, obscure: true),
+              title: 'API 密钥',
+              subtitle: sp.aiApiKey.isEmpty
+                  ? '未设置'
+                  : '${sp.aiApiKey.substring(0, 8)}...',
+              onTap: () => _editText(context, 'API 密钥', sp.aiApiKey,
+                  (v) => sp.aiApiKey = v,
+                  obscure: true),
             ),
           ),
           const Divider(height: 1),
-          // 模型选择
+          // 模型
           Consumer<SettingsProvider>(
             builder: (ctx, sp, _) => _buildSettingsRow(
               icon: Icons.model_training,

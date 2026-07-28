@@ -58,6 +58,21 @@ enum RiPoAnDongRule {
   const RiPoAnDongRule(this.label);
 }
 
+/// AI 提供商预设
+class AiProviderPreset {
+  final String name;
+  final String endpoint;
+  final String apiKey;
+  final String model;
+
+  const AiProviderPreset({
+    required this.name,
+    required this.endpoint,
+    required this.apiKey,
+    required this.model,
+  });
+}
+
 /// 全局设置 Provider — 持久化存储
 class SettingsProvider extends ChangeNotifier {
   double _fontSize = 16;
@@ -69,11 +84,28 @@ class SettingsProvider extends ChangeNotifier {
   SharedPreferences? _prefs;
 
   // ===== AI 解卦配置 =====
-  String _aiEndpoint = 'https://opencode.ai/zen/v1';
-  String _aiApiKey = 'sk-ztLkRc1oZQ1KMEUoUVFyO0dcYF3tk4qea7saKXFPvKyhAwcVfa4NNKlNzPujPD2j';
-  String _aiModel = 'deepseek-v4-flash-free';
+  /// 预设提供商列表
+  static const List<AiProviderPreset> aiPresets = [
+    AiProviderPreset(
+      name: 'opencode (deepseek-v4-flash)',
+      endpoint: 'https://opencode.ai/zen/v1',
+      apiKey: 'sk-ztLkRc1oZQ1KMEUoUVFyO0dcYF3tk4qea7saKXFPvKyhAwcVfa4NNKlNzPujPD2j',
+      model: 'deepseek-v4-flash-free',
+    ),
+    AiProviderPreset(
+      name: '阿里云通义千问',
+      endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+      apiKey: '',
+      model: 'qwen-turbo',
+    ),
+  ];
+
+  String _aiEndpoint = aiPresets[0].endpoint;
+  String _aiApiKey = aiPresets[0].apiKey;
+  String _aiModel = aiPresets[0].model;
   String _aiCustomModel = '';
   bool _aiEnabled = false;
+  int _aiPresetIndex = 0; // 当前选中的预设索引，-1 表示自定义
 
   // Getters
   double get fontSize => _fontSize;
@@ -88,6 +120,15 @@ class SettingsProvider extends ChangeNotifier {
   String get aiModel => _aiModel;
   bool get aiEnabled => _aiEnabled;
   String get aiCustomModel => _aiCustomModel;
+  int get aiPresetIndex => _aiPresetIndex;
+
+  /// 当前使用的提供商名称
+  String get aiProviderName {
+    if (_aiPresetIndex >= 0 && _aiPresetIndex < aiPresets.length) {
+      return aiPresets[_aiPresetIndex].name;
+    }
+    return '自定义';
+  }
 
   /// 实际使用的模型名：自定义优先
   String get effectiveAiModel => _aiCustomModel.isNotEmpty ? _aiCustomModel : _aiModel;
@@ -100,10 +141,11 @@ class SettingsProvider extends ChangeNotifier {
     _riPoRule = RiPoAnDongRule.values[_prefs!.getInt('paipan_riPoRule') ?? 1];
     _wanZiShi = _prefs!.getBool('paipan_wanZiShi') ?? false;
     _chenMuTuYao = _prefs!.getBool('paipan_chenMuTuYao') ?? false;
-    _aiEndpoint = _prefs!.getString('ai_endpoint') ?? 'https://opencode.ai/zen/v1';
-    _aiApiKey = _prefs!.getString('ai_apiKey') ?? 'sk-ztLkRc1oZQ1KMEUoUVFyO0dcYF3tk4qea7saKXFPvKyhAwcVfa4NNKlNzPujPD2j';
-    _aiModel = _prefs!.getString('ai_model') ?? 'deepseek-v4-flash-free';
+    _aiEndpoint = _prefs!.getString('ai_endpoint') ?? aiPresets[0].endpoint;
+    _aiApiKey = _prefs!.getString('ai_apiKey') ?? aiPresets[0].apiKey;
+    _aiModel = _prefs!.getString('ai_model') ?? aiPresets[0].model;
     _aiCustomModel = _prefs!.getString('ai_custom_model') ?? '';
+    _aiPresetIndex = _prefs!.getInt('ai_preset_index') ?? 0;
     _aiEnabled = _prefs!.getBool('ai_enabled') ?? false;
     final ds = _prefs!.getString('paipan_display');
     if (ds != null) {
@@ -168,9 +210,26 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   // ===== AI 解卦设置 =====
+  /// 切换预设提供商
+  void selectAiPreset(int index) {
+    if (index < 0 || index >= aiPresets.length) return;
+    _aiPresetIndex = index;
+    _aiEndpoint = aiPresets[index].endpoint;
+    _aiApiKey = aiPresets[index].apiKey;
+    _aiModel = aiPresets[index].model;
+    _aiCustomModel = '';
+    _prefs?.setInt('ai_preset_index', index);
+    _prefs?.setString('ai_endpoint', _aiEndpoint);
+    _prefs?.setString('ai_apiKey', _aiApiKey);
+    _prefs?.setString('ai_model', _aiModel);
+    _prefs?.setString('ai_custom_model', '');
+    notifyListeners();
+  }
   set aiEndpoint(String v) {
     _aiEndpoint = v;
+    _aiPresetIndex = -1;
     _prefs?.setString('ai_endpoint', v);
+    _prefs?.setInt('ai_preset_index', -1);
     notifyListeners();
   }
   set aiApiKey(String v) {

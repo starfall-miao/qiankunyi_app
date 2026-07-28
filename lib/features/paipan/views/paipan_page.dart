@@ -385,7 +385,10 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
             ],
           ),
           const SizedBox(height: 12),
-          _buildDuanYuCombined(pr.liuyaoResult!, p, t),
+          Center(
+            child: Text('💡 保存为卦例后可在详情页使用 AI 解卦与人工断语',
+                style: TextStyle(fontSize: 12, color: t.withAlpha(150))),
+          ),
         ],
       )
     : _emptyHint(p, t),
@@ -722,7 +725,8 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
               _log.info('保存卦例: ${cm.title}');
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('已保存卦例「${cm.title}」'), duration: const Duration(seconds: 2)),
+                const SnackBar(content: Text('已保存到卦例库，可到卦例页查看详情和 AI 解卦'),
+                    duration: Duration(seconds: 3)),
               );
             },
             child: const Text('保存'),
@@ -909,7 +913,10 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
           ],
         ),
         const SizedBox(height: 12),
-        _buildDuanYuCombined(result, p, t),
+        Center(
+          child: Text('💡 保存为卦例后可在详情页使用 AI 解卦与人工断语',
+              style: TextStyle(fontSize: 12, color: t.withAlpha(150))),
+        ),
       ],
     );
   }

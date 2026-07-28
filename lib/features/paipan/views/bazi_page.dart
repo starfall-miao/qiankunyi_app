@@ -577,15 +577,9 @@ class _BaziPageState extends State<BaziPage> {
           FilledButton(
             onPressed: () {
               if (titleCtrl.text.trim().isEmpty) return;
-              // 构造 JSON 数据
-              final paipanJson = jsonEncode(r.toJson());
-              final cm = CaseModel(
-                id: DateTime.now().millisecondsSinceEpoch,
+              final cm = CaseModel.fromBaziResult(
+                result: r,
                 title: titleCtrl.text.trim(),
-                guaName: '八字排盘',
-                guaGong: '八字',
-                method: '八字排盘',
-                paipanData: paipanJson,
                 notes: notesCtrl.text.trim().isEmpty
                     ? null
                     : notesCtrl.text.trim(),
@@ -598,7 +592,7 @@ class _BaziPageState extends State<BaziPage> {
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('已保存「${cm.title}」'),
+                  content: const Text('已保存到卦例库，可到卦例页查看详情和 AI 解卦'),
                   duration: const Duration(seconds: 2),
                 ),
               );

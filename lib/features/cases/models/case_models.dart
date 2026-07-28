@@ -1,6 +1,7 @@
 import 'dart:convert';
 import '../../paipan/models/paipan_result.dart';
 import '../../paipan/models/gua_model.dart';
+import '../../paipan/models/bazi_models.dart';
 
 /// 起卦方式中文映射
 const methodCN = <String, String>{
@@ -58,17 +59,47 @@ String methodToCN(String method) => methodCN[method] ?? method;
 /// 获取中文卦名
 String guaNameToCN(GuaName name) => guaNameCN[name] ?? name.name;
 
+/// AI 对话消息
+class AiMessage {
+  final String role;     // 'user' | 'assistant' | 'system'
+  final String content;  // 消息内容
+  final DateTime timestamp;
+
+  AiMessage({
+    required this.role,
+    required this.content,
+    DateTime? timestamp,
+  }) : timestamp = timestamp ?? DateTime.now();
+
+  Map<String, dynamic> toJson() => {
+    'role': role,
+    'content': content,
+    'timestamp': timestamp.toIso8601String(),
+  };
+
+  factory AiMessage.fromJson(Map<String, dynamic> json) => AiMessage(
+    role: json['role'] as String,
+    content: json['content'] as String,
+    timestamp: DateTime.parse(json['timestamp'] as String),
+  );
+}
+
+/// 卦例类型
+enum CaseType { liuyao, meihua, bazi }
+
 /// 卦例数据模型
 class CaseModel {
   final int? id;
   final String title;
   final String guaName;        // 卦名（中文）
   final String guaGong;        // 卦宫
-  final String method;         // 起卦方式（中文）
+  final String method;         // 起卦方式
   final String paipanData;     // 排盘JSON数据
   final String? notes;         // 用户备注
   final String? duanYu;        // 人工断语
   final List<String> tags;     // 标签
+  final List<AiMessage> aiMessages; // AI 对话历史
+  final CaseType caseType;     // 卦例类型
   final DateTime createdAt;    // 创建时间
   final DateTime updatedAt;    // 更新时间
 
@@ -82,6 +113,8 @@ class CaseModel {
     this.notes,
     this.duanYu,
     this.tags = const [],
+    this.aiMessages = const [],
+    this.caseType = CaseType.liuyao,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) : createdAt = createdAt ?? DateTime.now(),
@@ -97,6 +130,8 @@ class CaseModel {
     String? notes,
     String? duanYu,
     List<String>? tags,
+    List<AiMessage>? aiMessages,
+    CaseType? caseType,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -110,6 +145,8 @@ class CaseModel {
       notes: notes ?? this.notes,
       duanYu: duanYu ?? this.duanYu,
       tags: tags ?? this.tags,
+      aiMessages: aiMessages ?? this.aiMessages,
+      caseType: caseType ?? this.caseType,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -125,6 +162,8 @@ class CaseModel {
     'notes': notes,
     'duanYu': duanYu,
     'tags': jsonEncode(tags),
+    'aiMessages': jsonEncode(aiMessages.map((m) => m.toJson()).toList()),
+    'caseType': caseType.name,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
   };
@@ -139,13 +178,43 @@ class CaseModel {
     notes: map['notes'] as String?,
     duanYu: map['duanYu'] as String?,
     tags: (map['tags'] != null) ? (jsonDecode(map['tags'] as String) as List).cast<String>() : [],
+    aiMessages: (map['aiMessages'] != null)
+        ? (jsonDecode(map['aiMessages'] as String) as List).map((e) => AiMessage.fromJson(e as Map<String, dynamic>)).toList()
+        : [],
+    caseType: map['caseType'] != null ? CaseType.values.firstWhere((e) => e.name == map['caseType'], orElse: () => CaseType.liuyao) : CaseType.liuyao,
     createdAt: DateTime.parse(map['createdAt'] as String),
     updatedAt: DateTime.parse(map['updatedAt'] as String),
   );
 
-  /// 从排盘结果创建卦例（中文名存储）
+  /// 从排盘结果创建卦例
   factory CaseModel.fromPaipanResult({
     required PaipanResult result,
+    required String title,
+    String? notes,
+    String? duanYu,
+    List<String>? tags,
+  }) {
+    final now = DateTime.now();
+    final methodMap = <String, String>{'manual': '机器摇卦', 'time': '时间起卦', 'number': '数字起卦'};
+    return CaseModel(
+      id: now.millisecondsSinceEpoch ~/ 1000,
+      title: title,
+      guaName: guaNameToCN(result.benGua.name),
+      guaGong: guaGongCN[result.benGua.gong] ?? '',
+      method: methodMap[result.method] ?? result.method,
+      paipanData: jsonEncode(result.toJson()),
+      notes: notes,
+      duanYu: duanYu,
+      tags: tags ?? [],
+      caseType: result.method == 'meihua' ? CaseType.meihua : CaseType.liuyao,
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
+
+  /// 从八字结果创建卦例
+  factory CaseModel.fromBaziResult({
+    required BaziResult result,
     required String title,
     String? notes,
     String? duanYu,
@@ -155,13 +224,14 @@ class CaseModel {
     return CaseModel(
       id: now.millisecondsSinceEpoch ~/ 1000,
       title: title,
-      guaName: guaNameToCN(result.benGua.name),
-      guaGong: guaGongCN[result.benGua.gong] ?? '',
-      method: methodToCN(result.method),
+      guaName: result.yearZhu.tianGan + result.yearZhu.diZhi + '年',
+      guaGong: result.dayZhu.tianGan + result.dayZhu.diZhi,
+      method: '八字排盘',
       paipanData: jsonEncode(result.toJson()),
       notes: notes,
       duanYu: duanYu,
-      tags: tags ?? [],
+      tags: tags ?? ['八字'],
+      caseType: CaseType.bazi,
       createdAt: now,
       updatedAt: now,
     );

@@ -6,14 +6,18 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
 import '../../../core/utils/logger.dart';
+import '../../../core/services/ai_service.dart';
 import '../providers/case_provider.dart';
 import '../models/case_models.dart';
 import '../../paipan/models/paipan_result.dart';
+import '../../paipan/models/bazi_models.dart';
 import '../../paipan/models/gua_model.dart';
 import '../../paipan/models/yao_model.dart';
 import '../../paipan/views/gua_widget.dart';
+import '../../settings/settings_provider.dart';
 
 class CasePage extends StatefulWidget {
   const CasePage({super.key});
@@ -283,9 +287,14 @@ class _CasePageState extends State<CasePage> {
 
   void _showCaseDetail(BuildContext context, CaseModel c) {
     PaipanResult? result;
+    BaziResult? baziResult;
     try {
       result = PaipanResult.fromJson(jsonDecode(c.paipanData) as Map<String, dynamic>);
-    } catch (_) {}
+    } catch (_) {
+      try {
+        baziResult = BaziResult.fromJson(jsonDecode(c.paipanData) as Map<String, dynamic>);
+      } catch (_) {}
+    }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final t = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
@@ -405,10 +414,15 @@ class _CasePageState extends State<CasePage> {
                   const SizedBox(height: 16),
                   _buildTiYongDetail(result, t, isDark),
                 ],
+              ] else if (baziResult != null) ...[
+                _buildBaziDetail(baziResult, t, isDark),
               ],
               // ── 人工断语 ──
               const SizedBox(height: 16),
-              _DuanYuEditor(caseModel: c),
+              _ManualDuanYuEditor(caseModel: c),
+              const SizedBox(height: 16),
+              // ── AI 解卦 / 追问 ──
+              _AiChatSection(caseModel: c),
               const SizedBox(height: 24),
             ],
           ),
@@ -461,6 +475,55 @@ class _CasePageState extends State<CasePage> {
     if (name.contains(RegExp(r'[\u4e00-\u9fff]'))) return name;
     // 旧格式是枚举名 → 映射中文
     return _enumNameToGuaCN[name] ?? name;
+  }
+
+  /// 八字详情展示
+  Widget _buildBaziDetail(BaziResult r, Color t, bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF2C2C2C) : Colors.white.withAlpha(200),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('八字排盘', style: TextStyle(fontSize: 14,
+              fontWeight: FontWeight.bold, color: t)),
+          const SizedBox(height: 8),
+          _baziPillarRow('年柱', r.yearZhu, t),
+          const SizedBox(height: 4),
+          _baziPillarRow('月柱', r.monthZhu, t),
+          const SizedBox(height: 4),
+          _baziPillarRow('日柱', r.dayZhu, t),
+          const SizedBox(height: 4),
+          _baziPillarRow('时柱', r.hourZhu, t),
+        ],
+      ),
+    );
+  }
+
+  Widget _baziPillarRow(String label, SiZhu p, Color t) {
+    return Row(children: [
+      SizedBox(width: 40, child: Text(label,
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: t))),
+      const SizedBox(width: 8),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: t.withAlpha(15),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(p.ganZhi,
+            style: TextStyle(fontSize: 14, color: t)),
+      ),
+      if (p.tianGan.isNotEmpty) ...[
+        const SizedBox(width: 8),
+        Text(p.tianGan, style: TextStyle(fontSize: 13, color: t.withAlpha(180))),
+      ],
+    ]);
   }
 
   /// 详情页小标签（月令/日令/空亡）
@@ -715,16 +778,16 @@ class _CasePageState extends State<CasePage> {
   }
 }
 
-/// 断语编辑器
-class _DuanYuEditor extends StatefulWidget {
+/// 人工断语编辑器
+class _ManualDuanYuEditor extends StatefulWidget {
   final CaseModel caseModel;
-  const _DuanYuEditor({required this.caseModel});
+  const _ManualDuanYuEditor({required this.caseModel});
 
   @override
-  State<_DuanYuEditor> createState() => _DuanYuEditorState();
+  State<_ManualDuanYuEditor> createState() => _ManualDuanYuEditorState();
 }
 
-class _DuanYuEditorState extends State<_DuanYuEditor> {
+class _ManualDuanYuEditorState extends State<_ManualDuanYuEditor> {
   late TextEditingController _ctrl;
   bool _saving = false;
 
@@ -793,4 +856,285 @@ class _DuanYuEditorState extends State<_DuanYuEditor> {
       );
     }
   }
+}
+
+/// AI 解卦 / 追问 对话组件
+class _AiChatSection extends StatefulWidget {
+  final CaseModel caseModel;
+  const _AiChatSection({required this.caseModel});
+
+  @override
+  State<_AiChatSection> createState() => _AiChatSectionState();
+}
+
+class _AiChatSectionState extends State<_AiChatSection> {
+  final TextEditingController _questionCtrl = TextEditingController();
+  bool _loading = false;
+
+  List<AiMessage> get _messages => widget.caseModel.aiMessages;
+
+  @override
+  void dispose() {
+    _questionCtrl.dispose();
+    super.dispose();
+  }
+
+  bool get _hasAssistantReply =>
+      _messages.any((m) => m.role == 'assistant');
+
+  Future<void> _requestJieGua() async {
+    final sp = context.read<SettingsProvider>();
+    if (!sp.aiEnabled) {
+      _showToast('请先在设置中启用 AI 解卦');
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      final isBazi = widget.caseModel.caseType == CaseType.bazi;
+      final systemPrompt = isBazi
+          ? '你是一位精通八字命理的资深命理专家。请根据排盘信息进行详细分析。'
+          : '你是一位精通《周易》的资深术数专家。';
+      final prompt = _buildPromptForType();
+      final messages = <Map<String, String>>[
+        {'role': 'system', 'content': systemPrompt},
+        {'role': 'user', 'content': prompt},
+      ];
+      final result = await AiService().chat(
+        endpoint: sp.aiEndpoint,
+        apiKey: sp.aiApiKey,
+        model: sp.effectiveAiModel,
+        messages: messages,
+      );
+      if (result.success) {
+        _addAiMessage('user', prompt.truncated(200));
+        _addAiMessage('assistant', result.content);
+      } else {
+        _showToast('解卦失败: ${result.errorMessage}');
+      }
+    } catch (e) {
+      _showToast('网络错误: $e');
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  String _buildPromptForType() {
+    if (widget.caseModel.caseType == CaseType.bazi) {
+      return '【八字排盘信息】\n年柱：${widget.caseModel.guaName}\n'
+          '日柱：${widget.caseModel.guaGong}\n'
+          '排盘数据：${widget.caseModel.paipanData}\n\n'
+          '请分析此八字命盘，包括五行喜忌、十神、大运走势等。';
+    }
+    return AiService().buildJieGuaPrompt(
+      '卦名：${widget.caseModel.guaName}（${widget.caseModel.guaGong}宫）\n'
+      '起卦方式：${widget.caseModel.method}\n'
+      '排盘数据：${widget.caseModel.paipanData}',
+    );
+  }
+
+  Future<void> _askFollowUp() async {
+    final text = _questionCtrl.text.trim();
+    if (text.isEmpty) return;
+    final sp = context.read<SettingsProvider>();
+    if (!sp.aiEnabled) {
+      _showToast('请先在设置中启用 AI 解卦');
+      return;
+    }
+    setState(() => _loading = true);
+    _questionCtrl.clear();
+    try {
+      // 构建上下文：系统提示 + 之前的对话 + 当前问题
+      final messages = <Map<String, String>>[
+        {'role': 'system', 'content': '你是一位精通《周易》的资深术数专家。下面是对同一卦象的连续讨论。'},
+        ..._messages.map((m) => {'role': m.role, 'content': m.content}),
+        {'role': 'user', 'content': text},
+      ];
+      final result = await AiService().chat(
+        endpoint: sp.aiEndpoint,
+        apiKey: sp.aiApiKey,
+        model: sp.effectiveAiModel,
+        messages: messages,
+      );
+      if (result.success) {
+        _addAiMessage('user', text);
+        _addAiMessage('assistant', result.content);
+      } else {
+        _showToast('追问失败: ${result.errorMessage}');
+      }
+    } catch (e) {
+      _showToast('网络错误: $e');
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  void _addAiMessage(String role, String content) {
+    final msg = AiMessage(role: role, content: content);
+    final updated = widget.caseModel.copyWith(
+      aiMessages: [..._messages, msg],
+    );
+    context.read<CaseProvider>().updateCase(updated);
+    setState(() {});
+  }
+
+  void _deleteAiMessage(int index) {
+    final updated = widget.caseModel.copyWith(
+      aiMessages: [..._messages]..removeAt(index),
+    );
+    context.read<CaseProvider>().updateCase(updated);
+    setState(() {});
+  }
+
+  void _showToast(String msg) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final p = theme.colorScheme.primary;
+    final isDark = theme.brightness == Brightness.dark;
+    final t = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 标题
+            Row(children: [
+              Icon(Icons.auto_awesome, size: 18, color: p),
+              const SizedBox(width: 6),
+              Text('🤖 AI 解卦', style: TextStyle(fontSize: 14,
+                  fontWeight: FontWeight.bold, color: t)),
+              if (_loading) ...[
+                const Spacer(),
+                const SizedBox(width: 18, height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2)),
+              ],
+            ]),
+            const SizedBox(height: 8),
+
+            // AI 对话历史
+            if (_messages.isNotEmpty) ...[
+              ..._messages.asMap().entries.map((entry) {
+                final i = entry.key;
+                final m = entry.value;
+                final isUser = m.role == 'user';
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isUser
+                        ? (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF0EDE8))
+                        : (isDark ? const Color(0xFF252535) : const Color(0xFFFAF6F0)),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isUser ? t.withAlpha(20) : p.withAlpha(30),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Icon(
+                          isUser ? Icons.person : Icons.auto_awesome,
+                          size: 14,
+                          color: isUser ? t : p,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isUser ? '你' : 'AI',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isUser ? t : p,
+                          ),
+                        ),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () => _deleteAiMessage(i),
+                          child: Icon(Icons.close, size: 14,
+                              color: t.withAlpha(100)),
+                        ),
+                      ]),
+                      const SizedBox(height: 4),
+                      if (isUser)
+                        Text(m.content, style: TextStyle(
+                            fontSize: 13, color: t))
+                      else
+                        Markdown(
+                          data: m.content,
+                          styleSheet: MarkdownStyleSheet(
+                            p: TextStyle(fontSize: 13, color: t),
+                            h1: TextStyle(fontSize: 16, color: t,
+                                fontWeight: FontWeight.bold),
+                            h2: TextStyle(fontSize: 15, color: t,
+                                fontWeight: FontWeight.bold),
+                            h3: TextStyle(fontSize: 14, color: t,
+                                fontWeight: FontWeight.bold),
+                            strong: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+
+            // 无对话时显示请求按钮
+            if (_messages.isEmpty && !_loading)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _requestJieGua,
+                  icon: const Icon(Icons.auto_awesome, size: 16),
+                  label: const Text('请求 AI 解卦'),
+                ),
+              ),
+
+            // 有 AI 回复时显示追问输入
+            if (_hasAssistantReply && !_loading) ...[
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(
+                  child: TextField(
+                    controller: _questionCtrl,
+                    decoration: InputDecoration(
+                      hintText: '输入追问…',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      isDense: true,
+                    ),
+                    maxLines: 2,
+                    minLines: 1,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _askFollowUp(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: _askFollowUp,
+                  icon: Icon(Icons.send, color: p),
+                ),
+              ]),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+extension _StringExtension on String {
+  String truncated(int maxLen) =>
+      length <= maxLen ? this : '${substring(0, maxLen)}…';
 }
