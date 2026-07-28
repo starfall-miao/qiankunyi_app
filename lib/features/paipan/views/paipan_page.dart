@@ -1124,7 +1124,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     final gong = gongCN[result.benGua.gong] ?? '';
 
     return '「$nameCN」解卦分析：\n'
-        '${gong}宫  动爻 ${movingCount} 位\n'
+        '$gong宫  动爻 $movingCount 位\n'
         '此卦${movingCount > 0 ? '有动爻，变动至${result.bianGua != null ? guaCN[result.bianGua!.name] ?? "" : ""}' : '为静卦'}\n'
         '请根据爻位六亲关系自行判断吉凶。';
   }
