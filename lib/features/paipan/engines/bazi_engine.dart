@@ -91,15 +91,15 @@ class BaiZiEngine {
   }) {
     // 使用 tyme 获取干支
     final solar = tyme.SolarDay.fromYmd(birth.year, birth.month, birth.day);
-    final lunar = solar.toLunar();
+    final lunar = solar.getLunarDay();
+    final scd = solar.getSixtyCycleDay();
 
-    // 四柱干支
-    final yearGZ = lunar.getYearInGanZhi();
-    final monthGZ = lunar.getMonthInGanZhi();
-    final dayGZ = lunar.getDayInGanZhi();
+    // 四柱干支（通过 SixtyCycleDay 获取）
+    final yearGZ = scd.getYear().getName();
+    final monthGZ = scd.getMonth().getName();
+    final dayGZ = scd.getSixtyCycle().getName();
     // 时辰
-    final lunarDay = lunar;
-    final hours = lunarDay.getHours();
+    final hours = lunar.getHours();
     final hourGZ = _getHourGanZhi(dayGZ, hours, hourIndex);
 
     // 解析天干地支
@@ -148,8 +148,9 @@ class BaiZiEngine {
 
     // 流年（当年）
     final now = DateTime.now();
-    final nowLunar = tyme.SolarDay.fromYmd(now.year, now.month, now.day).getLunarDay();
-    final liuNian = nowLunar.getYearInGanZhi();
+    final nowSolar = tyme.SolarDay.fromYmd(now.year, now.month, now.day);
+    final nowScd = nowSolar.getSixtyCycleDay();
+    final liuNian = nowScd.getYear().getName();
 
     return BaziResult(
       birth: birth,

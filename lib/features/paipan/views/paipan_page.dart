@@ -360,9 +360,9 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
           ),
           const SizedBox(height: 12),
           _buildDuanYuSection(pr.liuyaoResult!, p, t),
-        : _emptyHint(p, t),
-        ),
-      ],
+        ],
+      )
+    : _emptyHint(p, t),
     );
   }
 
