@@ -130,6 +130,12 @@ class SettingsProvider extends ChangeNotifier {
     return '自定义';
   }
 
+  /// 是否选中的是 opencode 预设（免费无需配置）
+  bool get isOpenCodePreset =>
+      _aiPresetIndex == 0 &&
+      _aiEndpoint == aiPresets[0].endpoint &&
+      _aiApiKey == aiPresets[0].apiKey;
+
   /// 实际使用的模型名：自定义优先
   String get effectiveAiModel => _aiCustomModel.isNotEmpty ? _aiCustomModel : _aiModel;
 

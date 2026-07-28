@@ -514,7 +514,24 @@ class _SettingsPageState extends State<SettingsPage> {
                             : Icons.radio_button_unchecked,
                         color: isSelected ? t.colorScheme.primary : null,
                       ),
-                      title: Text(preset.name),
+                      title: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(preset.name),
+                          if (i == 0) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withAlpha(30),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text('免费 无需配置',
+                                  style: TextStyle(fontSize: 10, color: Colors.green.shade700)),
+                            ),
+                          ],
+                        ],
+                      ),
                       subtitle: Text(preset.endpoint,
                           style: const TextStyle(fontSize: 12)),
                       dense: true,
@@ -585,37 +602,43 @@ class _SettingsPageState extends State<SettingsPage> {
           const Divider(height: 1),
           // API 地址
           Consumer<SettingsProvider>(
-            builder: (ctx, sp, _) => _buildSettingsRow(
-              icon: Icons.link,
-              title: 'API 地址',
-              subtitle: sp.aiEndpoint,
-              onTap: () =>
-                  _editText(context, 'API 地址', sp.aiEndpoint, (v) => sp.aiEndpoint = v),
-            ),
+            builder: (ctx, sp, _) {
+              final isOpen = sp.isOpenCodePreset;
+              return _buildSettingsRow(
+                icon: Icons.link,
+                title: 'API 地址',
+                subtitle: isOpen ? '（免费无需配置）' : sp.aiEndpoint,
+                onTap: isOpen ? null : () => _editText(context, 'API 地址', sp.aiEndpoint, (v) => sp.aiEndpoint = v),
+              );
+            },
           ),
           const Divider(height: 1),
           // API 密钥
           Consumer<SettingsProvider>(
-            builder: (ctx, sp, _) => _buildSettingsRow(
-              icon: Icons.key,
-              title: 'API 密钥',
-              subtitle: sp.aiApiKey.isEmpty
-                  ? '未设置'
-                  : '${sp.aiApiKey.substring(0, 8)}...',
-              onTap: () => _editText(context, 'API 密钥', sp.aiApiKey,
-                  (v) => sp.aiApiKey = v,
-                  obscure: true),
-            ),
+            builder: (ctx, sp, _) {
+              final isOpen = sp.isOpenCodePreset;
+              return _buildSettingsRow(
+                icon: Icons.key,
+                title: 'API 密钥',
+                subtitle: isOpen ? '（免费无需配置）' : (sp.aiApiKey.isEmpty ? '未设置' : '${sp.aiApiKey.substring(0, 8)}...'),
+                onTap: isOpen ? null : () => _editText(context, 'API 密钥', sp.aiApiKey,
+                    (v) => sp.aiApiKey = v,
+                    obscure: true),
+              );
+            },
           ),
           const Divider(height: 1),
           // 模型
           Consumer<SettingsProvider>(
-            builder: (ctx, sp, _) => _buildSettingsRow(
-              icon: Icons.model_training,
-              title: '模型',
-              subtitle: sp.effectiveAiModel,
-              onTap: () => _selectModel(context, sp),
-            ),
+            builder: (ctx, sp, _) {
+              final isOpen = sp.isOpenCodePreset;
+              return _buildSettingsRow(
+                icon: Icons.model_training,
+                title: '模型',
+                subtitle: isOpen ? '（免费无需配置）' : sp.effectiveAiModel,
+                onTap: isOpen ? null : () => _selectModel(context, sp),
+              );
+            },
           ),
         ],
       ),
@@ -708,29 +731,34 @@ class _SettingsPageState extends State<SettingsPage> {
     required IconData icon,
     required String title,
     required String subtitle,
-    required VoidCallback onTap,
+    VoidCallback? onTap,
   }) {
     final t = Theme.of(context);
+    final enabled = onTap != null;
     return InkWell(
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            Icon(icon, size: 20, color: t.colorScheme.primary),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: TextStyle(fontSize: 14, color: t.colorScheme.onSurface)),
-                  const SizedBox(height: 2),
-                  Text(subtitle, style: TextStyle(fontSize: 12, color: t.colorScheme.onSurface.withAlpha(150))),
-                ],
+      child: Opacity(
+        opacity: enabled ? 1.0 : 0.5,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: t.colorScheme.primary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: TextStyle(fontSize: 14, color: t.colorScheme.onSurface)),
+                    const SizedBox(height: 2),
+                    Text(subtitle, style: TextStyle(fontSize: 12, color: t.colorScheme.onSurface.withAlpha(150))),
+                  ],
+                ),
               ),
-            ),
-            const Icon(Icons.edit_outlined, size: 16, color: Colors.grey),
-          ],
+              if (enabled)
+                const Icon(Icons.edit_outlined, size: 16, color: Colors.grey),
+            ],
+          ),
         ),
       ),
     );

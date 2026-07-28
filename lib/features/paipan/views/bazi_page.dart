@@ -24,7 +24,6 @@ class _BaziPageState extends State<BaziPage> {
   DateTime? _birth;
   bool _isMale = true;
   int _hourIndex = 6; // 默认为午时 (索引6)
-  String _duanYuText = '';
 
   static const _hourOptions = [
     '子时\n23-01', '丑时\n01-03', '寅时\n03-05', '卯时\n05-07',
@@ -449,8 +448,13 @@ class _BaziPageState extends State<BaziPage> {
           ),
           const SizedBox(height: 12),
 
-          // ── 断语 ──
-          _buildDuanYuSection(r, p, t),
+          // ── 保存引导提示 ──
+          Center(
+            child: Text('💡 保存为卦例后可在详情页使用 AI 解卦与人工断语',
+                style: TextStyle(fontSize: 12,
+                    color: t.withAlpha(180),
+                    fontStyle: FontStyle.italic)),
+          ),
           const SizedBox(height: 24),
         ],
       ),
@@ -531,7 +535,6 @@ class _BaziPageState extends State<BaziPage> {
         '八字排盘 · ${r.yearZhu.ganZhi} ${r.monthZhu.ganZhi} ${r.dayZhu.ganZhi} ${r.hourZhu.ganZhi}';
     final titleCtrl = TextEditingController(text: defaultTitle);
     final notesCtrl = TextEditingController();
-    final duanYuCtrl = TextEditingController(text: _duanYuText);
 
     showDialog(
       context: context,
@@ -556,15 +559,6 @@ class _BaziPageState extends State<BaziPage> {
               ),
               maxLines: 2,
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: duanYuCtrl,
-              decoration: const InputDecoration(
-                labelText: '断语（可选）',
-                hintText: '你的分析判断',
-              ),
-              maxLines: 2,
-            ),
           ],
         ),
         actions: [
@@ -581,9 +575,6 @@ class _BaziPageState extends State<BaziPage> {
                 notes: notesCtrl.text.trim().isEmpty
                     ? null
                     : notesCtrl.text.trim(),
-                duanYu: duanYuCtrl.text.trim().isEmpty
-                    ? null
-                    : duanYuCtrl.text.trim(),
               );
               context.read<CaseProvider>().addCase(cm);
               _log.info('保存八字排盘: ${cm.title}');
@@ -637,58 +628,6 @@ class _BaziPageState extends State<BaziPage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('结果已复制到剪贴板'), duration: Duration(seconds: 2)),
-    );
-  }
-
-  /// 断语区域
-  Widget _buildDuanYuSection(BaziResult r, Color p, Color t) {
-    final ctrl = TextEditingController(text: _duanYuText);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              Icon(Icons.edit_note, size: 18, color: p),
-              const SizedBox(width: 6),
-              Text('断语（AI 辅助分析）',
-                  style: TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.bold, color: t)),
-            ]),
-            const SizedBox(height: 8),
-            TextField(
-              controller: ctrl,
-              maxLines: 3,
-              onChanged: (v) => _duanYuText = v,
-              decoration: InputDecoration(
-                hintText: '输入你的分析判断…',
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton.icon(
-                  onPressed: () {
-                    if (_duanYuText.isEmpty) return;
-                    ctrl.text = '$_duanYuText\n\n【AI 辅助分析】\n'
-                        '日主${r.dayZhu.tianGan}（${r.dayZhu.wuXing}），生于${r.monthZhu.tianGan}${r.monthZhu.diZhi}月。\n'
-                        '十神：${r.shiShenMap.entries.take(4).map((e) => '${e.key}→${e.value}').join('、')}\n'
-                        '请结合大运流年综合分析吉凶。';
-                    _duanYuText = ctrl.text;
-                  },
-                  icon: const Icon(Icons.auto_awesome, size: 16),
-                  label: const Text('AI 辅助分析'),
-                  style: TextButton.styleFrom(foregroundColor: p),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 
