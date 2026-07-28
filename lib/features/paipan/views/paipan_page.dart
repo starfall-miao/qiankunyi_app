@@ -1056,180 +1056,73 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     );
   }
 }
-/// ──────────────── 八字参考 Tab ────────────────
-
-class _BaziRefTab extends StatelessWidget {
-  const _BaziRefTab();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final p = theme.colorScheme.primary;
-    final t = theme.colorScheme.onSurface.withAlpha(200);
-
-    return ListView(
-      padding: const EdgeInsets.all(12),
-      children: [
-        _sectionHeader(p, '八字基础'),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Text('八字命理，又称四柱预测，是以人出生的年、月、日、时四柱（每柱天干地支，共八个字）推算命运。日柱天干代表"日元"，是命局的核心。',
-                style: TextStyle(fontSize: 13, color: t.withAlpha(180))),
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        _sectionHeader(p, '十天干'),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Table(
-              columnWidths: const {0: FlexColumnWidth(1), 1: FlexColumnWidth(1), 2: FlexColumnWidth(1)},
+  Widget _buildDuanYuSection(PaipanResult result, Color p, Color t) {
+    final ctrl = TextEditingController(text: _duanYuText);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Icon(Icons.edit_note, size: 18, color: p),
+              const SizedBox(width: 6),
+              Text('断语（AI 辅助分析）', style: TextStyle(fontSize: 14,
+                  fontWeight: FontWeight.bold, color: t)),
+            ]),
+            const SizedBox(height: 8),
+            TextField(
+              controller: ctrl,
+              maxLines: 3,
+              onChanged: (v) => _duanYuText = v,
+              decoration: InputDecoration(
+                hintText: '输入你的分析判断…',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TableRow(decoration: BoxDecoration(color: p.withAlpha(20)),
-                  children: ['天干', '五行', '阴阳'].map((h) => _cell(h, p)).toList()),
-                ...tianGanTable.map((row) => TableRow(
-                  children: ['天干', '五行', '阴阳'].map((k) => _cell(row[k] ?? '', t)).toList(),
-                )),
+                TextButton.icon(
+                  onPressed: () {
+                    if (_duanYuText.isEmpty) return;
+                    final hint = _buildDuanYuHint(result, t);
+                    ctrl.text = '$_duanYuText\n\n【AI 辅助分析】\n$hint';
+                    _duanYuText = ctrl.text;
+                  },
+                  icon: const Icon(Icons.auto_awesome, size: 16),
+                  label: const Text('AI 辅助解卦'),
+                  style: TextButton.styleFrom(foregroundColor: p),
+                ),
               ],
             ),
-          ),
+          ],
         ),
-        const SizedBox(height: 12),
-
-        _sectionHeader(p, '十二地支'),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Table(
-              columnWidths: const {0: FlexColumnWidth(1), 1: FlexColumnWidth(1), 2: FlexColumnWidth(1), 3: FlexColumnWidth(1)},
-              children: [
-                TableRow(decoration: BoxDecoration(color: p.withAlpha(20)),
-                  children: ['地支', '生肖', '五行', '月份'].map((h) => _cell(h, p)).toList()),
-                ...diZhiTable.map((row) => TableRow(
-                  children: ['地支', '生肖', '五行', '月份'].map((k) => _cell(row[k] ?? '', t)).toList(),
-                )),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        _sectionHeader(p, '十神表（以日干为基准）'),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Table(
-              columnWidths: const {0: FlexColumnWidth(1), 1: FlexColumnWidth(1), 2: FlexColumnWidth(1)},
-              children: [
-                TableRow(decoration: BoxDecoration(color: p.withAlpha(20)),
-                  children: ['同我', '生我', '我生'].map((h) => _cell(h, p)).toList()),
-                TableRow(children: [
-                  _cell('比肩', t),
-                  _cell('偏印', t),
-                  _cell('食神', t),
-                ]),
-                TableRow(children: [
-                  _cell('劫财', t),
-                  _cell('正印', t),
-                  _cell('伤官', t),
-                ]),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-
-        _sectionHeader(p, '藏干表'),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Table(
-              columnWidths: const {0: FlexColumnWidth(1), 1: FlexColumnWidth(1), 2: FlexColumnWidth(1), 3: FlexColumnWidth(1)},
-              children: [
-                TableRow(decoration: BoxDecoration(color: p.withAlpha(20)),
-                  children: ['地支', '本气', '中气', '余气'].map((h) => _cell(h, p)).toList()),
-                ...cangGanTable.map((row) => TableRow(
-                  children: ['地支', '本气', '中气', '余气'].map((k) => _cell(row[k] ?? '', t)).toList(),
-                )),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-      ],
+      ),
     );
   }
-}
-/// 断语编辑区域
-Widget _buildDuanYuSection(PaipanResult result, Color p, Color t) {
-  final ctrl = TextEditingController(text: _duanYuText);
-  return Card(
-    child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Icon(Icons.edit_note, size: 18, color: p),
-            const SizedBox(width: 6),
-            Text('断语（AI 辅助分析）', style: TextStyle(fontSize: 14,
-                fontWeight: FontWeight.bold, color: t)),
-          ]),
-          const SizedBox(height: 8),
-          TextField(
-            controller: ctrl,
-            maxLines: 3,
-            onChanged: (v) => _duanYuText = v,
-            decoration: InputDecoration(
-              hintText: '输入你的分析判断…',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton.icon(
-                onPressed: () {
-                  if (_duanYuText.isEmpty) return;
-                  final hint = _buildDuanYuHint(result, t);
-                  ctrl.text = '$_duanYuText\n\n【AI 辅助分析】\n$hint';
-                  _duanYuText = ctrl.text;
-                },
-                icon: const Icon(Icons.auto_awesome, size: 16),
-                label: const Text('AI 辅助解卦'),
-                style: TextButton.styleFrom(foregroundColor: p),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ),
-  );
-}
 
-/// AI 辅助解卦模板
-String _buildDuanYuHint(PaipanResult result, Color t) {
-  final guaCN = <GuaName, String>{
-    GuaName.qian: '乾为天', GuaName.kun: '坤为地', GuaName.tai: '地天泰',
-    GuaName.pi: '天地否', GuaName.shi: '地水师', GuaName.bi: '水地比',
-    GuaName.xiaoXu: '风天小畜', GuaName.tongRen: '天火同人',
-    GuaName.daYou: '火天大有', GuaName.gu: '山风蛊',
-    GuaName.lin: '地泽临', GuaName.guan: '风地观',
-    GuaName.fu: '地雷复', GuaName.wuWang: '天雷无妄', GuaName.jiJi: '水火既济',
-    GuaName.weiJi: '火水未济',
-  };
-  final gongCN = <GuaGong, String>{
-    GuaGong.qian: '乾', GuaGong.kun: '坤', GuaGong.zhen: '震',
-  };
-  final nameCN = guaCN[result.benGua.name] ?? result.benGua.name.name;
-  final movingCount = result.benGua.yaos.where((y) => y.isMoving).length;
-  final gong = gongCN[result.benGua.gong] ?? '';
+  /// AI 辅助解卦模板
+  String _buildDuanYuHint(PaipanResult result, Color t) {
+    final guaCN = <GuaName, String>{
+      GuaName.qian: '乾为天', GuaName.kun: '坤为地', GuaName.tai: '地天泰',
+      GuaName.pi: '天地否', GuaName.shi: '地水师', GuaName.bi: '水地比',
+      GuaName.xiaoXu: '风天小畜', GuaName.tongRen: '天火同人',
+      GuaName.daYou: '火天大有', GuaName.gu: '山风蛊',
+      GuaName.lin: '地泽临', GuaName.guan: '风地观',
+      GuaName.fu: '地雷复', GuaName.wuWang: '天雷无妄', GuaName.jiJi: '水火既济',
+      GuaName.weiJi: '火水未济',
+    };
+    final gongCN = <GuaGong, String>{
+      GuaGong.qian: '乾', GuaGong.kun: '坤', GuaGong.zhen: '震',
+    };
+    final nameCN = guaCN[result.benGua.name] ?? result.benGua.name.name;
+    final movingCount = result.benGua.yaos.where((y) => y.isMoving).length;
+    final gong = gongCN[result.benGua.gong] ?? '';
 
-  return '「$nameCN」解卦分析：\n'
-      '${gong}宫  动爻 ${movingCount} 位\n'
-      '此卦${movingCount > 0 ? '有动爻，变动至${result.bianGua != null ? guaCN[result.bianGua!.name] ?? "" : ""}' : '为静卦'}\n'
-      '请根据爻位六亲关系自行判断吉凶。';
-}
+    return '「$nameCN」解卦分析：\n'
+        '${gong}宫  动爻 ${movingCount} 位\n'
+        '此卦${movingCount > 0 ? '有动爻，变动至${result.bianGua != null ? guaCN[result.bianGua!.name] ?? "" : ""}' : '为静卦'}\n'
+        '请根据爻位六亲关系自行判断吉凶。';
+  }
