@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/utils/logger.dart';
+import '../../settings/settings_provider.dart';
 import '../providers/paipan_provider.dart';
 import '../../cases/providers/case_provider.dart';
 import '../../cases/models/case_models.dart';
@@ -63,7 +64,10 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
   final DateTime _selectedTime = DateTime.now();
   bool _emptyInputWarn = false;
   bool _isLoading = false;
+  bool _immersiveMode = false;
   String _duanYuText = '';
+  String _aiJieGuaText = '';
+  String _aiCorrectionText = '';
   late final AnimationController _animCtrl;
   late final Animation<double> _fadeAnim;
 
@@ -96,58 +100,75 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB),
-      appBar: AppBar(
-        title: Text('排盘 · ${_tabIndex == 0 ? "六爻" : _tabIndex == 1 ? "梅花" : "八字"}',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            icon: Icon(tp.themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
-                color: const Color(0xFFD4A574)),
-            onPressed: () => tp.toggleTheme(),
+      body: NestedScrollView(
+        headerSliverBuilder: (ctx, innerScrolled) => [
+          SliverAppBar(
+            floating: true,
+            snap: true,
+            title: Text('排盘 · ${_tabIndex == 0 ? "六爻" : _tabIndex == 1 ? "梅花" : "八字"}',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            actions: [
+              IconButton(
+                icon: Icon(tp.themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
+                    color: const Color(0xFFD4A574)),
+                onPressed: () => tp.toggleTheme(),
+              ),
+            ],
           ),
-        ],
-      ),
-      body: Column(
-        children: [
           // 渲染检测条（仅调试模式显示）
-          if (tp.renderDebug)
-            Container(
-              color: Colors.green.shade100,
-              padding: const EdgeInsets.all(8),
-              child: Row(children: [
-                Icon(Icons.check_circle, size: 16, color: Colors.green.shade700),
-                const SizedBox(width: 6),
-                Text('渲染检测：页面正常',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.green.shade800)),
-              ]),
+          if (tp.renderDebug && !_immersiveMode)
+            SliverToBoxAdapter(
+              child: Container(
+                color: Colors.green.shade100,
+                padding: const EdgeInsets.all(8),
+                child: Row(children: [
+                  Icon(Icons.check_circle, size: 16, color: Colors.green.shade700),
+                  const SizedBox(width: 6),
+                  Text('渲染检测：页面正常',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.green.shade800)),
+                ]),
+              ),
             ),
           // Tab 行
-          Container(
-            decoration: BoxDecoration(color: c, border: Border(bottom: BorderSide(color: b))),
-            child: Row(children: [
-              _tabBtn('六爻（铜钱）', 0, p, isDark),
-              _tabBtn('梅花易数', 1, p, isDark),
-              _tabBtn('八字', 2, p, isDark),
-            ]),
-          ),
-          // 内容区域
-          Expanded(
-            child: LayoutBuilder(
-              builder: (ctx, constraints) {
-                final horizontalPadding = constraints.maxWidth >= 600 ? 32.0 : 12.0;
-                return SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 12),
-                  child: _tabIndex == 0
-                      ? _liuyaoContent(context, pr, p, t, b, c, isDark)
-                      : _tabIndex == 1
-                          ? _meihuaContent(context, pr, p, t, b, c, isDark)
-                          : const BaziPage(),
-                );
-              },
+          if (!_immersiveMode)
+            SliverToBoxAdapter(
+              child: Container(
+                decoration: BoxDecoration(color: c, border: Border(bottom: BorderSide(color: b))),
+                child: Row(children: [
+                  _tabBtn('六爻（铜钱）', 0, p, isDark),
+                  _tabBtn('梅花易数', 1, p, isDark),
+                  _tabBtn('八字', 2, p, isDark),
+                ]),
+              ),
             ),
-          ),
         ],
+        body: LayoutBuilder(
+          builder: (ctx, constraints) {
+            final horizontalPadding = constraints.maxWidth >= 600 ? 32.0 : 12.0;
+            final content = _tabIndex == 0
+                ? _liuyaoContent(context, pr, p, t, b, c, isDark)
+                : _tabIndex == 1
+                    ? _meihuaContent(context, pr, p, t, b, c, isDark)
+                    : const BaziPage();
+            return SingleChildScrollView(
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 12),
+              child: content,
+            );
+          },
+        ),
       ),
+      // 沉浸式切换按钮（右下角）
+      floatingActionButton: _immersiveMode
+          ? FloatingActionButton.small(
+              backgroundColor: p.withAlpha(200),
+              onPressed: () => setState(() => _immersiveMode = false),
+              child: const Icon(Icons.fullscreen_exit, color: Colors.white),
+            )
+          : FloatingActionButton.small(
+              backgroundColor: p.withAlpha(150),
+              onPressed: () => setState(() => _immersiveMode = true),
+              child: const Icon(Icons.fullscreen, color: Colors.white),
+            ),
     );
   }
 
@@ -313,7 +334,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
           // ── 六爻三卦 ──
           LayoutBuilder(
             builder: (ctx2, constraints) {
-              final isWide = constraints.maxWidth >= 500;
+              final isWide = constraints.maxWidth >= 340;
               final cards = <Widget>[
                 _miniGuaCard('本卦', pr.liuyaoResult!.benGua, p, t, c, dark),
                 if (pr.liuyaoResult!.bianGua != null)
@@ -359,7 +380,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
             ],
           ),
           const SizedBox(height: 12),
-          _buildDuanYuSection(pr.liuyaoResult!, p, t),
+          _buildDuanYuCombined(pr.liuyaoResult!, p, t),
         ],
       )
     : _emptyHint(p, t),
@@ -883,7 +904,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
           ],
         ),
         const SizedBox(height: 12),
-        _buildDuanYuSection(result, p, t),
+        _buildDuanYuCombined(result, p, t),
       ],
     );
   }
@@ -1058,55 +1079,151 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
       ),
     );
   }
-  Widget _buildDuanYuSection(PaipanResult result, Color p, Color t) {
-    final ctrl = TextEditingController(text: _duanYuText);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              Icon(Icons.edit_note, size: 18, color: p),
-              const SizedBox(width: 6),
-              Text('断语（AI 辅助分析）', style: TextStyle(fontSize: 14,
-                  fontWeight: FontWeight.bold, color: t)),
-            ]),
-            const SizedBox(height: 8),
-            TextField(
-              controller: ctrl,
-              maxLines: 3,
-              onChanged: (v) => _duanYuText = v,
-              decoration: InputDecoration(
-                hintText: '输入你的分析判断…',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+  Widget _buildDuanYuCombined(PaipanResult result, Color p, Color t) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ─── ① 人工断语 ───
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextButton.icon(
-                  onPressed: () {
-                    if (_duanYuText.isEmpty) return;
-                    final hint = _buildDuanYuHint(result, t);
-                    ctrl.text = '$_duanYuText\n\n【AI 辅助分析】\n$hint';
-                    _duanYuText = ctrl.text;
-                  },
-                  icon: const Icon(Icons.auto_awesome, size: 16),
-                  label: const Text('AI 辅助解卦'),
-                  style: TextButton.styleFrom(foregroundColor: p),
+                Row(children: [
+                  Icon(Icons.edit_note, size: 18, color: p),
+                  const SizedBox(width: 6),
+                  Text('✍️ 人工断语', style: TextStyle(fontSize: 14,
+                      fontWeight: FontWeight.bold, color: t)),
+                ]),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: TextEditingController(text: _duanYuText),
+                  maxLines: 3,
+                  onChanged: (v) => _duanYuText = v,
+                  decoration: InputDecoration(
+                    hintText: '输入你的分析判断…',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
                 ),
               ],
             ),
-          ],
+          ),
         ),
-      ),
+        const SizedBox(height: 8),
+
+        // ─── ② AI 解卦 ───
+        Consumer<SettingsProvider>(
+          builder: (ctx, sp, _) {
+            final aiReady = sp.aiEnabled && sp.aiApiKey.isNotEmpty;
+            return Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      Icon(Icons.auto_awesome, size: 18, color: p),
+                      const SizedBox(width: 6),
+                      Text('🤖 AI 解卦', style: TextStyle(fontSize: 14,
+                          fontWeight: FontWeight.bold, color: t)),
+                      const Spacer(),
+                      if (!aiReady)
+                        Text('需配置 API', style: TextStyle(fontSize: 11, color: t.withAlpha(120))),
+                    ]),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: TextEditingController(text: _aiJieGuaText),
+                      maxLines: 3,
+                      onChanged: (v) => _aiJieGuaText = v,
+                      decoration: InputDecoration(
+                        hintText: aiReady ? 'AI 将根据卦象自动分析…' : '请先在设置中配置 AI 模型',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      enabled: aiReady,
+                    ),
+                    if (aiReady) ...[
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: () {
+                            // 调用 AI API 进行解卦
+                            _aiJieGuaText = _buildPromptForAI(result);
+                            setState(() {});
+                          },
+                          icon: const Icon(Icons.send, size: 16),
+                          label: const Text('请求 AI 解卦'),
+                          style: TextButton.styleFrom(foregroundColor: p),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+
+        // ─── ③ AI 纠错 ───
+        Consumer<SettingsProvider>(
+          builder: (ctx, sp, _) {
+            final aiReady = sp.aiEnabled && sp.aiApiKey.isNotEmpty;
+            return Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      Icon(Icons.tips_and_updates, size: 18, color: p),
+                      const SizedBox(width: 6),
+                      Text('🔍 AI 纠错', style: TextStyle(fontSize: 14,
+                          fontWeight: FontWeight.bold, color: t)),
+                      const Spacer(),
+                      if (!aiReady)
+                        Text('需配置 API', style: TextStyle(fontSize: 11, color: t.withAlpha(120))),
+                    ]),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: TextEditingController(text: _aiCorrectionText),
+                      maxLines: 3,
+                      onChanged: (v) => _aiCorrectionText = v,
+                      decoration: InputDecoration(
+                        hintText: aiReady ? '对断语有疑问？让 AI 帮你复核…' : '请先在设置中配置 AI 模型',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      enabled: aiReady,
+                    ),
+                    if (aiReady && _duanYuText.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: () {
+                            // 调用 AI API 纠错
+                            _aiCorrectionText = '【纠错请求】\n原断语：$_duanYuText\n请复核以上断语的合理性并给出改进建议。';
+                            setState(() {});
+                          },
+                          icon: const Icon(Icons.replay, size: 16),
+                          label: const Text('请求 AI 纠错'),
+                          style: TextButton.styleFrom(foregroundColor: p),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 
-  /// AI 辅助解卦模板
-  String _buildDuanYuHint(PaipanResult result, Color t) {
+  /// 构建 AI 解卦提示词
+  String _buildPromptForAI(PaipanResult result) {
     final guaCN = <GuaName, String>{
       GuaName.qian: '乾为天', GuaName.kun: '坤为地', GuaName.tai: '地天泰',
       GuaName.pi: '天地否', GuaName.shi: '地水师', GuaName.bi: '水地比',
@@ -1123,9 +1240,27 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     final movingCount = result.benGua.yaos.where((y) => y.isMoving).length;
     final gong = gongCN[result.benGua.gong] ?? '';
 
-    return '「$nameCN」解卦分析：\n'
-        '$gong宫  动爻 $movingCount 位\n'
-        '此卦${movingCount > 0 ? '有动爻，变动至${result.bianGua != null ? guaCN[result.bianGua!.name] ?? "" : ""}' : '为静卦'}\n'
-        '请根据爻位六亲关系自行判断吉凶。';
+    var sb = StringBuffer();
+    sb.writeln('你是一位精通六爻纳甲筮法的资深易学大师。请根据以下卦象信息为用户解卦：');
+    sb.writeln();
+    sb.writeln('【起卦信息】');
+    sb.writeln('本卦：$nameCN（${gong}宫）');
+    sb.writeln('动爻：$movingCount 位');
+    if (result.bianGua != null) {
+      final bianCN = guaCN[result.bianGua!.name] ?? '';
+      sb.writeln('变卦：$bianCN');
+    }
+    if (result.huGua != null) {
+      final huCN = guaCN[result.huGua!.name] ?? '';
+      sb.writeln('互卦：$huCN');
+    }
+    sb.writeln();
+    sb.writeln('【要求】');
+    sb.writeln('1. 用通俗易懂的白话解释卦象含义');
+    sb.writeln('2. 分析世应关系和六亲生克');
+    sb.writeln('3. 指出动爻的意义和变化趋势');
+    sb.writeln('4. 给出简明具体的建议，不要说空话套话');
+    sb.writeln('5. 最后用一句话总结吉凶方向');
+    return sb.toString();
   }
 }
