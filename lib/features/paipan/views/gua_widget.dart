@@ -480,21 +480,21 @@ class GuaWidget extends StatelessWidget {
               // ── 1. 基本信息 ──
               _refSection('基本信息', [
                 _refRow('爻位', '$pos爻（从下往上第${yao.position.index + 1}爻）',
-                    '六爻从下往上数，依次为初爻、二爻……上爻'),
+                    '六爻从下往上数，依次为初爻、二爻……上爻', textColor),
                 _refRow('阴阳', yao.yinYang == YaoYinYang.yang ? '阳爻（———）' : '阴爻（— —）',
-                    '阳爻代表刚健、主动；阴爻代表柔顺、被动'),
+                    '阳爻代表刚健、主动；阴爻代表柔顺、被动', textColor),
                 _refRow('动静', yao.isMoving ? '动爻 ⚡（有变化）' : '静爻（无变化）',
-                    yao.isMoving ? '动爻表示该爻发生变化，会生出一个变爻' : '静爻表示该爻没有变化'),
+                    yao.isMoving ? '动爻表示该爻发生变化，会生出一个变爻' : '静爻表示该爻没有变化', textColor),
               ], cardColor, textColor, theme.colorScheme.primary),
 
               // ── 2. 天干地支 ──
               if (yao.tianGan != null && yao.diZhi != null) ...[
                 const SizedBox(height: 12),
                 _refSection('天干地支', [
-                  _refRow('天干', '${_tianGanCN[yao.tianGan!]}', '天干代表天时、外在环境的影响'),
-                  _refRow('地支', '${_diZhiCN[yao.diZhi!]}', '地支代表地利、内在品质'),
+                  _refRow('天干', '${_tianGanCN[yao.tianGan!]}', '天干代表天时、外在环境的影响', textColor),
+                  _refRow('地支', '${_diZhiCN[yao.diZhi!]}', '地支代表地利、内在品质', textColor),
                   _refRow('五行', '${_wuXingCN[_diZhiWuXing(yao.diZhi!)]}',
-                      '五行决定生克关系：金木水火土相生相克'),
+                      '五行决定生克关系：金木水火土相生相克', textColor),
                 ], cardColor, textColor, theme.colorScheme.primary),
               ],
 
@@ -503,7 +503,7 @@ class GuaWidget extends StatelessWidget {
                 const SizedBox(height: 12),
                 _refSection('六亲（核心关系）', [
                   _refRow('六亲', '${_liuQinCN[yao.liuQin]}',
-                      _liuQinDesc(yao.liuQin)),
+                      _liuQinDesc(yao.liuQin), textColor),
                 ], cardColor, textColor, theme.colorScheme.primary),
               ],
 
@@ -512,7 +512,7 @@ class GuaWidget extends StatelessWidget {
                 const SizedBox(height: 12),
                 _refSection('六神（辅助信息）', [
                   _refRow('六神', '${_liuShenCN[yao.liuShen]}',
-                      _liuShenDesc(yao.liuShen!)),
+                      _liuShenDesc(yao.liuShen!), textColor),
                 ], cardColor, textColor, theme.colorScheme.primary),
               ],
 
@@ -522,10 +522,10 @@ class GuaWidget extends StatelessWidget {
                 _refSection('世应（主客定位）', [
                   if (yao.isShi)
                     _refRow('世爻', '✅ 此爻为世爻',
-                        '世爻代表自己、占卜者本身，是卦的核心'),
+                        '世爻代表自己、占卜者本身，是卦的核心', textColor),
                   if (yao.isYing)
                     _refRow('应爻', '✅ 此爻为应爻',
-                        '应爻代表对方、所问之事或环境'),
+                        '应爻代表对方、所问之事或环境', textColor),
                 ], cardColor, textColor, theme.colorScheme.primary),
               ],
 
@@ -534,7 +534,7 @@ class GuaWidget extends StatelessWidget {
                 const SizedBox(height: 12),
                 _refSection('旺衰（力量强弱）', [
                   _refRow('旺衰', '${_wangShuaiCN[yao.wangShuai]}',
-                      _wangShuaiDesc(yao.wangShuai!)),
+                      _wangShuaiDesc(yao.wangShuai!), textColor),
                 ], cardColor, textColor, theme.colorScheme.primary),
               ],
 
@@ -543,7 +543,7 @@ class GuaWidget extends StatelessWidget {
                 const SizedBox(height: 12),
                 _refSection('旬空（空亡）', [
                   _refRow('旬空', '✅ 此爻逢空',
-                      '旬空表示该爻暂时"不在位"，力量空虚，事情可能落空或延迟'),
+                      '旬空表示该爻暂时"不在位"，力量空虚，事情可能落空或延迟', textColor),
                 ], cardColor, textColor, theme.colorScheme.primary),
               ],
 
@@ -551,13 +551,13 @@ class GuaWidget extends StatelessWidget {
               if (yao.isXing || yao.isChong || yao.isHe || yao.isHai || yao.sanHeJu.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 _refSection('刑冲合害（特殊关系）', [
-                  if (yao.isXing) _refRow('刑', '✅ 相刑', '相刑代表矛盾、纠纷、互相伤害'),
-                  if (yao.isChong) _refRow('冲', '✅ 相冲', '相冲代表冲突、变动、对立，事情可能有突破或破裂'),
-                  if (yao.isHe) _refRow('合', '✅ 相合', '相合代表合作、和合、阻碍，事情可能被绊住'),
-                  if (yao.isHai) _refRow('害', '✅ 相害', '相害代表损害、暗中伤害，需防小人'),
+                  if (yao.isXing) _refRow('刑', '✅ 相刑', '相刑代表矛盾、纠纷、互相伤害', textColor),
+                  if (yao.isChong) _refRow('冲', '✅ 相冲', '相冲代表冲突、变动、对立，事情可能有突破或破裂', textColor),
+                  if (yao.isHe) _refRow('合', '✅ 相合', '相合代表合作、和合、阻碍，事情可能被绊住', textColor),
+                  if (yao.isHai) _refRow('害', '✅ 相害', '相害代表损害、暗中伤害，需防小人', textColor),
                   if (yao.sanHeJu.isNotEmpty)
                     _refRow('三合', '${yao.sanHeJu.join("、")}',
-                        '三合代表三方合作、汇聚力量，大吉之象'),
+                        '三合代表三方合作、汇聚力量，大吉之象', textColor),
                 ], cardColor, textColor, theme.colorScheme.primary),
               ],
 
@@ -604,9 +604,8 @@ class GuaWidget extends StatelessWidget {
     );
   }
 
-  /// 一行：名称 + 值 + 解释
-  Widget _refRow(String label, String value, String desc) {
-    final tc = Theme.of(context).colorScheme.onSurface;
+  /// 一行：名称 + 值 + 小白解释
+  Widget _refRow(String label, String value, String desc, Color textColor) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Column(
@@ -618,18 +617,18 @@ class GuaWidget extends StatelessWidget {
               SizedBox(
                 width: 56,
                 child: Text(label,
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: tc.withAlpha(180))),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textColor.withAlpha(180))),
               ),
               Expanded(
                 child: Text(value,
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: tc)),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: textColor)),
               ),
             ],
           ),
           Padding(
             padding: const EdgeInsets.only(left: 56, top: 1),
             child: Text(desc,
-                style: TextStyle(fontSize: 12, color: tc.withAlpha(120))),
+                style: TextStyle(fontSize: 12, color: textColor.withAlpha(120))),
           ),
         ],
       ),

@@ -584,21 +584,22 @@ class _SettingsPageState extends State<SettingsPage> {
     required String subtitle,
     required VoidCallback onTap,
   }) {
+    final t = Theme.of(context);
     return InkWell(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: theme.colorScheme.primary),
+            Icon(icon, size: 20, color: t.colorScheme.primary),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurface)),
+                  Text(title, style: TextStyle(fontSize: 14, color: t.colorScheme.onSurface)),
                   const SizedBox(height: 2),
-                  Text(subtitle, style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withAlpha(150))),
+                  Text(subtitle, style: TextStyle(fontSize: 12, color: t.colorScheme.onSurface.withAlpha(150))),
                 ],
               ),
             ),
