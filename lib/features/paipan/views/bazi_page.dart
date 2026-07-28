@@ -64,16 +64,38 @@ class _BaziPageState extends State<BaziPage> {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 100),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── 输入区域 ──
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
+      child: bp.result != null
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildInputCard(p, t, b, isDark, bp),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: _baziResultSection(context, bp.result!, p, t, b, c, isDark),
+                ),
+              ],
+            )
+          : SingleChildScrollView(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  _buildInputCard(p, t, b, isDark, bp),
+                  const SizedBox(height: 12),
+                  _emptyHint(p, t),
+                  const SizedBox(height: 60),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildInputCard(Color p, Color t, Color b, bool isDark, BaziProvider bp) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                   // 日期
                   InkWell(
                     onTap: () async {
@@ -221,32 +243,19 @@ class _BaziPageState extends State<BaziPage> {
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-
-          // ── 结果区域 ──
-          Expanded(
-            child: bp.result != null
-                ? _baziResultSection(context, bp.result!, p, t, b, c, isDark)
-                : _emptyHint(p, t),
-          ),
-        ],
-      ),
     );
   }
 
   /// 空状态提示
   Widget _emptyHint(Color p, Color t) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.auto_awesome, size: 48, color: p.withAlpha(80)),
-          const SizedBox(height: 12),
-          Text('选择出生信息后点击排盘',
-              style: TextStyle(fontSize: 14, color: t.withAlpha(120))),
-        ],
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 60),
+      child: Column(children: [
+        Icon(Icons.auto_awesome, size: 48, color: p.withAlpha(80)),
+        const SizedBox(height: 12),
+        Text('选择出生信息后点击排盘',
+            style: TextStyle(fontSize: 14, color: t.withAlpha(180))),
+      ]),
     );
   }
 

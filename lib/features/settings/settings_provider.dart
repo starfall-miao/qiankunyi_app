@@ -69,9 +69,10 @@ class SettingsProvider extends ChangeNotifier {
   SharedPreferences? _prefs;
 
   // ===== AI 解卦配置 =====
-  String _aiEndpoint = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
-  String _aiApiKey = '';
-  String _aiModel = 'qwen-turbo';
+  String _aiEndpoint = 'https://opencode.ai/zen/v1';
+  String _aiApiKey = 'sk-ztLkRc1oZQ1KMEUoUVFyO0dcYF3tk4qea7saKXFPvKyhAwcVfa4NNKlNzPujPD2j';
+  String _aiModel = 'deepseek-v4-flash-free';
+  String _aiCustomModel = '';
   bool _aiEnabled = false;
 
   // Getters
@@ -86,6 +87,10 @@ class SettingsProvider extends ChangeNotifier {
   String get aiApiKey => _aiApiKey;
   String get aiModel => _aiModel;
   bool get aiEnabled => _aiEnabled;
+  String get aiCustomModel => _aiCustomModel;
+
+  /// 实际使用的模型名：自定义优先
+  String get effectiveAiModel => _aiCustomModel.isNotEmpty ? _aiCustomModel : _aiModel;
 
   /// 初始化 — 从 SharedPreferences 加载
   Future<void> init() async {
@@ -95,9 +100,10 @@ class SettingsProvider extends ChangeNotifier {
     _riPoRule = RiPoAnDongRule.values[_prefs!.getInt('paipan_riPoRule') ?? 1];
     _wanZiShi = _prefs!.getBool('paipan_wanZiShi') ?? false;
     _chenMuTuYao = _prefs!.getBool('paipan_chenMuTuYao') ?? false;
-    _aiEndpoint = _prefs!.getString('ai_endpoint') ?? 'https://dashscope.aliyuncs.com/compatible-mode/v1';
-    _aiApiKey = _prefs!.getString('ai_apiKey') ?? '';
-    _aiModel = _prefs!.getString('ai_model') ?? 'qwen-turbo';
+    _aiEndpoint = _prefs!.getString('ai_endpoint') ?? 'https://opencode.ai/zen/v1';
+    _aiApiKey = _prefs!.getString('ai_apiKey') ?? 'sk-ztLkRc1oZQ1KMEUoUVFyO0dcYF3tk4qea7saKXFPvKyhAwcVfa4NNKlNzPujPD2j';
+    _aiModel = _prefs!.getString('ai_model') ?? 'deepseek-v4-flash-free';
+    _aiCustomModel = _prefs!.getString('ai_custom_model') ?? '';
     _aiEnabled = _prefs!.getBool('ai_enabled') ?? false;
     final ds = _prefs!.getString('paipan_display');
     if (ds != null) {
@@ -175,6 +181,11 @@ class SettingsProvider extends ChangeNotifier {
   set aiModel(String v) {
     _aiModel = v;
     _prefs?.setString('ai_model', v);
+    notifyListeners();
+  }
+  set aiCustomModel(String v) {
+    _aiCustomModel = v;
+    _prefs?.setString('ai_custom_model', v);
     notifyListeners();
   }
   set aiEnabled(bool v) {

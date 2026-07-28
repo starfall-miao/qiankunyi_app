@@ -406,6 +406,9 @@ class _CasePageState extends State<CasePage> {
                   _buildTiYongDetail(result, t, isDark),
                 ],
               ],
+              // ── 人工断语 ──
+              const SizedBox(height: 16),
+              _DuanYuEditor(caseModel: c),
               const SizedBox(height: 24),
             ],
           ),
@@ -709,5 +712,85 @@ class _CasePageState extends State<CasePage> {
         Text(text, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface)),
       ],
     );
+  }
+}
+
+/// 断语编辑器
+class _DuanYuEditor extends StatefulWidget {
+  final CaseModel caseModel;
+  const _DuanYuEditor({required this.caseModel});
+
+  @override
+  State<_DuanYuEditor> createState() => _DuanYuEditorState();
+}
+
+class _DuanYuEditorState extends State<_DuanYuEditor> {
+  late TextEditingController _ctrl;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.caseModel.duanYu ?? '');
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final p = theme.colorScheme.primary;
+    final isDark = theme.brightness == Brightness.dark;
+    final t = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Icon(Icons.edit_note, size: 18, color: p),
+              const SizedBox(width: 6),
+              Text('✍️ 人工断语', style: TextStyle(fontSize: 14,
+                  fontWeight: FontWeight.bold, color: t)),
+              const Spacer(),
+              if (_saving)
+                const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+              if (!_saving)
+                TextButton.icon(
+                  onPressed: _save,
+                  icon: const Icon(Icons.save, size: 16),
+                  label: const Text('保存', style: TextStyle(fontSize: 13)),
+                ),
+            ]),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _ctrl,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: '输入你的分析判断…',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _save() async {
+    setState(() => _saving = true);
+    final updated = widget.caseModel.copyWith(duanYu: _ctrl.text);
+    await context.read<CaseProvider>().updateCase(updated);
+    setState(() => _saving = false);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('断语已保存'), duration: Duration(seconds: 2)),
+      );
+    }
   }
 }

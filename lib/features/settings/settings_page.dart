@@ -529,7 +529,7 @@ class _SettingsPageState extends State<SettingsPage> {
             builder: (ctx, sp, _) => _buildSettingsRow(
               icon: Icons.model_training,
               title: '模型',
-              subtitle: sp.aiModel,
+              subtitle: sp.effectiveAiModel,
               onTap: () => _selectModel(context, sp),
             ),
           ),
@@ -559,24 +559,61 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _selectModel(BuildContext context, SettingsProvider sp) {
-    final models = ['qwen-turbo', 'qwen-plus', 'qwen-max', 'deepseek-v3', 'deepseek-r1'];
+    final models = ['deepseek-v4-flash-free', 'qwen-turbo', 'qwen-plus', 'qwen-max', 'deepseek-v3', 'deepseek-r1'];
+    final customCtrl = TextEditingController(text: sp.aiCustomModel);
     showDialog(
       context: context,
       builder: (ctx) {
         final theme2 = Theme.of(ctx);
         return AlertDialog(
           title: const Text('选择 AI 模型'),
-          content: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: models.map((m) {
-              final sel = sp.aiModel == m;
-              return ChoiceChip(
-                label: Text(m, style: TextStyle(fontSize: 13, color: sel ? theme2.colorScheme.primary : null)),
-                selected: sel,
-                onSelected: (_) { sp.aiModel = m; Navigator.pop(ctx); },
-              );
-            }).toList(),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 预设模型 choice chip
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: models.map((m) {
+                    final sel = sp.effectiveAiModel == m;
+                    return ChoiceChip(
+                      label: Text(m, style: TextStyle(fontSize: 13, color: sel ? theme2.colorScheme.primary : null)),
+                      selected: sel,
+                      onSelected: (_) { sp.aiCustomModel = ''; sp.aiModel = m; Navigator.pop(ctx); },
+                    );
+                  }).toList(),
+                ),
+                const Divider(height: 20),
+                const Text('或自定义模型名', style: TextStyle(fontSize: 12)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: customCtrl,
+                        decoration: const InputDecoration(
+                          hintText: '输入自定义模型名',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (customCtrl.text.trim().isNotEmpty) {
+                          sp.aiCustomModel = customCtrl.text.trim();
+                          Navigator.pop(ctx);
+                        }
+                      },
+                      child: const Text('确认'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },

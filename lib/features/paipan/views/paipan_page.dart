@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/services/ai_service.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/utils/logger.dart';
 import '../../settings/settings_provider.dart';
@@ -61,13 +62,16 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
   final _numACtrl = TextEditingController();
   final _numBCtrl = TextEditingController();
   final _numCCtrl = TextEditingController();
+  final _correctionCtrl = TextEditingController();
   final DateTime _selectedTime = DateTime.now();
   bool _emptyInputWarn = false;
   bool _isLoading = false;
   bool _immersiveMode = false;
-  String _duanYuText = '';
-  String _aiJieGuaText = '';
-  String _aiCorrectionText = '';
+  String _aiJieGuaResult = '';
+  bool _aiJieGuaLoading = false;
+  String _aiCorrectionFollowUp = '';
+  String _aiCorrectionResult = '';
+  bool _aiCorrectionLoading = false;
   late final AnimationController _animCtrl;
   late final Animation<double> _fadeAnim;
 
@@ -84,6 +88,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     _numACtrl.dispose();
     _numBCtrl.dispose();
     _numCCtrl.dispose();
+    _correctionCtrl.dispose();
     super.dispose();
   }
 
@@ -1083,36 +1088,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ─── ① 人工断语 ───
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(children: [
-                  Icon(Icons.edit_note, size: 18, color: p),
-                  const SizedBox(width: 6),
-                  Text('✍️ 人工断语', style: TextStyle(fontSize: 14,
-                      fontWeight: FontWeight.bold, color: t)),
-                ]),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: TextEditingController(text: _duanYuText),
-                  maxLines: 3,
-                  onChanged: (v) => _duanYuText = v,
-                  decoration: InputDecoration(
-                    hintText: '输入你的分析判断…',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        // ─── ② AI 解卦 ───
+        // ─── ① AI 解卦 ───
         Consumer<SettingsProvider>(
           builder: (ctx, sp, _) {
             final aiReady = sp.aiEnabled && sp.aiApiKey.isNotEmpty;
@@ -1132,32 +1108,39 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                         Text('需配置 API', style: TextStyle(fontSize: 11, color: t.withAlpha(120))),
                     ]),
                     const SizedBox(height: 8),
-                    TextField(
-                      controller: TextEditingController(text: _aiJieGuaText),
-                      maxLines: 3,
-                      onChanged: (v) => _aiJieGuaText = v,
-                      decoration: InputDecoration(
-                        hintText: aiReady ? 'AI 将根据卦象自动分析…' : '请先在设置中配置 AI 模型',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    // 结果区域
+                    if (_aiJieGuaResult.isNotEmpty) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: t.withAlpha(15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: SelectableText(_aiJieGuaResult,
+                            style: TextStyle(fontSize: 13, color: t, height: 1.5)),
                       ),
-                      enabled: aiReady,
-                    ),
-                    if (aiReady) ...[
                       const SizedBox(height: 8),
+                    ],
+                    if (_aiJieGuaLoading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: Center(child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                          SizedBox(width: 8),
+                          Text('AI 思考中…', style: TextStyle(fontSize: 12)),
+                        ])),
+                      ),
+                    if (aiReady && !_aiJieGuaLoading)
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton.icon(
-                          onPressed: () {
-                            // 调用 AI API 进行解卦
-                            _aiJieGuaText = _buildPromptForAI(result);
-                            setState(() {});
-                          },
+                          onPressed: () => _requestAiJieGua(ctx, result, sp),
                           icon: const Icon(Icons.send, size: 16),
                           label: const Text('请求 AI 解卦'),
                           style: TextButton.styleFrom(foregroundColor: p),
                         ),
                       ),
-                    ],
                   ],
                 ),
               ),
@@ -1166,7 +1149,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         ),
         const SizedBox(height: 8),
 
-        // ─── ③ AI 纠错 ───
+        // ─── ② AI 纠错 ───
         Consumer<SettingsProvider>(
           builder: (ctx, sp, _) {
             final aiReady = sp.aiEnabled && sp.aiApiKey.isNotEmpty;
@@ -1186,30 +1169,53 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                         Text('需配置 API', style: TextStyle(fontSize: 11, color: t.withAlpha(120))),
                     ]),
                     const SizedBox(height: 8),
-                    TextField(
-                      controller: TextEditingController(text: _aiCorrectionText),
-                      maxLines: 3,
-                      onChanged: (v) => _aiCorrectionText = v,
-                      decoration: InputDecoration(
-                        hintText: aiReady ? '对断语有疑问？让 AI 帮你复核…' : '请先在设置中配置 AI 模型',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      enabled: aiReady,
-                    ),
-                    if (aiReady && _duanYuText.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          onPressed: () {
-                            // 调用 AI API 纠错
-                            _aiCorrectionText = '【纠错请求】\n原断语：$_duanYuText\n请复核以上断语的合理性并给出改进建议。';
-                            setState(() {});
-                          },
-                          icon: const Icon(Icons.replay, size: 16),
-                          label: const Text('请求 AI 纠错'),
-                          style: TextButton.styleFrom(foregroundColor: p),
+                    // 追问框
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _correctionCtrl,
+                            onChanged: (v) => _aiCorrectionFollowUp = v,
+                            maxLines: 2,
+                            decoration: InputDecoration(
+                              hintText: aiReady ? '对此卦还有什么疑问？让 AI 补充分析…' : '请先在设置中配置 AI 模型',
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              isDense: true,
+                            ),
+                            enabled: aiReady,
+                          ),
                         ),
+                        if (aiReady && !_aiCorrectionLoading) ...[
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: () => _requestAiCorrection(ctx, result, sp),
+                            icon: Icon(Icons.send_rounded, color: p),
+                            tooltip: '发送追问',
+                          ),
+                        ],
+                      ],
+                    ),
+                    if (_aiCorrectionLoading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: Center(child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                          SizedBox(width: 8),
+                          Text('AI 思考中…', style: TextStyle(fontSize: 12)),
+                        ])),
+                      ),
+                    // 结果
+                    if (_aiCorrectionResult.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: t.withAlpha(15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: SelectableText(_aiCorrectionResult,
+                            style: TextStyle(fontSize: 13, color: t, height: 1.5)),
                       ),
                     ],
                   ],
@@ -1218,8 +1224,77 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
             );
           },
         ),
+        const SizedBox(height: 8),
+        // ─── ③ 提示保存 ───
+        Center(
+          child: TextButton.icon(
+            onPressed: () => _saveCurrentResult(context, context.read<PaipanProvider>(), result),
+            icon: const Icon(Icons.bookmark_add_outlined, size: 16),
+            label: const Text('保存到卦例后可在详情中编辑断语'),
+            style: TextButton.styleFrom(foregroundColor: t.withAlpha(150)),
+          ),
+        ),
       ],
     );
+  }
+
+  /// 请求 AI 解卦
+  void _requestAiJieGua(BuildContext context, PaipanResult result, SettingsProvider sp) async {
+    setState(() {
+      _aiJieGuaLoading = true;
+      _aiJieGuaResult = '';
+    });
+    final prompt = _buildPromptForAI(result);
+    final aiResult = await AiService().chat(
+      endpoint: sp.aiEndpoint,
+      apiKey: sp.aiApiKey,
+      model: sp.effectiveAiModel,
+      messages: [
+        {'role': 'system', 'content': '你是一位精通六爻纳甲筮法的资深易学大师，请用通俗易懂的白话回答用户的问题。'},
+        {'role': 'user', 'content': prompt},
+      ],
+    );
+    if (mounted) {
+      setState(() {
+        _aiJieGuaLoading = false;
+        if (aiResult.success) {
+          _aiJieGuaResult = aiResult.content;
+        } else {
+          _aiJieGuaResult = '❌ 请求失败: $aiResult.errorMessage';
+        }
+      });
+    }
+  }
+
+  /// 请求 AI 纠错
+  void _requestAiCorrection(BuildContext context, PaipanResult result, SettingsProvider sp) async {
+    if (_aiCorrectionFollowUp.trim().isEmpty) return;
+    setState(() {
+      _aiCorrectionLoading = true;
+    });
+    final followUp = _aiCorrectionFollowUp;
+    _aiCorrectionFollowUp = '';
+    _correctionCtrl.clear();
+    final prompt = AiService().buildCorrectionPrompt('', followUp);
+    final aiResult = await AiService().chat(
+      endpoint: sp.aiEndpoint,
+      apiKey: sp.aiApiKey,
+      model: sp.effectiveAiModel,
+      messages: [
+        {'role': 'system', 'content': '你是一位精通六爻纳甲筮法的资深易学大师，请复核断语的合理性并给出改进建议。'},
+        {'role': 'user', 'content': prompt},
+      ],
+    );
+    if (mounted) {
+      setState(() {
+        _aiCorrectionLoading = false;
+        if (aiResult.success) {
+          _aiCorrectionResult = (aiResult.content);
+        } else {
+          _aiCorrectionResult = '❌ 请求失败: $aiResult.errorMessage';
+        }
+      });
+    }
   }
 
   /// 构建 AI 解卦提示词

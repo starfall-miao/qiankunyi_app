@@ -201,8 +201,6 @@ class GuaWidget extends StatelessWidget {
             // 六神（窄竖条）
             if (ds.showLiuShen) _buildLiuShenTag(yao, theme),
             if (ds.showLiuShen) const SizedBox(width: 4),
-            // 世应标记
-            if (ds.showShiYing) _buildShiYingMark(yao, theme),
             // 爻画
             SizedBox(width: 40, child: _buildYaoLine(yao, theme)),
             const SizedBox(width: 6),
@@ -230,6 +228,8 @@ class GuaWidget extends StatelessWidget {
               const SizedBox(width: 4),
               _wangShuaiBadge(yao.wangShuai!, theme),
             ],
+            // 世应标记（放在旺衰后面）
+            if (ds.showShiYing) _buildShiYingMark(yao, theme),
             const Spacer(),
             // 刑冲合害标记
             if (ds.showXingChong) _buildSpecialMarks(yao, theme),
