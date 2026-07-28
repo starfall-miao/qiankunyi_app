@@ -62,22 +62,6 @@ class ReferencePage extends StatelessWidget {
       ),
     );
   }
-
-  Widget _sectionHeader(Color primary, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6, top: 4),
-      child: Text(title, style: TextStyle(fontSize: 15,
-          fontWeight: FontWeight.bold, color: primary)),
-    );
-  }
-
-  Widget _cell(String text, Color t) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-      child: Text(text, textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13, color: t.withAlpha(220))),
-    );
-  }
 }
 
 /// ──────────────── 六十四卦（八宫分组） ────────────────
@@ -339,22 +323,6 @@ class _GuaCiTabState extends State<_GuaCiTab> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _sectionHeader(Color primary, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6, top: 4),
-      child: Text(title, style: TextStyle(fontSize: 15,
-          fontWeight: FontWeight.bold, color: primary)),
-    );
-  }
-
-  Widget _cell(String text, Color t) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-      child: Text(text, textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13, color: t.withAlpha(220))),
     );
   }
 }
@@ -788,22 +756,6 @@ class _XiangYiTabState extends State<_XiangYiTab> {
       ],
     );
   }
-
-  Widget _sectionHeader(Color primary, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6, top: 4),
-      child: Text(title, style: TextStyle(fontSize: 15,
-          fontWeight: FontWeight.bold, color: primary)),
-    );
-  }
-
-  Widget _cell(String text, Color t) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-      child: Text(text, textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13, color: t.withAlpha(220))),
-    );
-  }
 }
 
 /// ──────────────── 禽星关系 Tab ────────────────
@@ -934,22 +886,6 @@ class _QinXingTab extends StatelessWidget {
       ),
     );
   }
-
-  Widget _sectionHeader(Color primary, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6, top: 4),
-      child: Text(title, style: TextStyle(fontSize: 15,
-          fontWeight: FontWeight.bold, color: primary)),
-    );
-  }
-
-  Widget _cell(String text, Color t) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-      child: Text(text, textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13, color: t.withAlpha(220))),
-    );
-  }
 }
 
 /// ──────────────── 神煞象义 Tab ────────────────
@@ -1041,22 +977,6 @@ class _ShenShaTabState extends State<_ShenShaTab> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _sectionHeader(Color primary, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6, top: 4),
-      child: Text(title, style: TextStyle(fontSize: 15,
-          fontWeight: FontWeight.bold, color: primary)),
-    );
-  }
-
-  Widget _cell(String text, Color t) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-      child: Text(text, textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13, color: t.withAlpha(220))),
     );
   }
 }
@@ -1248,22 +1168,6 @@ class _LiuYaoRefTab extends StatelessWidget {
           fontWeight: FontWeight.bold, color: primary)),
     );
   }
-
-  Widget _sectionHeader(Color primary, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6, top: 4),
-      child: Text(title, style: TextStyle(fontSize: 15,
-          fontWeight: FontWeight.bold, color: primary)),
-    );
-  }
-
-  Widget _cell(String text, Color t) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-      child: Text(text, textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13, color: t.withAlpha(220))),
-    );
-  }
 }
 class _MeiHuaTab extends StatelessWidget {
   const _MeiHuaTab();
@@ -1435,22 +1339,6 @@ class _MeiHuaTab extends StatelessWidget {
           style: TextStyle(fontSize: 13, color: t.withAlpha(220))),
     );
   }
-
-  Widget _sectionHeader(Color primary, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6, top: 4),
-      child: Text(title, style: TextStyle(fontSize: 15,
-          fontWeight: FontWeight.bold, color: primary)),
-    );
-  }
-
-  Widget _cell(String text, Color t) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-      child: Text(text, textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13, color: t.withAlpha(220))),
-    );
-  }
 }
 
 /// ──────────────── 动变含义 Tab ────────────────
@@ -1535,22 +1423,6 @@ class _DongBianTabState extends State<_DongBianTab> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _sectionHeader(Color primary, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6, top: 4),
-      child: Text(title, style: TextStyle(fontSize: 15,
-          fontWeight: FontWeight.bold, color: primary)),
-    );
-  }
-
-  Widget _cell(String text, Color t) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-      child: Text(text, textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13, color: t.withAlpha(220))),
     );
   }
 }

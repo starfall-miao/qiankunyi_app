@@ -363,7 +363,9 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         ],
       )
     : _emptyHint(p, t),
-    );
+    ),
+  ],
+);
   }
 
   void _submitLiuyao(PaipanProvider pr) {
