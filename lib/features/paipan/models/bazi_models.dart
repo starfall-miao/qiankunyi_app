@@ -3,13 +3,20 @@ library;
 
 /// 四柱（年月日时）
 class SiZhu {
-  final String ganZhi;      // 干支，如 "甲子"
-  final String tianGan;     // 天干
-  final String diZhi;       // 地支
-  final String tianGanCN;   // 天干中文
-  final String diZhiCN;     // 地支中文
-  final String wuXing;      // 日干五行
-  final Map<String, String> cangGan;  // 藏干 {干: 地支, ...}
+  /// 干支字符串，如 "甲子"
+  final String ganZhi;
+  /// 天干，如 "甲"
+  final String tianGan;
+  /// 地支，如 "子"
+  final String diZhi;
+  /// 天干中文名
+  final String tianGanCN;
+  /// 地支中文名
+  final String diZhiCN;
+  /// 天干五行属性
+  final String wuXing;
+  /// 藏干映射 {本气/中气/余气: 干}
+  final Map<String, String> cangGan;
 
   const SiZhu({
     required this.ganZhi,
@@ -24,9 +31,13 @@ class SiZhu {
 
 /// 大运条目
 class DaYun {
-  final int startAge;       // 起运年龄
-  final String ganZhi;      // 大运干支
+  /// 起运年龄
+  final int startAge;
+  /// 大运干支，如 "甲子"
+  final String ganZhi;
+  /// 大运天干
   final String tianGan;
+  /// 大运地支
   final String diZhi;
 
   const DaYun({
@@ -37,32 +48,30 @@ class DaYun {
   });
 }
 
-/// 十神
-enum ShiShen {
-  none('无'),
-  biHe('比肩'),
-  jieCai('劫财'),
-  fuMu('父母'),
-  shiShen('食神'),
-  shangGuan('伤官'),
-  guiRen('官鬼'),
-  qiXiao('妻财'),
-  ziSun('子孙');
-
-  final String label;
-  const ShiShen(this.label);
-}
-
 /// 八字排盘结果
 class BaziResult {
-  final DateTime birth;     // 出生时间
-  final bool isMale;        // 性别（大运顺/逆用）
-  final SiZhu yearZhu;      // 年柱
-  final SiZhu monthZhu;     // 月柱
-  final SiZhu dayZhu;       // 日柱
-  final SiZhu hourZhu;      // 时柱
-  final List<DaYun> daYun;  // 大运列表
-  final String? liuNian;    // 流年（当年）
+  /// 出生时间
+  final DateTime birth;
+  /// 性别（true=男，false=女；大运顺逆用）
+  final bool isMale;
+  /// 年柱
+  final SiZhu yearZhu;
+  /// 月柱
+  final SiZhu monthZhu;
+  /// 日柱（日元，命主）
+  final SiZhu dayZhu;
+  /// 时柱
+  final SiZhu hourZhu;
+  /// 大运列表（通常8步）
+  final List<DaYun> daYun;
+  /// 当年流年干支
+  final String? liuNian;
+  /// 五行数量统计 {木: N, 火: N, 土: N, 金: N, 水: N}
+  final Map<String, int> wuXingCounts;
+  /// 五行旺衰 {木: 旺, 火: 相, ...}
+  final Map<String, String> wuXingWangShuai;
+  /// 十神映射 {年干: 正财, 月干: 正官, 时干: 伤官, 年支藏干: ..., ...}
+  final Map<String, String> shiShenMap;
 
   const BaziResult({
     required this.birth,
@@ -73,8 +82,12 @@ class BaziResult {
     required this.hourZhu,
     required this.daYun,
     this.liuNian,
+    this.wuXingCounts = const {},
+    this.wuXingWangShuai = const {},
+    this.shiShenMap = const {},
   });
 
+  /// 序列化为 JSON
   Map<String, dynamic> toJson() => {
     'birth': birth.toIso8601String(),
     'isMale': isMale,
@@ -86,6 +99,7 @@ class BaziResult {
     'liuNian': liuNian,
   };
 
+  /// 从 JSON 反序列化（保留柱的简略信息）
   factory BaziResult.fromJson(Map<String, dynamic> j) => BaziResult(
     birth: DateTime.parse(j['birth'] as String),
     isMale: j['isMale'] as bool? ?? true,

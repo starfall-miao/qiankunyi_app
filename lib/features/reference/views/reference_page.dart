@@ -1446,85 +1446,183 @@ class _BaziRefTab extends StatelessWidget {
         Card(
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: Text('八字命理，又称四柱预测，是以人出生的年、月、日、时四柱（每柱天干地支，共八个字）推算命运。日柱天干代表"日元"，是命局的核心。',
+            child: Text('八字命理，又称四柱预测，是以人出生的年、月、日、时四柱（每柱天干地支，共八个字）推算命运。'
+                '日柱天干代表"日元"，是命局的核心。五行旺衰、十神生克、格局组合构成论命基础。',
                 style: TextStyle(fontSize: 13, color: t.withAlpha(180))),
           ),
         ),
         const SizedBox(height: 12),
 
-        _sectionHeader(p, '十天干'),
+        // ── 十天干（含类象） ──
+        _sectionHeader(p, '十天干（含类象）'),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: Table(
-              columnWidths: const {0: FlexColumnWidth(1), 1: FlexColumnWidth(1), 2: FlexColumnWidth(1)},
+              columnWidths: const {
+                0: FlexColumnWidth(1),
+                1: FlexColumnWidth(1),
+                2: FlexColumnWidth(1),
+                3: FlexColumnWidth(2),
+              },
               children: [
-                TableRow(decoration: BoxDecoration(color: p.withAlpha(20)),
-                  children: ['天干', '五行', '阴阳'].map((h) => _cell(h, p)).toList()),
-                ...tianGanTable.map((row) => TableRow(
-                  children: ['天干', '五行', '阴阳'].map((k) => _cell(row[k] ?? '', t)).toList(),
-                )),
+                TableRow(
+                  decoration: BoxDecoration(color: p.withAlpha(20)),
+                  children: ['天干', '五行', '阴阳', '类象']
+                      .map((h) => _cell(h, p))
+                      .toList(),
+                ),
+                ...tianGanList.map((info) => TableRow(
+                      children: [
+                        _cell(info.name, t),
+                        _cell(info.wuXing, t),
+                        _cell(info.yinYang, t),
+                        _cell(info.image, t),
+                      ],
+                    )),
               ],
             ),
           ),
         ),
         const SizedBox(height: 12),
 
-        _sectionHeader(p, '十二地支'),
+        // ── 十二地支（含类象） ──
+        _sectionHeader(p, '十二地支（含类象）'),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: Table(
-              columnWidths: const {0: FlexColumnWidth(1), 1: FlexColumnWidth(1), 2: FlexColumnWidth(1), 3: FlexColumnWidth(1)},
+              columnWidths: const {
+                0: FlexColumnWidth(1),
+                1: FlexColumnWidth(1),
+                2: FlexColumnWidth(1),
+                3: FlexColumnWidth(1),
+                4: FlexColumnWidth(1.5),
+              },
               children: [
-                TableRow(decoration: BoxDecoration(color: p.withAlpha(20)),
-                  children: ['地支', '生肖', '五行', '月份'].map((h) => _cell(h, p)).toList()),
-                ...diZhiTable.map((row) => TableRow(
-                  children: ['地支', '生肖', '五行', '月份'].map((k) => _cell(row[k] ?? '', t)).toList(),
-                )),
+                TableRow(
+                  decoration: BoxDecoration(color: p.withAlpha(20)),
+                  children: ['地支', '生肖', '五行', '月份', '类象']
+                      .map((h) => _cell(h, p))
+                      .toList(),
+                ),
+                ...diZhiList.map((info) => TableRow(
+                      children: [
+                        _cell(info.name, t),
+                        _cell(info.shengXiao, t),
+                        _cell(info.wuXing, t),
+                        _cell(info.month, t),
+                        _cell(info.image, t),
+                      ],
+                    )),
               ],
             ),
           ),
         ),
         const SizedBox(height: 12),
 
-        _sectionHeader(p, '十神表（以日干为基准）'),
+        // ── 十神详解 ──
+        _sectionHeader(p, '十神详解（以日干为基准）'),
+        ...shiShenList.map((ss) => Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(ss.name,
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: p)),
+                    const SizedBox(height: 4),
+                    Text(ss.description,
+                        style: TextStyle(fontSize: 12, color: t)),
+                    const SizedBox(height: 2),
+                    Row(children: [
+                      _tag('性质: ${ss.nature}', p, t),
+                      const SizedBox(width: 6),
+                      _tag('六亲: ${ss.relation}', p, t),
+                    ]),
+                    const SizedBox(height: 2),
+                    Text('类象: ${ss.image}',
+                        style: TextStyle(
+                            fontSize: 12, color: t.withAlpha(200))),
+                  ],
+                ),
+              ),
+            )),
+        const SizedBox(height: 12),
+
+        // ── 藏干表 ──
+        _sectionHeader(p, '藏干表（地支藏天干）'),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: Table(
-              columnWidths: const {0: FlexColumnWidth(1), 1: FlexColumnWidth(1), 2: FlexColumnWidth(1)},
+              columnWidths: const {
+                0: FlexColumnWidth(1),
+                1: FlexColumnWidth(1.2),
+                2: FlexColumnWidth(1.2),
+                3: FlexColumnWidth(1.2),
+              },
               children: [
-                TableRow(decoration: BoxDecoration(color: p.withAlpha(20)),
-                  children: ['同我', '生我', '我生'].map((h) => _cell(h, p)).toList()),
-                TableRow(children: [
-                  _cell('比肩', t),
-                  _cell('偏印', t),
-                  _cell('食神', t),
-                ]),
-                TableRow(children: [
-                  _cell('劫财', t),
-                  _cell('正印', t),
-                  _cell('伤官', t),
-                ]),
+                TableRow(
+                  decoration: BoxDecoration(color: p.withAlpha(20)),
+                  children: ['地支', '本气', '中气', '余气']
+                      .map((h) => _cell(h, p))
+                      .toList(),
+                ),
+                ...cangGanList.map((entry) => TableRow(
+                      children: [
+                        _cell(entry.diZhi, t),
+                        _cell(entry.benQi, t),
+                        _cell(entry.zhongQi, t),
+                        _cell(entry.yuQi, t),
+                      ],
+                    )),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 12),
 
-        _sectionHeader(p, '藏干表'),
+        // ── 五行旺衰 ──
+        _sectionHeader(p, '五行旺衰（按月令）'),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(8),
-            child: Table(
-              columnWidths: const {0: FlexColumnWidth(1), 1: FlexColumnWidth(1), 2: FlexColumnWidth(1), 3: FlexColumnWidth(1)},
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TableRow(decoration: BoxDecoration(color: p.withAlpha(20)),
-                  children: ['地支', '本气', '中气', '余气'].map((h) => _cell(h, p)).toList()),
-                ...cangGanTable.map((row) => TableRow(
-                  children: ['地支', '本气', '中气', '余气'].map((k) => _cell(row[k] ?? '', t)).toList(),
-                )),
+                Table(
+                  columnWidths: const {
+                    0: FlexColumnWidth(1),
+                    1: FlexColumnWidth(1),
+                    2: FlexColumnWidth(3),
+                  },
+                  children: [
+                    TableRow(
+                      decoration: BoxDecoration(color: p.withAlpha(20)),
+                      children: ['五行', '状态', '含义']
+                          .map((h) => _cell(h, p))
+                          .toList(),
+                    ),
+                    ...wuXingWangShuaiTable.map((w) => TableRow(
+                          children: [
+                            _cell(w.wuXing, t),
+                            _cell(w.status, t),
+                            _cell(w.meaning, t),
+                          ],
+                        )),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text('旺相休囚死：当令者旺，我生者相，生我者休，克我者囚，我克者死',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: t.withAlpha(160),
+                        fontStyle: FontStyle.italic)),
               ],
             ),
           ),
@@ -1537,16 +1635,31 @@ class _BaziRefTab extends StatelessWidget {
   Widget _sectionHeader(Color primary, String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6, top: 4),
-      child: Text(title, style: TextStyle(fontSize: 15,
-          fontWeight: FontWeight.bold, color: primary)),
+      child: Text(title,
+          style: TextStyle(
+              fontSize: 15, fontWeight: FontWeight.bold, color: primary)),
     );
   }
 
   Widget _cell(String text, Color t) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-      child: Text(text, textAlign: TextAlign.center,
+      child: Text(text,
+          textAlign: TextAlign.center,
           style: TextStyle(fontSize: 13, color: t.withAlpha(220))),
+    );
+  }
+
+  Widget _tag(String text, Color p, Color t) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: p.withAlpha(15),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: p.withAlpha(30)),
+      ),
+      child: Text(text,
+          style: TextStyle(fontSize: 11, color: t.withAlpha(200))),
     );
   }
 }
