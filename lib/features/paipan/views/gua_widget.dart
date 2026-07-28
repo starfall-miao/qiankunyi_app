@@ -434,62 +434,241 @@ class GuaWidget extends StatelessWidget {
     return '世在$shiCN爻 · 应在$yingCN爻';
   }
 
-  /// 爻位参考资料弹窗
+  /// 爻位参考资料弹窗 — 小白友好版
   void _showYaoRef(BuildContext context, YaoModel yao, ThemeData theme) {
     final pos = _yaoPosCN[yao.position] ?? yao.positionName;
-    final lines = <String>[
-      '$pos爻 · ${yao.yinYang == YaoYinYang.yang ? '阳爻' : '阴爻'}${yao.isMoving ? '（动爻）' : ''}',
-    ];
-    if (yao.tianGan != null && yao.diZhi != null) {
-      final tianGan = _tianGanCN[yao.tianGan!];
-      final diZhi = _diZhiCN[yao.diZhi!];
-      lines.add('天干：$tianGan  地支：$diZhi');
-      final wx = _diZhiWuXing(yao.diZhi!);
-      lines.add('五行：${_wuXingCN[wx]}');
-    }
-    if (yao.liuShen != null) {
-      lines.add('六神：${_liuShenCN[yao.liuShen]}');
-    }
-    if (yao.liuQin != LiuQin.none) {
-      lines.add('六亲：${_liuQinCN[yao.liuQin]}');
-    }
-    if (yao.isShi) lines.add('世爻');
-    if (yao.isYing) lines.add('应爻');
-    if (yao.wangShuai != null) lines.add('旺衰：${_wangShuaiCN[yao.wangShuai]}');
-    if (yao.isKongWang) lines.add('旬空');
-    if (yao.isXing) lines.add('刑');
-    if (yao.isChong) lines.add('冲');
-    if (yao.isHe) lines.add('合');
-    if (yao.isHai) lines.add('害');
-    if (yao.sanHeJu.isNotEmpty) lines.add('三合：${yao.sanHeJu.join("、")}');
+    final isDark = theme.brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB);
+    final textColor = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
+    final cardColor = isDark ? const Color(0xFF2C2C2C) : Colors.white;
 
     showModalBottomSheet(
       context: context,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('爻位详解 · $pos爻',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
-            const SizedBox(height: 8),
-            ...lines.map((l) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Text(l, style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurface)),
-            )),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('关闭'),
+      isScrollControlled: true,
+      backgroundColor: bgColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.65,
+        maxChildSize: 0.9,
+        minChildSize: 0.3,
+        expand: false,
+        builder: (ctx2, scrollCtrl) => SingleChildScrollView(
+          controller: scrollCtrl,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── 标题 ──
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: textColor.withAlpha(60),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
               ),
-            ),
-          ],
+              Text('📖 爻位详解 · $pos爻',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+              const SizedBox(height: 4),
+              Text('点击任意处可关闭', style: TextStyle(fontSize: 12, color: textColor.withAlpha(100))),
+              const SizedBox(height: 16),
+
+              // ── 1. 基本信息 ──
+              _refSection('基本信息', [
+                _refRow('爻位', '$pos爻（从下往上第${yao.position.index + 1}爻）',
+                    '六爻从下往上数，依次为初爻、二爻……上爻'),
+                _refRow('阴阳', yao.yinYang == YaoYinYang.yang ? '阳爻（———）' : '阴爻（— —）',
+                    '阳爻代表刚健、主动；阴爻代表柔顺、被动'),
+                _refRow('动静', yao.isMoving ? '动爻 ⚡（有变化）' : '静爻（无变化）',
+                    yao.isMoving ? '动爻表示该爻发生变化，会生出一个变爻' : '静爻表示该爻没有变化'),
+              ], cardColor, textColor, theme.colorScheme.primary),
+
+              // ── 2. 天干地支 ──
+              if (yao.tianGan != null && yao.diZhi != null) ...[
+                const SizedBox(height: 12),
+                _refSection('天干地支', [
+                  _refRow('天干', '${_tianGanCN[yao.tianGan!]}', '天干代表天时、外在环境的影响'),
+                  _refRow('地支', '${_diZhiCN[yao.diZhi!]}', '地支代表地利、内在品质'),
+                  _refRow('五行', '${_wuXingCN[_diZhiWuXing(yao.diZhi!)]}',
+                      '五行决定生克关系：金木水火土相生相克'),
+                ], cardColor, textColor, theme.colorScheme.primary),
+              ],
+
+              // ── 3. 六亲 ──
+              if (yao.liuQin != LiuQin.none) ...[
+                const SizedBox(height: 12),
+                _refSection('六亲（核心关系）', [
+                  _refRow('六亲', '${_liuQinCN[yao.liuQin]}',
+                      _liuQinDesc(yao.liuQin)),
+                ], cardColor, textColor, theme.colorScheme.primary),
+              ],
+
+              // ── 4. 六神 ──
+              if (yao.liuShen != null) ...[
+                const SizedBox(height: 12),
+                _refSection('六神（辅助信息）', [
+                  _refRow('六神', '${_liuShenCN[yao.liuShen]}',
+                      _liuShenDesc(yao.liuShen!)),
+                ], cardColor, textColor, theme.colorScheme.primary),
+              ],
+
+              // ── 5. 世应 ──
+              if (yao.isShi || yao.isYing) ...[
+                const SizedBox(height: 12),
+                _refSection('世应（主客定位）', [
+                  if (yao.isShi)
+                    _refRow('世爻', '✅ 此爻为世爻',
+                        '世爻代表自己、占卜者本身，是卦的核心'),
+                  if (yao.isYing)
+                    _refRow('应爻', '✅ 此爻为应爻',
+                        '应爻代表对方、所问之事或环境'),
+                ], cardColor, textColor, theme.colorScheme.primary),
+              ],
+
+              // ── 6. 旺衰 ──
+              if (yao.wangShuai != null) ...[
+                const SizedBox(height: 12),
+                _refSection('旺衰（力量强弱）', [
+                  _refRow('旺衰', '${_wangShuaiCN[yao.wangShuai]}',
+                      _wangShuaiDesc(yao.wangShuai!)),
+                ], cardColor, textColor, theme.colorScheme.primary),
+              ],
+
+              // ── 7. 旬空 ──
+              if (yao.isKongWang) ...[
+                const SizedBox(height: 12),
+                _refSection('旬空（空亡）', [
+                  _refRow('旬空', '✅ 此爻逢空',
+                      '旬空表示该爻暂时"不在位"，力量空虚，事情可能落空或延迟'),
+                ], cardColor, textColor, theme.colorScheme.primary),
+              ],
+
+              // ── 8. 刑冲合害 ──
+              if (yao.isXing || yao.isChong || yao.isHe || yao.isHai || yao.sanHeJu.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _refSection('刑冲合害（特殊关系）', [
+                  if (yao.isXing) _refRow('刑', '✅ 相刑', '相刑代表矛盾、纠纷、互相伤害'),
+                  if (yao.isChong) _refRow('冲', '✅ 相冲', '相冲代表冲突、变动、对立，事情可能有突破或破裂'),
+                  if (yao.isHe) _refRow('合', '✅ 相合', '相合代表合作、和合、阻碍，事情可能被绊住'),
+                  if (yao.isHai) _refRow('害', '✅ 相害', '相害代表损害、暗中伤害，需防小人'),
+                  if (yao.sanHeJu.isNotEmpty)
+                    _refRow('三合', '${yao.sanHeJu.join("、")}',
+                        '三合代表三方合作、汇聚力量，大吉之象'),
+                ], cardColor, textColor, theme.colorScheme.primary),
+              ],
+
+              // ── 关闭按钮 ──
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('关闭'),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  /// 分区卡片标题
+  Widget _refSection(String title, List<Widget> rows, Color cardColor, Color textColor, Color primary) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: textColor.withAlpha(30)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: primary)),
+          const SizedBox(height: 8),
+          ...rows,
+        ],
+      ),
+    );
+  }
+
+  /// 一行：名称 + 值 + 解释
+  Widget _refRow(String label, String value, String desc) {
+    final tc = Theme.of(context).colorScheme.onSurface;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 56,
+                child: Text(label,
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: tc.withAlpha(180))),
+              ),
+              Expanded(
+                child: Text(value,
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: tc)),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 56, top: 1),
+            child: Text(desc,
+                style: TextStyle(fontSize: 12, color: tc.withAlpha(120))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 六亲含义查询
+  String _liuQinDesc(LiuQin lq) {
+    switch (lq) {
+      case LiuQin.parent: return '父母爻代表长辈、文书、房屋、保护。占事业看父母爻旺衰';
+      case LiuQin.brother: return '兄弟爻代表同辈、朋友、竞争者。占财见兄弟爻多不吉';
+      case LiuQin.officer: return '官鬼爻代表官职、压力、祸患。占官运喜官鬼旺，占病忌官鬼';
+      case LiuQin.wife: return '妻财爻代表财富、妻子、资产。占财运喜妻财爻旺';
+      case LiuQin.child: return '子孙爻代表晚辈、下属、福神。占事见子孙爻主无忧';
+      case LiuQin.none: return '';
+    }
+  }
+
+  /// 六神含义查询
+  String _liuShenDesc(LiuShen ls) {
+    switch (ls) {
+      case LiuShen.qingLong: return '青龙代表喜庆、贵人、文采。青龙临爻主好事将临';
+      case LiuShen.zhuQue: return '朱雀代表口舌、文书、消息。朱雀临爻主有口舌是非或消息传来';
+      case LiuShen.gouChen: return '勾陈代表拖延、老熟人、田产。勾陈临爻主事情进展缓慢';
+      case LiuShen.tengShe: return '螣蛇代表虚惊、怪异、纠缠。螣蛇临爻主有令人不安之事';
+      case LiuShen.baiHu: return '白虎代表凶事、争吵、血光。白虎临爻需防意外伤害';
+      case LiuShen.xuanWu: return '玄武代表暗昧、隐晦、偷盗。玄武临爻需防小人或隐私泄露';
+    }
+  }
+
+  /// 旺衰含义查询
+  String _wangShuaiDesc(WangShuaiLevel level) {
+    switch (level) {
+      case WangShuaiLevel.wang: return '旺 — 力量最旺盛，如日中天。此爻能量最强，作用力大';
+      case WangShuaiLevel.xiang: return '相 — 力量次旺，正在上升趋势。能量较强';
+      case WangShuaiLevel.xiu: return '休 — 力量消退，处于休息状态。暂时无力';
+      case WangShuaiLevel.qiu: return '囚 — 力量被囚禁，受制于人。能量低，难以发挥作用';
+      case WangShuaiLevel.si: return '死 — 力量衰竭，毫无生气。最弱状态，无力回天';
+    }
   }
 
   // ============ 辅助函数 ============
