@@ -3,10 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/services/ai_service.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/utils/logger.dart';
-import '../../settings/settings_provider.dart';
 import '../providers/paipan_provider.dart';
 import '../../cases/providers/case_provider.dart';
 import '../../cases/models/case_models.dart';
@@ -62,16 +60,10 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
   final _numACtrl = TextEditingController();
   final _numBCtrl = TextEditingController();
   final _numCCtrl = TextEditingController();
-  final _correctionCtrl = TextEditingController();
   final DateTime _selectedTime = DateTime.now();
   bool _emptyInputWarn = false;
   bool _isLoading = false;
   bool _immersiveMode = false;
-  String _aiJieGuaResult = '';
-  bool _aiJieGuaLoading = false;
-  String _aiCorrectionFollowUp = '';
-  String _aiCorrectionResult = '';
-  bool _aiCorrectionLoading = false;
   late final AnimationController _animCtrl;
   late final Animation<double> _fadeAnim;
 
@@ -88,7 +80,6 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     _numACtrl.dispose();
     _numBCtrl.dispose();
     _numCCtrl.dispose();
-    _correctionCtrl.dispose();
     super.dispose();
   }
 
@@ -1091,104 +1082,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
       ),
     );
   }
-  /// 请求 AI 解卦
-  void _requestAiJieGua(BuildContext context, PaipanResult result, SettingsProvider sp) async {
-    setState(() {
-      _aiJieGuaLoading = true;
-      _aiJieGuaResult = '';
-    });
-    final prompt = _buildPromptForAI(result);
-    final aiResult = await AiService().chat(
-      endpoint: sp.aiEndpoint,
-      apiKey: sp.aiApiKey,
-      model: sp.effectiveAiModel,
-      messages: [
-        {'role': 'system', 'content': '你是一位精通六爻纳甲筮法的资深易学大师，请用通俗易懂的白话回答用户的问题。'},
-        {'role': 'user', 'content': prompt},
-      ],
-    );
-    if (mounted) {
-      setState(() {
-        _aiJieGuaLoading = false;
-        if (aiResult.success) {
-          _aiJieGuaResult = aiResult.content;
-        } else {
-          _aiJieGuaResult = '❌ 请求失败: $aiResult.errorMessage';
-        }
-      });
-    }
-  }
 
-  /// 请求 AI 纠错
-  void _requestAiCorrection(BuildContext context, PaipanResult result, SettingsProvider sp) async {
-    if (_aiCorrectionFollowUp.trim().isEmpty) return;
-    setState(() {
-      _aiCorrectionLoading = true;
-    });
-    final followUp = _aiCorrectionFollowUp;
-    _aiCorrectionFollowUp = '';
-    _correctionCtrl.clear();
-    final prompt = AiService().buildCorrectionPrompt('', followUp);
-    final aiResult = await AiService().chat(
-      endpoint: sp.aiEndpoint,
-      apiKey: sp.aiApiKey,
-      model: sp.effectiveAiModel,
-      messages: [
-        {'role': 'system', 'content': '你是一位精通六爻纳甲筮法的资深易学大师，请复核断语的合理性并给出改进建议。'},
-        {'role': 'user', 'content': prompt},
-      ],
-    );
-    if (mounted) {
-      setState(() {
-        _aiCorrectionLoading = false;
-        if (aiResult.success) {
-          _aiCorrectionResult = (aiResult.content);
-        } else {
-          _aiCorrectionResult = '❌ 请求失败: $aiResult.errorMessage';
-        }
-      });
-    }
-  }
 
-  /// 构建 AI 解卦提示词
-  String _buildPromptForAI(PaipanResult result) {
-    final guaCN = <GuaName, String>{
-      GuaName.qian: '乾为天', GuaName.kun: '坤为地', GuaName.tai: '地天泰',
-      GuaName.pi: '天地否', GuaName.shi: '地水师', GuaName.bi: '水地比',
-      GuaName.xiaoXu: '风天小畜', GuaName.tongRen: '天火同人',
-      GuaName.daYou: '火天大有', GuaName.gu: '山风蛊',
-      GuaName.lin: '地泽临', GuaName.guan: '风地观',
-      GuaName.fu: '地雷复', GuaName.wuWang: '天雷无妄', GuaName.jiJi: '水火既济',
-      GuaName.weiJi: '火水未济',
-    };
-    final gongCN = <GuaGong, String>{
-      GuaGong.qian: '乾', GuaGong.kun: '坤', GuaGong.zhen: '震',
-    };
-    final nameCN = guaCN[result.benGua.name] ?? result.benGua.name.name;
-    final movingCount = result.benGua.yaos.where((y) => y.isMoving).length;
-    final gong = gongCN[result.benGua.gong] ?? '';
 
-    var sb = StringBuffer();
-    sb.writeln('你是一位精通六爻纳甲筮法的资深易学大师。请根据以下卦象信息为用户解卦：');
-    sb.writeln();
-    sb.writeln('【起卦信息】');
-    sb.writeln('本卦：$nameCN（$gong宫）');
-    sb.writeln('动爻：$movingCount 位');
-    if (result.bianGua != null) {
-      final bianCN = guaCN[result.bianGua!.name] ?? '';
-      sb.writeln('变卦：$bianCN');
-    }
-    if (result.huGua != null) {
-      final huCN = guaCN[result.huGua!.name] ?? '';
-      sb.writeln('互卦：$huCN');
-    }
-    sb.writeln();
-    sb.writeln('【要求】');
-    sb.writeln('1. 用通俗易懂的白话解释卦象含义');
-    sb.writeln('2. 分析世应关系和六亲生克');
-    sb.writeln('3. 指出动爻的意义和变化趋势');
-    sb.writeln('4. 给出简明具体的建议，不要说空话套话');
-    sb.writeln('5. 最后用一句话总结吉凶方向');
-    return sb.toString();
-  }
-}
+
