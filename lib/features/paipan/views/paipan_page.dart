@@ -14,6 +14,7 @@ import '../models/paipan_result.dart';
 import '../models/gua_model.dart';
 import '../models/yao_model.dart';
 import 'gua_widget.dart';
+import '../views/bazi_page.dart';
 
 // ============ 中文卦名映射 ============
 const _guaNameCN = <GuaName, String>{
@@ -1055,7 +1056,6 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
       ),
     );
   }
-}
   Widget _buildDuanYuSection(PaipanResult result, Color p, Color t) {
     final ctrl = TextEditingController(text: _duanYuText);
     return Card(
@@ -1126,3 +1126,4 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         '此卦${movingCount > 0 ? '有动爻，变动至${result.bianGua != null ? guaCN[result.bianGua!.name] ?? "" : ""}' : '为静卦'}\n'
         '请根据爻位六亲关系自行判断吉凶。';
   }
+}

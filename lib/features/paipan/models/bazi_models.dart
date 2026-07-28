@@ -90,9 +90,9 @@ class BaziResult {
     birth: DateTime.parse(j['birth'] as String),
     isMale: j['isMale'] as bool? ?? true,
     yearZhu: SiZhu(ganZhi: j['yearZhu'] as String, tianGan: '', diZhi: '', tianGanCN: '', diZhiCN: '', wuXing: '', cangGan: {}),
-    monthZhu: SiZhu(ganZhi: j['monthZhu'] as String, tianGan: '', diZhi: '', diZhiCN: '', wuXing: '', cangGan: {}),
-    dayZhu: SiZhu(ganZhi: j['dayZhu'] as String, tianGan: '', diZhi: '', diZhiCN: '', wuXing: '', cangGan: {}),
-    hourZhu: SiZhu(ganZhi: j['hourZhu'] as String, tianGan: '', diZhi: '', diZhiCN: '', wuXing: '', cangGan: {}),
+    monthZhu: SiZhu(ganZhi: j['monthZhu'] as String, tianGan: '', diZhi: '', tianGanCN: '', diZhiCN: '', wuXing: '', cangGan: {}),
+    dayZhu: SiZhu(ganZhi: j['dayZhu'] as String, tianGan: '', diZhi: '', tianGanCN: '', diZhiCN: '', wuXing: '', cangGan: {}),
+    hourZhu: SiZhu(ganZhi: j['hourZhu'] as String, tianGan: '', diZhi: '', tianGanCN: '', diZhiCN: '', wuXing: '', cangGan: {}),
     daYun: (j['daYun'] as List).map((e) => DaYun(startAge: 0, ganZhi: e as String, tianGan: '', diZhi: '')).toList(),
     liuNian: j['liuNian'] as String?,
   );

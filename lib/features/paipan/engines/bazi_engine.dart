@@ -1,7 +1,7 @@
 /// 八字排盘引擎 — 基于 tyme4dart
 library;
 
-import 'package:tyme/tyme.dart';
+import 'package:tyme/tyme.dart' as tyme;
 
 import '../models/bazi_models.dart';
 
@@ -90,7 +90,7 @@ class BaiZiEngine {
     required int hourIndex,
   }) {
     // 使用 tyme 获取干支
-    final solar = Solar.fromDate(birth);
+    final solar = tyme.SolarDay.fromYmd(birth.year, birth.month, birth.day);
     final lunar = solar.toLunar();
 
     // 四柱干支
@@ -148,7 +148,7 @@ class BaiZiEngine {
 
     // 流年（当年）
     final now = DateTime.now();
-    final nowLunar = Solar.fromDate(now).toLunar();
+    final nowLunar = tyme.SolarDay.fromYmd(now.year, now.month, now.day).getLunarDay();
     final liuNian = nowLunar.getYearInGanZhi();
 
     return BaziResult(
