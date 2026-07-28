@@ -68,6 +68,12 @@ class SettingsProvider extends ChangeNotifier {
   bool _loaded = false;
   SharedPreferences? _prefs;
 
+  // ===== AI 解卦配置 =====
+  String _aiEndpoint = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+  String _aiApiKey = '';
+  String _aiModel = 'qwen-turbo';
+  bool _aiEnabled = false;
+
   // Getters
   double get fontSize => _fontSize;
   RiPoAnDongRule get riPoRule => _riPoRule;
@@ -75,6 +81,11 @@ class SettingsProvider extends ChangeNotifier {
   bool get chenMuTuYao => _chenMuTuYao;
   DisplaySettings get display => _display;
   bool get loaded => _loaded;
+  // AI Getters
+  String get aiEndpoint => _aiEndpoint;
+  String get aiApiKey => _aiApiKey;
+  String get aiModel => _aiModel;
+  bool get aiEnabled => _aiEnabled;
 
   /// 初始化 — 从 SharedPreferences 加载
   Future<void> init() async {
@@ -84,6 +95,10 @@ class SettingsProvider extends ChangeNotifier {
     _riPoRule = RiPoAnDongRule.values[_prefs!.getInt('paipan_riPoRule') ?? 1];
     _wanZiShi = _prefs!.getBool('paipan_wanZiShi') ?? false;
     _chenMuTuYao = _prefs!.getBool('paipan_chenMuTuYao') ?? false;
+    _aiEndpoint = _prefs!.getString('ai_endpoint') ?? 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+    _aiApiKey = _prefs!.getString('ai_apiKey') ?? '';
+    _aiModel = _prefs!.getString('ai_model') ?? 'qwen-turbo';
+    _aiEnabled = _prefs!.getBool('ai_enabled') ?? false;
     final ds = _prefs!.getString('paipan_display');
     if (ds != null) {
       _display = DisplaySettings.fromMap(
@@ -144,5 +159,28 @@ class SettingsProvider extends ChangeNotifier {
     _save();
     notifyListeners();
     Logger.instance.info('切换显示要素: $key = ${_display.toMap()[key]}');
+  }
+
+  // ===== AI 解卦设置 =====
+  set aiEndpoint(String v) {
+    _aiEndpoint = v;
+    _prefs?.setString('ai_endpoint', v);
+    notifyListeners();
+  }
+  set aiApiKey(String v) {
+    _aiApiKey = v;
+    _prefs?.setString('ai_apiKey', v);
+    notifyListeners();
+  }
+  set aiModel(String v) {
+    _aiModel = v;
+    _prefs?.setString('ai_model', v);
+    notifyListeners();
+  }
+  set aiEnabled(bool v) {
+    _aiEnabled = v;
+    _prefs?.setBool('ai_enabled', v);
+    notifyListeners();
+    Logger.instance.info('AI 解卦: ${v ? "开启" : "关闭"}');
   }
 }

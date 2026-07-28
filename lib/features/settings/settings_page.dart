@@ -68,6 +68,11 @@ class _SettingsPageState extends State<SettingsPage> {
             _buildDebugSettings(theme),
             const SizedBox(height: 16),
 
+            _buildSectionHeader(theme, '🤖 AI 解卦配置'),
+            const SizedBox(height: 8),
+            _buildAISettings(theme),
+            const SizedBox(height: 16),
+
             _buildSectionHeader(theme, '📖 信息'),
             const SizedBox(height: 8),
             _buildAboutButton(theme),
@@ -477,6 +482,129 @@ class _SettingsPageState extends State<SettingsPage> {
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('关闭')),
         ],
+      ),
+    );
+  }
+
+  // ──────────────── AI 解卦配置 ────────────────
+
+  Widget _buildAISettings(ThemeData theme) {
+    return _buildCard(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 总开关
+          Consumer<SettingsProvider>(
+            builder: (ctx, sp, _) => SwitchListTile(
+              title: const Text('启用 AI 解卦'),
+              subtitle: const Text('开启后可在排盘页使用 AI 辅助分析'),
+              value: sp.aiEnabled,
+              onChanged: (v) => sp.aiEnabled = v,
+              dense: true,
+            ),
+          ),
+          const Divider(height: 1),
+          // API 地址
+          Consumer<SettingsProvider>(
+            builder: (ctx, sp, _) => _buildSettingsRow(
+              icon: Icons.link,
+              title: 'API 地址',
+              subtitle: sp.aiEndpoint,
+              onTap: () => _editText(context, 'API 地址', sp.aiEndpoint, (v) => sp.aiEndpoint = v),
+            ),
+          ),
+          const Divider(height: 1),
+          // API Key
+          Consumer<SettingsProvider>(
+            builder: (ctx, sp, _) => _buildSettingsRow(
+              icon: Icons.key,
+              title: 'API Key',
+              subtitle: sp.aiApiKey.isEmpty ? '未设置' : '${sp.aiApiKey.substring(0, 8)}...',
+              onTap: () => _editText(context, 'API Key', sp.aiApiKey, (v) => sp.aiApiKey = v, obscure: true),
+            ),
+          ),
+          const Divider(height: 1),
+          // 模型选择
+          Consumer<SettingsProvider>(
+            builder: (ctx, sp, _) => _buildSettingsRow(
+              icon: Icons.model_training,
+              title: '模型',
+              subtitle: sp.aiModel,
+              onTap: () => _selectModel(context, sp),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editText(BuildContext context, String label, String current, Function(String) onSave,
+      {bool obscure = false}) {
+    final ctrl = TextEditingController(text: current);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(label),
+        content: TextField(
+          controller: ctrl,
+          obscureText: obscure,
+          decoration: InputDecoration(hintText: '请输入$label'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(onPressed: () { onSave(ctrl.text); Navigator.pop(ctx); }, child: const Text('保存')),
+        ],
+      ),
+    );
+  }
+
+  void _selectModel(BuildContext context, SettingsProvider sp) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('选择 AI 模型'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: ['qwen-turbo', 'qwen-plus', 'qwen-max', 'deepseek-v3', 'deepseek-r1'].map((m) =>
+            RadioListTile<String>(
+              title: Text(m),
+              value: m,
+              groupValue: sp.aiModel,
+              onChanged: (v) { sp.aiModel = v!; Navigator.pop(ctx); },
+            ),
+          ).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsRow({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: theme.colorScheme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurface)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withAlpha(150))),
+                ],
+              ),
+            ),
+            const Icon(Icons.edit_outlined, size: 16, color: Colors.grey),
+          ],
+        ),
       ),
     );
   }
