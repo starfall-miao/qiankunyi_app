@@ -368,6 +368,16 @@ class _DayCell extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
             ),
+            // ── 日干支小字 ──
+            Text(
+              day.dayGanZhi,
+              style: TextStyle(
+                fontSize: 8,
+                color: useWhiteText
+                    ? Colors.white.withAlpha(200)
+                    : textColor.withAlpha(100),
+              ),
+            ),
             if (day.solarTerm != null)
               Text(
                 day.solarTerm!,
