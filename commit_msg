@@ -1,0 +1,7 @@
+feat(mission-4): US-6 沉浸式查看优化 - 收起标题栏和底部导航栏
+
+- ThemeProvider 新增 immersiveMode 属性/setImmersiveMode 方法
+- paipan_page.dart: SliverAppBar 在沉浸模式下隐藏（if !tp.immersiveMode）
+  底部 FAB 使用 tp.immersiveMode/tp.setImmersiveMode 替代本地 state
+- app.dart (MainShell): 沉浸模式下 bottomNavigationBar 设为 null 隐藏
+  使用 context.watch<ThemeProvider>() 响应式控制

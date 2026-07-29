@@ -112,9 +112,6 @@ class BaziResult {
   );
 
   /// 从干支字符串解析 SiZhu（兼容旧数据）
-  static const _tianGanNames = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
-  static const _diZhiNames = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
-
   static SiZhu _parseSiZhu(String ganZhi) {
     if (ganZhi.length < 2) return SiZhu(ganZhi: ganZhi, tianGan: '', diZhi: '', tianGanCN: '', diZhiCN: '', wuXing: '', cangGan: {});
     final tg = ganZhi[0];

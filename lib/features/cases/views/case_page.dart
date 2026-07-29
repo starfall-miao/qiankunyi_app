@@ -15,7 +15,6 @@ import '../models/case_models.dart';
 import '../../paipan/models/paipan_result.dart';
 import '../../paipan/models/bazi_models.dart';
 import '../../reference/data/bazi_reference_data.dart';
-import '../../paipan/models/bazi_models.dart';
 import '../../paipan/models/gua_model.dart';
 import '../../paipan/models/yao_model.dart';
 import '../../paipan/views/gua_widget.dart';
@@ -154,6 +153,7 @@ class _CasePageState extends State<CasePage> {
             ],
           ),
         ),
+      ),
     );
   }
 
@@ -592,8 +592,8 @@ class _CasePageState extends State<CasePage> {
 
   /// 八字单柱行（含点击参考）
   Widget _baziPillarRow(String label, SiZhu p, Color t, BuildContext ctx, {bool isRiZhu = false}) {
-    final _ganInfo = _findTianGanInfo(p.tianGan);
-    final _zhiInfo = _findDiZhiInfo(p.diZhi);
+    final ganInfo = _findTianGanInfo(p.tianGan);
+    final zhiInfo = _findDiZhiInfo(p.diZhi);
     return Row(children: [
       SizedBox(width: 40, child: Text(label,
           style: TextStyle(fontSize: 13,
@@ -603,7 +603,7 @@ class _CasePageState extends State<CasePage> {
       // 天干（可点击）
       if (p.tianGan.isNotEmpty)
         GestureDetector(
-          onTap: () => _showGanZhiRef(ctx, '天干', p.tianGan, _ganInfo),
+          onTap: () => _showGanZhiRef(ctx, '天干', p.tianGan, ganInfo),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
@@ -619,7 +619,7 @@ class _CasePageState extends State<CasePage> {
         const SizedBox(width: 4),
         // 地支（可点击）
         GestureDetector(
-          onTap: () => _showGanZhiRef(ctx, '地支', p.diZhi, _zhiInfo),
+          onTap: () => _showGanZhiRef(ctx, '地支', p.diZhi, zhiInfo),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
