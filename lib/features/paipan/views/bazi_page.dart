@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../../core/utils/logger.dart';
 import '../../cases/models/case_models.dart';
 import '../../cases/providers/case_provider.dart';
+import '../../reference/data/bazi_reference_data.dart';
 import '../models/bazi_models.dart';
 import '../providers/bazi_provider.dart';
 
@@ -60,7 +61,7 @@ class _BaziPageState extends State<BaziPage> {
     final c = isDark ? const Color(0xFF2C2C2C) : Colors.white;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 100),
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
       child: bp.result != null
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -481,15 +482,42 @@ class _BaziPageState extends State<BaziPage> {
           children: [
             Text(label,
                 style: TextStyle(fontSize: 11, color: t.withAlpha(120))),
+            const SizedBox(height: 6),
+            // 天干 + 地支（可点击查看参考）
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: () => _showGanRef(context, zhu.tianGan, t, p, dark),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: isRiZhu ? p.withAlpha(20) : t.withAlpha(10),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(zhu.tianGan,
+                        style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: isRiZhu ? p : t)),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => _showZhiRef(context, zhu.diZhi, t, p, dark),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    child: Text(zhu.diZhi,
+                        style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: t)),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 4),
-            Text(zhu.ganZhi,
-                style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: isRiZhu ? p : t)),
-            const SizedBox(height: 2),
-            Text('${zhu.tianGan} · ${zhu.diZhi}',
-                style: TextStyle(fontSize: 12, color: t.withAlpha(180))),
+            Text('${zhu.tianGan}${zhu.diZhi} · ${zhu.wuXing}',
+                style: TextStyle(fontSize: 11, color: t.withAlpha(150))),
           ],
         ),
       ),
@@ -658,5 +686,138 @@ class _BaziPageState extends State<BaziPage> {
   /// Wrap 行
   Widget _rowWrap(List<Widget> children) {
     return Wrap(spacing: 6, runSpacing: 6, children: children);
+  }
+
+  /// 显示天干参考弹窗
+  void _showGanRef(BuildContext ctx, String gan, Color t, Color p, bool dark) {
+    TianGanInfo? info;
+    try {
+      info = tianGanList.firstWhere((g) => g.name == gan);
+    } catch (_) {}
+    if (info == null) {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        SnackBar(content: Text('暂无「$gan」的参考资料', style: const TextStyle(fontSize: 13))),
+      );
+      return;
+    }
+    showDialog(
+      context: ctx,
+      builder: (ctx2) => AlertDialog(
+        backgroundColor: dark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Row(children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: p.withAlpha(25),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(info.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: p)),
+          ),
+          const SizedBox(width: 8),
+          Text('天干', style: TextStyle(fontSize: 14, color: t.withAlpha(120))),
+        ]),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _refRow('五行', info.wuXing, t),
+              _refRow('阴阳', info.yinYang, t),
+              _refRow('方位', info.fangWei, t),
+              if (info.season.isNotEmpty) _refRow('季节', info.season, t),
+              if (info.zangFu.isNotEmpty) _refRow('脏腑', info.zangFu, t),
+              if (info.meridian.isNotEmpty) _refRow('经络', info.meridian, t),
+              if (info.qi.isNotEmpty) _refRow('本气', info.qi, t),
+              if (info.shiShen.isNotEmpty) _refRow('十神', info.shiShen, t),
+              if (info.meaning.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text('类象', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t)),
+                const SizedBox(height: 2),
+                Text(info.meaning, style: TextStyle(fontSize: 12, color: t.withAlpha(200))),
+              ],
+            ],
+          ),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx2), child: const Text('关闭'))],
+      ),
+    );
+  }
+
+  /// 显示地支参考弹窗
+  void _showZhiRef(BuildContext ctx, String zhi, Color t, Color p, bool dark) {
+    DiZhiInfo? info;
+    try {
+      info = diZhiList.firstWhere((z) => z.name == zhi);
+    } catch (_) {}
+    if (info == null) {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        SnackBar(content: Text('暂无「$zhi」的参考资料', style: const TextStyle(fontSize: 13))),
+      );
+      return;
+    }
+    showDialog(
+      context: ctx,
+      builder: (ctx2) => AlertDialog(
+        backgroundColor: dark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Row(children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: p.withAlpha(25),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(info.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: p)),
+          ),
+          const SizedBox(width: 8),
+          Text('地支', style: TextStyle(fontSize: 14, color: t.withAlpha(120))),
+        ]),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _refRow('五行', info.wuXing, t),
+              _refRow('阴阳', info.yinYang, t),
+              _refRow('方位', info.fangWei, t),
+              _refRow('月份', info.month, t),
+              if (info.time.isNotEmpty) _refRow('时辰', info.time, t),
+              if (info.zangFu.isNotEmpty) _refRow('脏腑', info.zangFu, t),
+              if (info.animal.isNotEmpty) _refRow('生肖', info.animal, t),
+              if (info.cangGan.isNotEmpty) _refRow('藏干', info.cangGan, t),
+              if (info.qi.isNotEmpty) _refRow('本气', info.qi, t),
+              if (info.shiShen.isNotEmpty) _refRow('十神', info.shiShen, t),
+              if (info.meaning.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text('类象', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t)),
+                const SizedBox(height: 2),
+                Text(info.meaning, style: TextStyle(fontSize: 12, color: t.withAlpha(200))),
+              ],
+            ],
+          ),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx2), child: const Text('关闭'))],
+      ),
+    );
+  }
+
+  /// 参考信息行
+  Widget _refRow(String label, String value, Color t) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 48,
+            child: Text('$label：', style: TextStyle(fontSize: 12, color: t.withAlpha(150))),
+          ),
+          Expanded(
+            child: Text(value, style: TextStyle(fontSize: 12, color: t)),
+          ),
+        ],
+      ),
+    );
   }
 }
