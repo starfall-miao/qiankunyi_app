@@ -63,7 +63,6 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
   final DateTime _selectedTime = DateTime.now();
   bool _emptyInputWarn = false;
   bool _isLoading = false;
-  bool _immersiveMode = false;
   late final AnimationController _animCtrl;
   late final Animation<double> _fadeAnim;
 
@@ -98,21 +97,23 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
       backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB),
       body: NestedScrollView(
         headerSliverBuilder: (ctx, innerScrolled) => [
-          SliverAppBar(
-            floating: true,
-            snap: true,
-            title: Text('排盘 · ${_tabIndex == 0 ? "六爻" : _tabIndex == 1 ? "梅花" : "八字"}',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            actions: [
-              IconButton(
-                icon: Icon(tp.themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
-                    color: const Color(0xFFD4A574)),
-                onPressed: () => tp.toggleTheme(),
-              ),
-            ],
-          ),
+          // ── AppBar 标题栏（沉浸模式隐藏）──
+          if (!tp.immersiveMode)
+            SliverAppBar(
+              floating: true,
+              snap: true,
+              title: Text('排盘 · ${_tabIndex == 0 ? "六爻" : _tabIndex == 1 ? "梅花" : "八字"}',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              actions: [
+                IconButton(
+                  icon: Icon(tp.themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
+                      color: const Color(0xFFD4A574)),
+                  onPressed: () => tp.toggleTheme(),
+                ),
+              ],
+            ),
           // 渲染检测条（仅调试模式显示）
-          if (tp.renderDebug && !_immersiveMode)
+          if (tp.renderDebug && !tp.immersiveMode)
             SliverToBoxAdapter(
               child: Container(
                 color: Colors.green.shade100,
@@ -126,7 +127,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
               ),
             ),
           // Tab 行
-          if (!_immersiveMode)
+          if (!tp.immersiveMode)
             SliverToBoxAdapter(
               child: Container(
                 decoration: BoxDecoration(color: c, border: Border(bottom: BorderSide(color: b))),
@@ -154,15 +155,15 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         ),
       ),
       // 沉浸式切换按钮（右下角）
-      floatingActionButton: _immersiveMode
+      floatingActionButton: tp.immersiveMode
           ? FloatingActionButton.small(
               backgroundColor: p.withAlpha(200),
-              onPressed: () => setState(() => _immersiveMode = false),
+              onPressed: () => tp.setImmersiveMode(false),
               child: const Icon(Icons.fullscreen_exit, color: Colors.white),
             )
           : FloatingActionButton.small(
               backgroundColor: p.withAlpha(150),
-              onPressed: () => setState(() => _immersiveMode = true),
+              onPressed: () => tp.setImmersiveMode(true),
               child: const Icon(Icons.fullscreen, color: Colors.white),
             ),
     );

@@ -17,6 +17,7 @@ class ThemeProvider extends ChangeNotifier {
   bool _useAcrylic = false;
   double _acrylicOpacity = 0.75;
   bool _renderDebug = false;
+  bool _immersiveMode = false;
 
   ThemeMode get themeMode => _themeMode;
   bool get isDarkMode => _themeMode == ThemeMode.dark;
@@ -24,6 +25,7 @@ class ThemeProvider extends ChangeNotifier {
   bool get acrylicEffect => _useAcrylic;
   double get acrylicOpacity => _acrylicOpacity;
   bool get renderDebug => _renderDebug;
+  bool get immersiveMode => _immersiveMode;
 
   ThemeProvider() {
     _loadPrefs();
@@ -107,5 +109,10 @@ class ThemeProvider extends ChangeNotifier {
       (e) => e.name == value,
       orElse: () => ColorSchemeType.xuanZi,
     );
+  }
+
+  void setImmersiveMode(bool value) {
+    _immersiveMode = value;
+    notifyListeners();
   }
 }

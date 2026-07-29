@@ -76,22 +76,25 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    final tp = context.watch<ThemeProvider>();
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
         children: _pages,
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.change_circle_outlined), label: '排盘'),
-          NavigationDestination(icon: Icon(Icons.bookmark_border), label: '卦例'),
-          NavigationDestination(icon: Icon(Icons.calendar_month_outlined), label: '日历'),
-          NavigationDestination(icon: Icon(Icons.menu_book_outlined), label: '参考'),
-          NavigationDestination(icon: Icon(Icons.settings_outlined), label: '设置'),
-        ],
-      ),
+      bottomNavigationBar: tp.immersiveMode
+          ? null
+          : NavigationBar(
+              selectedIndex: _currentIndex,
+              onDestinationSelected: (i) => setState(() => _currentIndex = i),
+              destinations: const [
+                NavigationDestination(icon: Icon(Icons.change_circle_outlined), label: '排盘'),
+                NavigationDestination(icon: Icon(Icons.bookmark_border), label: '卦例'),
+                NavigationDestination(icon: Icon(Icons.calendar_month_outlined), label: '日历'),
+                NavigationDestination(icon: Icon(Icons.menu_book_outlined), label: '参考'),
+                NavigationDestination(icon: Icon(Icons.settings_outlined), label: '设置'),
+              ],
+            ),
     );
   }
 }
