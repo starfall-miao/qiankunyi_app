@@ -14,6 +14,8 @@ import '../providers/case_provider.dart';
 import '../models/case_models.dart';
 import '../../paipan/models/paipan_result.dart';
 import '../../paipan/models/bazi_models.dart';
+import '../../reference/data/bazi_reference_data.dart';
+import '../../paipan/models/bazi_models.dart';
 import '../../paipan/models/gua_model.dart';
 import '../../paipan/models/yao_model.dart';
 import '../../paipan/views/gua_widget.dart';
@@ -408,7 +410,7 @@ class _CasePageState extends State<CasePage> {
                   _buildTiYongDetail(result, t, isDark),
                 ],
               ] else if (baziResult != null) ...[
-                _buildBaziDetail(baziResult, t, isDark),
+                _buildBaziDetail(baziResult, t, isDark, context),
               ],
               // ── 人工断语 ──
               const SizedBox(height: 16),
@@ -470,7 +472,7 @@ class _CasePageState extends State<CasePage> {
   }
 
   /// 八字详情展示
-  Widget _buildBaziDetail(BaziResult r, Color t, bool isDark) {
+  Widget _buildBaziDetail(BaziResult r, Color t, bool isDark, BuildContext ctx) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -482,40 +484,250 @@ class _CasePageState extends State<CasePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('八字排盘', style: TextStyle(fontSize: 14,
-              fontWeight: FontWeight.bold, color: t)),
+          // ── 标题 ──
+          Row(children: [
+            Text('八字排盘', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: t)),
+            const Spacer(),
+            Text(r.isMale ? '乾造' : '坤造',
+                style: TextStyle(fontSize: 12,
+                    color: Theme.of(ctx).colorScheme.primary,
+                    fontWeight: FontWeight.w500)),
+          ]),
           const SizedBox(height: 8),
-          _baziPillarRow('年柱', r.yearZhu, t),
+
+          // ── 四柱 ──
+          _baziPillarRow('年柱', r.yearZhu, t, ctx),
           const SizedBox(height: 4),
-          _baziPillarRow('月柱', r.monthZhu, t),
+          _baziPillarRow('月柱', r.monthZhu, t, ctx),
           const SizedBox(height: 4),
-          _baziPillarRow('日柱', r.dayZhu, t),
+          _baziPillarRow('日柱', r.dayZhu, t, ctx, isRiZhu: true),
           const SizedBox(height: 4),
-          _baziPillarRow('时柱', r.hourZhu, t),
+          _baziPillarRow('时柱', r.hourZhu, t, ctx),
+
+          // ── 十神 ──
+          if (r.shiShenMap.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text('十神', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t)),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 6, runSpacing: 4,
+              children: r.shiShenMap.entries.map((e) =>
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: t.withAlpha(12),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text('${e.key}: ${e.value}',
+                      style: TextStyle(fontSize: 11, color: t.withAlpha(200))),
+                ),
+              ).toList(),
+            ),
+          ],
+
+          // ── 五行统计 ──
+          if (r.wuXingCounts.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text('五行分布', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t)),
+            const SizedBox(height: 4),
+            Row(
+              children: r.wuXingCounts.entries.map((e) {
+                final colors = {'木': Colors.green, '火': Colors.red, '土': Colors.brown, '金': Colors.amber, '水': Colors.blue};
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8, height: 8,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: colors[e.key] ?? Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(width: 3),
+                      Text('${e.key}: ${e.value}',
+                          style: TextStyle(fontSize: 11, color: t.withAlpha(200))),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+
+          // ── 大运 ──
+          if (r.daYun.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text('大运', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t)),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 6, runSpacing: 4,
+              children: r.daYun.map((d) =>
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Theme.of(ctx).colorScheme.primary.withAlpha(15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(d.ganZhi,
+                      style: TextStyle(fontSize: 11,
+                          color: Theme.of(ctx).colorScheme.primary)),
+                ),
+              ).toList(),
+            ),
+          ],
+
+          // ── 流年 ──
+          if (r.liuNian != null) ...[
+            const SizedBox(height: 6),
+            Text('流年：${r.liuNian}',
+                style: TextStyle(fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: t.withAlpha(180))),
+          ],
         ],
       ),
     );
   }
 
-  Widget _baziPillarRow(String label, SiZhu p, Color t) {
+  /// 八字单柱行（含点击参考）
+  Widget _baziPillarRow(String label, SiZhu p, Color t, BuildContext ctx, {bool isRiZhu = false}) {
+    final _ganInfo = _findTianGanInfo(p.tianGan);
+    final _zhiInfo = _findDiZhiInfo(p.diZhi);
     return Row(children: [
       SizedBox(width: 40, child: Text(label,
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: t))),
+          style: TextStyle(fontSize: 13,
+              fontWeight: isRiZhu ? FontWeight.w800 : FontWeight.w600,
+              color: isRiZhu ? Theme.of(ctx).colorScheme.primary : t))),
       const SizedBox(width: 8),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(
-          color: t.withAlpha(15),
-          borderRadius: BorderRadius.circular(4),
+      // 天干（可点击）
+      if (p.tianGan.isNotEmpty)
+        GestureDetector(
+          onTap: () => _showGanZhiRef(ctx, '天干', p.tianGan, _ganInfo),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: isRiZhu ? Theme.of(ctx).colorScheme.primary.withAlpha(20) : t.withAlpha(15),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: isRiZhu ? Theme.of(ctx).colorScheme.primary.withAlpha(60) : t.withAlpha(25)),
+            ),
+            child: Text(p.tianGan,
+                style: TextStyle(fontSize: 14, fontWeight: isRiZhu ? FontWeight.bold : FontWeight.normal, color: t)),
+          ),
         ),
-        child: Text(p.ganZhi,
-            style: TextStyle(fontSize: 14, color: t)),
-      ),
-      if (p.tianGan.isNotEmpty) ...[
-        const SizedBox(width: 8),
-        Text(p.tianGan, style: TextStyle(fontSize: 13, color: t.withAlpha(180))),
+      if (p.diZhi.isNotEmpty) ...[
+        const SizedBox(width: 4),
+        // 地支（可点击）
+        GestureDetector(
+          onTap: () => _showGanZhiRef(ctx, '地支', p.diZhi, _zhiInfo),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: t.withAlpha(15),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: t.withAlpha(25)),
+            ),
+            child: Text(p.diZhi,
+                style: TextStyle(fontSize: 14, color: t)),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(p.ganZhi,
+            style: TextStyle(fontSize: 12, color: t.withAlpha(120))),
       ],
     ]);
+  }
+
+  /// 查找天干参考信息
+  TianGanInfo? _findTianGanInfo(String tg) {
+    try {
+      return tianGanList.firstWhere((g) => g.name == tg);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 查找地支参考信息
+  DiZhiInfo? _findDiZhiInfo(String dz) {
+    try {
+      return diZhiList.firstWhere((z) => z.name == dz);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 显示天干/地支参考弹窗
+  void _showGanZhiRef(BuildContext ctx, String type, String name, dynamic info) {
+    if (info == null) {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        SnackBar(content: Text('暂无「$name」的参考资料'), duration: const Duration(seconds: 2)),
+      );
+      return;
+    }
+    final t = Theme.of(ctx);
+    showDialog(
+      context: ctx,
+      builder: (dialogCtx) => AlertDialog(
+        title: Row(children: [
+          Text('$type · $name',
+              style: TextStyle(fontWeight: FontWeight.bold, color: t.colorScheme.onSurface)),
+          if (info is TianGanInfo) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: t.colorScheme.primary.withAlpha(20),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(info.wuXing,
+                  style: TextStyle(fontSize: 12, color: t.colorScheme.primary)),
+            ),
+          ],
+        ]),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (info is TianGanInfo) ...[
+                _refRow('五行', info.wuXing, t),
+                _refRow('阴阳', info.yinYang, t),
+                _refRow('方位', info.direction, t),
+                _refRow('类象', info.image, t),
+                _refRow('对应身体', info.body, t),
+              ] else if (info is DiZhiInfo) ...[
+                _refRow('五行', info.wuXing, t),
+                _refRow('阴阳', info.yinYang, t),
+                _refRow('生肖', info.shengXiao, t),
+                _refRow('月份', info.month, t),
+                _refRow('时辰', info.hourRange, t),
+                _refRow('方位', info.direction, t),
+                _refRow('类象', info.image, t),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('关闭')),
+        ],
+      ),
+    );
+  }
+
+  /// 参考信息行
+  Widget _refRow(String label, String value, ThemeData t) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 60, child: Text('$label：',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: t.colorScheme.onSurface.withAlpha(180)))),
+          Expanded(child: Text(value,
+              style: TextStyle(fontSize: 13, color: t.colorScheme.onSurface))),
+        ],
+      ),
+    );
   }
 
   /// 详情页小标签（月令/日令/空亡）

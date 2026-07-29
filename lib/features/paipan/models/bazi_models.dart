@@ -103,11 +103,66 @@ class BaziResult {
   factory BaziResult.fromJson(Map<String, dynamic> j) => BaziResult(
     birth: DateTime.parse(j['birth'] as String),
     isMale: j['isMale'] as bool? ?? true,
-    yearZhu: SiZhu(ganZhi: j['yearZhu'] as String, tianGan: '', diZhi: '', tianGanCN: '', diZhiCN: '', wuXing: '', cangGan: {}),
-    monthZhu: SiZhu(ganZhi: j['monthZhu'] as String, tianGan: '', diZhi: '', tianGanCN: '', diZhiCN: '', wuXing: '', cangGan: {}),
-    dayZhu: SiZhu(ganZhi: j['dayZhu'] as String, tianGan: '', diZhi: '', tianGanCN: '', diZhiCN: '', wuXing: '', cangGan: {}),
-    hourZhu: SiZhu(ganZhi: j['hourZhu'] as String, tianGan: '', diZhi: '', tianGanCN: '', diZhiCN: '', wuXing: '', cangGan: {}),
-    daYun: (j['daYun'] as List).map((e) => DaYun(startAge: 0, ganZhi: e as String, tianGan: '', diZhi: '')).toList(),
+    yearZhu: _parseSiZhu(j['yearZhu'] as String? ?? ''),
+    monthZhu: _parseSiZhu(j['monthZhu'] as String? ?? ''),
+    dayZhu: _parseSiZhu(j['dayZhu'] as String? ?? ''),
+    hourZhu: _parseSiZhu(j['hourZhu'] as String? ?? ''),
+    daYun: (j['daYun'] as List?)?.map((e) => _parseDaYun(e as String? ?? '')).toList() ?? [],
     liuNian: j['liuNian'] as String?,
   );
+
+  /// 从干支字符串解析 SiZhu（兼容旧数据）
+  static const _tianGanNames = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+  static const _diZhiNames = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+
+  static SiZhu _parseSiZhu(String ganZhi) {
+    if (ganZhi.length < 2) return SiZhu(ganZhi: ganZhi, tianGan: '', diZhi: '', tianGanCN: '', diZhiCN: '', wuXing: '', cangGan: {});
+    final tg = ganZhi[0];
+    final dz = ganZhi[1];
+    return SiZhu(
+      ganZhi: ganZhi,
+      tianGan: tg,
+      diZhi: dz,
+      tianGanCN: tg,
+      diZhiCN: _diZhiNameCN(dz),
+      wuXing: _tianGanWuXing(tg),
+      cangGan: _cangGanMap(dz),
+    );
+  }
+
+  static DaYun _parseDaYun(String ganZhi) {
+    if (ganZhi.length < 2) return DaYun(startAge: 0, ganZhi: ganZhi, tianGan: '', diZhi: '');
+    return DaYun(startAge: 0, ganZhi: ganZhi, tianGan: ganZhi[0], diZhi: ganZhi[1]);
+  }
+
+  /// 地支中文名
+  static String _diZhiNameCN(String dz) {
+    const names = {'子':'子','丑':'丑','寅':'寅','卯':'卯','辰':'辰','巳':'巳','午':'午','未':'未','申':'申','酉':'酉','戌':'戌','亥':'亥'};
+    return names[dz] ?? dz;
+  }
+
+  /// 天干五行
+  static String _tianGanWuXing(String tg) {
+    const map = {'甲':'木','乙':'木','丙':'火','丁':'火','戊':'土','己':'土','庚':'金','辛':'金','壬':'水','癸':'水'};
+    return map[tg] ?? '';
+  }
+
+  /// 地支藏干
+  static Map<String, String> _cangGanMap(String dz) {
+    const map = {
+      '子': {'本气': '癸'},
+      '丑': {'本气': '己', '中气': '癸', '余气': '辛'},
+      '寅': {'本气': '甲', '中气': '丙', '余气': '戊'},
+      '卯': {'本气': '乙'},
+      '辰': {'本气': '戊', '中气': '乙', '余气': '癸'},
+      '巳': {'本气': '丙', '中气': '庚', '余气': '戊'},
+      '午': {'本气': '丁', '中气': '己'},
+      '未': {'本气': '己', '中气': '丁', '余气': '乙'},
+      '申': {'本气': '庚', '中气': '壬', '余气': '戊'},
+      '酉': {'本气': '辛'},
+      '戌': {'本气': '戊', '中气': '辛', '余气': '丁'},
+      '亥': {'本气': '壬', '中气': '甲'},
+    };
+    return map[dz] ?? {};
+  }
 }
