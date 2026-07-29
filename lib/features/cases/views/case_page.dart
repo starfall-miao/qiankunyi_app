@@ -152,7 +152,6 @@ class _CasePageState extends State<CasePage> {
             ],
           ),
         ),
-      ),
     );
   }
 
@@ -306,14 +305,8 @@ class _CasePageState extends State<CasePage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.85,
-        maxChildSize: 0.95,
-        minChildSize: 0.4,
-        expand: false,
-        builder: (_, scrollCtrl) => SingleChildScrollView(
-          controller: scrollCtrl,
-          padding: const EdgeInsets.all(20),
+      builder: (ctx) => SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -427,7 +420,6 @@ class _CasePageState extends State<CasePage> {
             ],
           ),
         ),
-      ),
     );
   }
 
@@ -1019,6 +1011,25 @@ class _AiChatSectionState extends State<_AiChatSection> {
               ],
             ]),
             const SizedBox(height: 8),
+
+            // ── 首次 AI 解卦按钮 ──
+            if (!_hasAssistantReply && !_loading) ...[
+              Center(
+                child: TextButton.icon(
+                  onPressed: _requestJieGua,
+                  icon: const Icon(Icons.auto_awesome, size: 18),
+                  label: const Text('开始 AI 解卦', style: TextStyle(fontSize: 14)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: p,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                    side: BorderSide(color: p.withAlpha(80)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ],
 
             // AI 对话历史
             if (_messages.isNotEmpty) ...[
