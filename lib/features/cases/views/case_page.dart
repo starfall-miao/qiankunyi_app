@@ -307,7 +307,13 @@ class _CasePageState extends State<CasePage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (ctx) => SingleChildScrollView(
+      builder: (ctx) => DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          maxChildSize: 0.95,
+          minChildSize: 0.35,
+          expand: false,
+          builder: (_, scrollCtrl) => SingleChildScrollView(
+          controller: scrollCtrl,
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -422,6 +428,7 @@ class _CasePageState extends State<CasePage> {
             ],
           ),
         ),
+      ),
     );
   }
 
@@ -1074,17 +1081,33 @@ class _AiChatSection extends StatefulWidget {
 class _AiChatSectionState extends State<_AiChatSection> {
   final TextEditingController _questionCtrl = TextEditingController();
   bool _loading = false;
+  List<AiMessage> _localMessages = [];
 
-  List<AiMessage> get _messages => widget.caseModel.aiMessages;
+  List<AiMessage> get _messages => _localMessages;
+
+  bool get _hasAssistantReply =>
+      _localMessages.any((m) => m.role == 'assistant');
+
+  @override
+  void initState() {
+    super.initState();
+    _localMessages = List.from(widget.caseModel.aiMessages);
+  }
+
+  @override
+  void didUpdateWidget(covariant _AiChatSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 如果父级传入的 caseModel 变了，同步
+    if (widget.caseModel.id != oldWidget.caseModel.id) {
+      _localMessages = List.from(widget.caseModel.aiMessages);
+    }
+  }
 
   @override
   void dispose() {
     _questionCtrl.dispose();
     super.dispose();
   }
-
-  bool get _hasAssistantReply =>
-      _messages.any((m) => m.role == 'assistant');
 
   Future<void> _requestJieGua() async {
     final sp = context.read<SettingsProvider>();
@@ -1174,19 +1197,24 @@ class _AiChatSectionState extends State<_AiChatSection> {
 
   void _addAiMessage(String role, String content) {
     final msg = AiMessage(role: role, content: content);
+    setState(() {
+      _localMessages = [..._localMessages, msg];
+    });
+    // 持久化到 provider
     final updated = widget.caseModel.copyWith(
-      aiMessages: [..._messages, msg],
+      aiMessages: _localMessages,
     );
     context.read<CaseProvider>().updateCase(updated);
-    setState(() {});
   }
 
   void _deleteAiMessage(int index) {
+    setState(() {
+      _localMessages = [..._localMessages]..removeAt(index);
+    });
     final updated = widget.caseModel.copyWith(
-      aiMessages: [..._messages]..removeAt(index),
+      aiMessages: _localMessages,
     );
     context.read<CaseProvider>().updateCase(updated);
-    setState(() {});
   }
 
   void _showToast(String msg) {
@@ -1310,18 +1338,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
               }),
             ],
 
-            // 无对话时显示请求按钮
-            if (_messages.isEmpty && !_loading)
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _requestJieGua,
-                  icon: const Icon(Icons.auto_awesome, size: 16),
-                  label: const Text('请求 AI 解卦'),
-                ),
-              ),
-
-            // 有 AI 回复时显示追问输入
+            // ── 有 AI 回复时显示追问输入 ──
             if (_hasAssistantReply && !_loading) ...[
               const SizedBox(height: 8),
               Row(children: [

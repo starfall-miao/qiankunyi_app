@@ -1,0 +1,138 @@
+{
+  "project": "「乾坤易」全面体验优化 Mission 5",
+  "branchName": "mission-5",
+  "description": "修复卦例详情窗口全屏问题、AI解卦不正常、八字详情不完整、排盘页面布局统一、参考资料可滑动、万年历增强、日期选择器重写、底部按钮四方格、设置页小工具（罗盘）。",
+  "userStories": [
+    {
+      "id": "US-1",
+      "title": "卦例详情窗口初始半屏，可滑动至全屏",
+      "description": "恢复 DraggableScrollableSheet 或使用类似行为，打开卦例详情时初始高度为约 60% 屏幕，用户上滑可扩展至全屏，下滑可关闭。",
+      "acceptanceCriteria": [
+        "卦例详情窗口打开时初始高度约 60%-65% 屏幕",
+        "上滑可平滑扩展至全屏",
+        "下滑可关闭窗口"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "之前 US-4 移除了 DraggableScrollableSheet 改用 SingleChildScrollView，需重新引入并设合理 initialChildSize"
+    },
+    {
+      "id": "US-2",
+      "title": "AI 解卦功能修复（结果卡片、追问按钮、输入框）",
+      "description": "卦例详情页中 AI 解卦不显示结果卡片、追问按钮不出现、输入框悬在左上角。需排查 _AiChatSection 状态、消息列表渲染、布局定位问题。",
+      "acceptanceCriteria": [
+        "点击「开始 AI 解卦」后显示结果卡片（Markdown 渲染）",
+        "AI 回复后出现追问输入框和发送按钮",
+        "追问输入框不悬空，固定在卡片下方",
+        "多轮对话正常"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "检查 _AiChatSection 中 _hasAssistantReply 逻辑、_messages 列表更新、输入框位置约束"
+    },
+    {
+      "id": "US-3",
+      "title": "八字详情增强（与排盘页内容一致，大运竖屏显示修复）",
+      "description": "卦例详情页的八字内容应与排盘页八字结果一致（十神、五行、藏干、旺衰等），且大运部分在竖屏下可横向滚动查看完整内容。",
+      "acceptanceCriteria": [
+        "卦例详情页八字展示内容与排盘页对齐",
+        "大运表格在竖屏下可横向滚动查看完整列",
+        "显示十神、五行统计、藏干、旺衰月令等"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "对比 bazi_page.dart 和 case_page.dart 中 _buildBaziDetail 的差异，统一内容"
+    },
+    {
+      "id": "US-4",
+      "title": "排盘结果空余空间与六爻对齐",
+      "description": "八字排盘结果页面底部空余空间与六爻排盘结果不一致，需要统一。",
+      "acceptanceCriteria": [
+        "八字排盘结果页底部 padding 与六爻一致",
+        "滚动行为一致"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "检查 bazi_page.dart 中 SingleChildScrollView/Column 的 padding 和 spacing"
+    },
+    {
+      "id": "US-5",
+      "title": "点击干支查看资料功能统一且详细",
+      "description": "卦例详情页八字中点击天干地支已可弹出参考信息，但排盘页八字无此功能。需为排盘页添加同样的点击查看资料/解析功能，且内容保持一致并更详细。",
+      "acceptanceCriteria": [
+        "排盘页八字结果中天干、地支可点击弹出参考弹窗",
+        "弹窗内容与卦例详情页一致",
+        "包含天干/地支的基本属性、五行、藏干、类象等"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "复用 case_page.dart 的 _showGanZhiRef、_findTianGanInfo、_findDiZhiInfo 等方法"
+    },
+    {
+      "id": "US-6",
+      "title": "竖屏参考资料 TabBar 可左右滑动",
+      "description": "参考资料页在竖屏下选择栏显示不全，无法滑动查看更多 Tab。",
+      "acceptanceCriteria": [
+        "参考资料 TabBar 在竖屏下可左右滑动",
+        "所有 Tab 选项可完整访问"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "TabBar 添加 isScrollable: true"
+    },
+    {
+      "id": "US-7",
+      "title": "万年历详情增强（节气信息 + 每日干支小字）",
+      "description": "万年历/日期详情页面需要添加节气信息显示；日期选择下方应显示每天对应的天干地支小字，方便快速查找干支日期。",
+      "acceptanceCriteria": [
+        "万年历详情显示当天节气信息（如果有）",
+        "日期选择器中每天下方显示天干地支（如甲子、乙丑等）",
+        "干支小字不占用过多空间"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "使用 tyme4dart 获取节气信息；日历单元格内添加小字显示"
+    },
+    {
+      "id": "US-8",
+      "title": "八字日期选择器改为内置万年历风格",
+      "description": "八字的出生日期选择使用 Flutter 原生 DatePicker，应改为 app 内置的基于 tyme4dart 的万年历风格选择器，与整体国风设计一致。",
+      "acceptanceCriteria": [
+        "八字页面点击出生日期弹出内置万年历风格选择器",
+        "可选择年/月/日，显示农历、干支等",
+        "选择器风格与 app 国风主题一致"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "复用/参考已有日历组件，改为弹窗形式供八字页面使用"
+    },
+    {
+      "id": "US-9",
+      "title": "底部四方格按钮（清空/排盘/复制/保存+截图）",
+      "description": "排盘页底部操作按钮（清空排盘/复制结果/保存卦例）竖屏显示不全，小字被截断。需改为四方格布局，并增加保存为图片功能。",
+      "acceptanceCriteria": [
+        "底部操作按钮以 2×2 四方格布局展示",
+        "每个格显示图标和文字（竖屏完整可见）",
+        "新增「保存图片」功能（截图当前排盘结果并保存）",
+        "布局在横屏下合理适配"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "使用 RepaintBoundary 截图；四方格用 GridView 或 Row+Expanded"
+    },
+    {
+      "id": "US-10",
+      "title": "设置页新增小工具栏（含罗盘指南针）",
+      "description": "设置页在「关于」上方新增「小工具」栏目，点进去后包含罗盘指南针功能（方位、角度显示），后续可扩展。",
+      "acceptanceCriteria": [
+        "设置页「关于」上方显示「小工具」入口",
+        "点击进入罗盘页面",
+        "罗盘显示方位（东/南/西/北等）和角度",
+        "使用设备磁力传感器实时更新"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "利用传感器（flutter_compass 或 sensors 包）；设置页新增 _buildToolsSection"
+    }
+  ]
+}
