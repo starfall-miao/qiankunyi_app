@@ -480,29 +480,95 @@ class _CasePageState extends State<CasePage> {
 
   /// 八字详情展示
   Widget _buildBaziDetail(BaziResult r, Color t, bool isDark, BuildContext ctx) {
+    final p = Theme.of(ctx).colorScheme.primary;
+    final b = isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
+    const wxColors = <String, Color>{
+      '木': Color(0xFF4CAF50), '火': Color(0xFFE53935),
+      '土': Color(0xFF8D6E63), '金': Color(0xFFFFB300),
+      '水': Color(0xFF2196F3),
+    };
+    const wsColors = <String, Color>{
+      '旺': Color(0xFFE53935), '相': Color(0xFFFF9800),
+      '休': Color(0xFF9E9E9E), '囚': Color(0xFF6D4C41),
+      '死': Color(0xFF424242),
+    };
+
+    Widget sectionHeader(String title) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 6, top: 2),
+        child: Text(title,
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: p)),
+      );
+    }
+
+    Widget tag(String text, Color accent) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: accent.withAlpha(15),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: accent.withAlpha(40)),
+        ),
+        child: Text(text,
+            style: TextStyle(fontSize: 12, color: t.withAlpha(220))),
+      );
+    }
+
+    Widget cangGanRow(String label, Map<String, String> cangGan) {
+      final items = cangGan.entries
+          .where((e) => e.value != '无' && e.value.isNotEmpty)
+          .toList();
+      return Row(
+        children: [
+          SizedBox(
+            width: 48,
+            child: Text(label,
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: p)),
+          ),
+          if (items.isEmpty)
+            Expanded(
+              child: Text('无',
+                  style: TextStyle(fontSize: 12, color: t.withAlpha(120))),
+            )
+          else
+            Expanded(
+              child: Row(
+                children: items.map((e) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Text('${e.key}:${e.value}',
+                        style: TextStyle(fontSize: 12, color: t)),
+                  );
+                }).toList(),
+              ),
+            ),
+        ],
+      );
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF2C2C2C) : Colors.white.withAlpha(200),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8)),
+        border: Border.all(color: b),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── 标题 ──
           Row(children: [
-            Text('八字排盘', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: t)),
+            Text('八字排盘', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: t)),
             const Spacer(),
             Text(r.isMale ? '乾造' : '坤造',
-                style: TextStyle(fontSize: 12,
-                    color: Theme.of(ctx).colorScheme.primary,
+                style: TextStyle(fontSize: 13,
+                    color: p,
                     fontWeight: FontWeight.w500)),
           ]),
           const SizedBox(height: 8),
 
-          // ── 四柱 ──
+          // ── 四柱（支持点击天干/地支查看参考资料） ──
           _baziPillarRow('年柱', r.yearZhu, t, ctx),
           const SizedBox(height: 4),
           _baziPillarRow('月柱', r.monthZhu, t, ctx),
@@ -511,86 +577,179 @@ class _CasePageState extends State<CasePage> {
           const SizedBox(height: 4),
           _baziPillarRow('时柱', r.hourZhu, t, ctx),
 
-          // ── 十神 ──
-          if (r.shiShenMap.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text('十神', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t)),
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 6, runSpacing: 4,
-              children: r.shiShenMap.entries.map((e) =>
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: t.withAlpha(12),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text('${e.key}: ${e.value}',
-                      style: TextStyle(fontSize: 11, color: t.withAlpha(200))),
-                ),
-              ).toList(),
+          // ── 月令/日辰/空亡 ──
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF9F6F2),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: b.withAlpha(50)),
             ),
-          ],
+            child: Row(
+              children: [
+                _infoTag('月令 ${r.monthZhu.diZhi}', p),
+                const SizedBox(width: 6),
+                _infoTag('日辰 ${r.dayZhu.diZhi}', Theme.of(ctx).colorScheme.secondary),
+                const SizedBox(width: 6),
+                _infoTag('旬空 ${_kongWang(r.dayZhu.ganZhi)}', Colors.deepOrange),
+              ],
+            ),
+          ),
 
-          // ── 五行统计 ──
-          if (r.wuXingCounts.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text('五行分布', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t)),
-            const SizedBox(height: 4),
+          const SizedBox(height: 12),
+
+          // ── 五行旺衰 ──
+          if (r.wuXingWangShuai.isNotEmpty) ...[
+            sectionHeader('五行旺衰'),
             Row(
-              children: r.wuXingCounts.entries.map((e) {
-                final colors = {'木': Colors.green, '火': Colors.red, '土': Colors.brown, '金': Colors.amber, '水': Colors.blue};
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: r.wuXingWangShuai.entries.map((e) {
+                final wc = wxColors[e.key] ?? t;
+                final sc = wsColors[e.value] ?? t;
+                return Container(
+                  width: 56,
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: wc.withAlpha(15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: wc.withAlpha(40)),
+                  ),
+                  child: Column(
                     children: [
-                      Container(
-                        width: 8, height: 8,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: colors[e.key] ?? Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(width: 3),
-                      Text('${e.key}: ${e.value}',
-                          style: TextStyle(fontSize: 11, color: t.withAlpha(200))),
+                      Text(e.key,
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold, color: wc)),
+                      const SizedBox(height: 2),
+                      Text(e.value,
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: sc)),
                     ],
                   ),
                 );
               }).toList(),
             ),
+            const SizedBox(height: 12),
+          ],
+
+          // ── 五行统计 ──
+          if (r.wuXingCounts.isNotEmpty) ...[
+            sectionHeader('五行统计'),
+            Wrap(spacing: 6, runSpacing: 6,
+              children: r.wuXingCounts.entries.map((e) {
+                final wc = wxColors[e.key] ?? t;
+                return tag('${e.key} ${e.value}', wc);
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // ── 藏干 ──
+          sectionHeader('藏干'),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF9F6F2),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: b.withAlpha(60)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                cangGanRow('年柱', r.yearZhu.cangGan),
+                const Divider(height: 12),
+                cangGanRow('月柱', r.monthZhu.cangGan),
+                const Divider(height: 12),
+                cangGanRow('日柱', r.dayZhu.cangGan),
+                const Divider(height: 12),
+                cangGanRow('时柱', r.hourZhu.cangGan),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ── 十神 ──
+          if (r.shiShenMap.isNotEmpty) ...[
+            sectionHeader('十神关系（以日干为基准）'),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF9F6F2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: b.withAlpha(60)),
+              ),
+              child: Wrap(
+                spacing: 6, runSpacing: 6,
+                children: r.shiShenMap.entries
+                    .where((e) => e.key != '日主')
+                    .map((e) {
+                  final label = e.key.contains(':')
+                      ? '${e.key.split(':')[0]}:${e.key.split(':')[1]}'
+                      : e.key;
+                  return tag('$label → ${e.value}', p);
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 12),
           ],
 
           // ── 大运 ──
           if (r.daYun.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text('大运', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t)),
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 6, runSpacing: 4,
-              children: r.daYun.map((d) =>
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Theme.of(ctx).colorScheme.primary.withAlpha(15),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(d.ganZhi,
-                      style: TextStyle(fontSize: 11,
-                          color: Theme.of(ctx).colorScheme.primary)),
-                ),
-              ).toList(),
+            sectionHeader('大运'),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: r.daYun.map((dy) {
+                  return Container(
+                    width: 68,
+                    margin: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: b.withAlpha(60)),
+                    ),
+                    child: Column(
+                      children: [
+                        Text('${dy.startAge}岁',
+                            style: TextStyle(
+                                fontSize: 11, color: t.withAlpha(150))),
+                        const SizedBox(height: 2),
+                        Text(dy.ganZhi,
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: t)),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
+            const SizedBox(height: 12),
           ],
 
           // ── 流年 ──
           if (r.liuNian != null) ...[
-            const SizedBox(height: 6),
-            Text('流年：${r.liuNian}',
-                style: TextStyle(fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                    color: t.withAlpha(180))),
+            sectionHeader('当年流年'),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: b.withAlpha(60)),
+              ),
+              child: Row(children: [
+                const Icon(Icons.calendar_month_outlined, size: 18, color: Colors.deepOrange),
+                const SizedBox(width: 8),
+                Text('流年：', style: TextStyle(fontSize: 13, color: t)),
+                Text(r.liuNian!,
+                    style: TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold, color: p)),
+              ]),
+            ),
           ],
         ],
       ),
@@ -661,6 +820,27 @@ class _CasePageState extends State<CasePage> {
     } catch (_) {
       return null;
     }
+  }
+
+  /// 计算旬空（空亡）based on 日柱干支
+  /// 甲子旬戌亥空，甲戌旬申酉空，甲申旬午未空，
+  /// 甲午旬辰巳空，甲辰旬寅卯空，甲寅旬子丑空
+  String _kongWang(String ganZhi) {
+    const xunKong = {
+      '甲子': '戌亥', '乙丑': '戌亥', '丙寅': '戌亥', '丁卯': '戌亥', '戊辰': '戌亥', '己巳': '戌亥',
+      '庚午': '戌亥', '辛未': '戌亥', '壬申': '戌亥', '癸酉': '戌亥',
+      '甲戌': '申酉', '乙亥': '申酉', '丙子': '申酉', '丁丑': '申酉', '戊寅': '申酉', '己卯': '申酉',
+      '庚辰': '申酉', '辛巳': '申酉', '壬午': '申酉', '癸未': '申酉',
+      '甲申': '午未', '乙酉': '午未', '丙戌': '午未', '丁亥': '午未', '戊子': '午未', '己丑': '午未',
+      '庚寅': '午未', '辛卯': '午未', '壬辰': '午未', '癸巳': '午未',
+      '甲午': '辰巳', '乙未': '辰巳', '丙申': '辰巳', '丁酉': '辰巳', '戊戌': '辰巳', '己亥': '辰巳',
+      '庚子': '辰巳', '辛丑': '辰巳', '壬寅': '辰巳', '癸卯': '辰巳',
+      '甲辰': '寅卯', '乙巳': '寅卯', '丙午': '寅卯', '丁未': '寅卯', '戊申': '寅卯', '己酉': '寅卯',
+      '庚戌': '寅卯', '辛亥': '寅卯', '壬子': '寅卯', '癸丑': '寅卯',
+      '甲寅': '子丑', '乙卯': '子丑', '丙辰': '子丑', '丁巳': '子丑', '戊午': '子丑', '己未': '子丑',
+      '庚申': '子丑', '辛酉': '子丑', '壬戌': '子丑', '癸亥': '子丑',
+    };
+    return xunKong[ganZhi] ?? '无';
   }
 
   /// 显示天干/地支参考弹窗
