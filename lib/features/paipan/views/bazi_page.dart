@@ -1,11 +1,18 @@
 /// 八字排盘页面 — 国风卡片风格，与六爻/梅花一致
 library;
 
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/utils/logger.dart';
+import '../../calendar/views/calendar_picker_dialog.dart';
 import '../../cases/models/case_models.dart';
 import '../../cases/providers/case_provider.dart';
 import '../../reference/data/bazi_reference_data.dart';
@@ -22,6 +29,7 @@ class BaziPage extends StatefulWidget {
 
 class _BaziPageState extends State<BaziPage> {
   final _log = Logger.instance;
+  final _baziScreenshotKey = GlobalKey();
   DateTime? _birth;
   bool _isMale = true;
   int _hourIndex = 6; // 默认为午时 (索引6)
@@ -97,11 +105,9 @@ class _BaziPageState extends State<BaziPage> {
                   // 日期
                   InkWell(
                     onTap: () async {
-                      final d = await showDatePicker(
+                      final d = await showDialog<DateTime>(
                         context: context,
-                        initialDate: _birth ?? DateTime(1990, 1, 1),
-                        firstDate: DateTime(1900),
-                        lastDate: DateTime.now(),
+                        builder: (_) => const CalendarPickerDialog(),
                       );
                       if (d != null) setState(() => _birth = d);
                     },
@@ -264,6 +270,11 @@ class _BaziPageState extends State<BaziPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          RepaintBoundary(
+            key: _baziScreenshotKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
           // ── 四柱卡片 ──
           Row(
             children: [
@@ -419,31 +430,48 @@ class _BaziPageState extends State<BaziPage> {
               ]),
             ),
             const SizedBox(height: 12),
-          ],
+          ],   // RepaintBoundary child column end
+            ),
+          ),
 
-          // ── 操作按钮 ──
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          // ── 操作按钮（2×2 四方格）──
+          Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              TextButton.icon(
-                onPressed: () => context.read<BaziProvider>().clear(),
-                icon: const Icon(Icons.refresh, size: 16),
-                label: const Text('清空排盘'),
-                style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+              Row(
+                children: [
+                  Expanded(child: TextButton.icon(
+                    onPressed: () => context.read<BaziProvider>().clear(),
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('清空排盘'),
+                    style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+                  )),
+                  const SizedBox(width: 8),
+                  Expanded(child: TextButton.icon(
+                    onPressed: () => _shareResult(context, r),
+                    icon: const Icon(Icons.copy_outlined, size: 16),
+                    label: const Text('复制结果'),
+                    style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+                  )),
+                ],
               ),
-              const SizedBox(width: 12),
-              TextButton.icon(
-                onPressed: () => _shareResult(context, r),
-                icon: const Icon(Icons.copy_outlined, size: 16),
-                label: const Text('复制结果'),
-                style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
-              ),
-              const SizedBox(width: 12),
-              TextButton.icon(
-                onPressed: () => _saveBaziResult(context, r),
-                icon: const Icon(Icons.bookmark_add_outlined, size: 16),
-                label: const Text('保存卦例'),
-                style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(child: TextButton.icon(
+                    onPressed: () => _saveBaziResult(context, r),
+                    icon: const Icon(Icons.bookmark_add_outlined, size: 16),
+                    label: const Text('保存卦例'),
+                    style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+                  )),
+                  const SizedBox(width: 8),
+                  Expanded(child: TextButton.icon(
+                    onPressed: () => _saveImage(_baziScreenshotKey, context),
+                    icon: const Icon(Icons.image_outlined, size: 16),
+                    label: const Text('保存图片'),
+                    style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+                  )),
+                ],
               ),
             ],
           ),
@@ -555,6 +583,39 @@ class _BaziPageState extends State<BaziPage> {
           ),
       ],
     );
+  }
+
+  /// 截图排盘结果并保存
+  Future<void> _saveImage(GlobalKey key, BuildContext ctx) async {
+    try {
+      final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        if (ctx.mounted) {
+          ScaffoldMessenger.of(ctx).showSnackBar(
+            const SnackBar(content: Text('截图失败：未找到排盘结果')),
+          );
+        }
+        return;
+      }
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+      final pngBytes = byteData.buffer.asUint8List();
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/qiankunyi_bazi_${DateTime.now().millisecondsSinceEpoch}.png');
+      await file.writeAsBytes(pngBytes);
+      if (ctx.mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(content: Text('截图已保存: ${file.path}')),
+        );
+      }
+    } catch (e) {
+      if (ctx.mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(content: Text('保存图片失败: $e')),
+        );
+      }
+    }
   }
 
   /// 保存八字结果到卦例库

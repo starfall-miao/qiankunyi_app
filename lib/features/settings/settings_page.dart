@@ -9,6 +9,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/logger.dart';
 import 'settings_provider.dart';
 import 'views/about_page.dart';
+import 'widgets/compass_widget.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -66,6 +67,11 @@ class _SettingsPageState extends State<SettingsPage> {
             _buildSectionHeader(theme, '🔧 调试与日志'),
             const SizedBox(height: 8),
             _buildDebugSettings(theme),
+            const SizedBox(height: 16),
+
+            _buildSectionHeader(theme, '🧭 小工具'),
+            const SizedBox(height: 8),
+            _buildCompassWidget(theme),
             const SizedBox(height: 16),
 
             _buildSectionHeader(theme, '🤖 AI 解卦配置'),
@@ -481,6 +487,24 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('关闭')),
+        ],
+      ),
+    );
+  }
+
+  // ──────────────── 🧭 小工具 ────────────────
+
+  Widget _buildCompassWidget(ThemeData theme) {
+    return _buildCard(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 4),
+          const Center(child: CompassWidget()),
+          const SizedBox(height: 8),
+          Center(
+            child: Text('点击方位查看信息', style: TextStyle(fontSize: 12, color: theme.textTheme.bodySmall?.color?.withAlpha(150) ?? Colors.grey)),
+          ),
         ],
       ),
     );
