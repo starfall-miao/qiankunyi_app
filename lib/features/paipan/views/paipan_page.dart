@@ -1,7 +1,14 @@
 // 排盘主页 — 全功能版
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/utils/logger.dart';
@@ -61,6 +68,8 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
   final _numBCtrl = TextEditingController();
   final _numCCtrl = TextEditingController();
   final DateTime _selectedTime = DateTime.now();
+  final _liuyaoScreenshotKey = GlobalKey();
+  final _meihuaScreenshotKey = GlobalKey();
   bool _emptyInputWarn = false;
   bool _isLoading = false;
   late final AnimationController _animCtrl;
@@ -282,6 +291,11 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
           child: pr.liuyaoResult != null ? Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+          RepaintBoundary(
+            key: _liuyaoScreenshotKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
           // ── 装饰标题 ──
           Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -350,29 +364,56 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
               );
             },
           ),
+              ], // RepaintBoundary children
+            ),
+          ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          // ── 操作按钮（2×2 四方格）──
+          Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              TextButton.icon(
-                onPressed: () => pr.clearLiuyao(),
-                icon: const Icon(Icons.refresh, size: 16),
-                label: const Text('清空排盘'),
-                style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () => pr.clearLiuyao(),
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: const Text('清空排盘'),
+                      style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () => _shareResult(context, pr.liuyaoResult!),
+                      icon: const Icon(Icons.copy_outlined, size: 16),
+                      label: const Text('复制结果'),
+                      style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              TextButton.icon(
-                onPressed: () => _shareResult(context, pr.liuyaoResult!),
-                icon: const Icon(Icons.copy_outlined, size: 16),
-                label: const Text('复制结果'),
-                style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
-              ),
-              const SizedBox(width: 12),
-              TextButton.icon(
-                onPressed: () => _saveCurrentResult(context, pr, pr.liuyaoResult!),
-                icon: const Icon(Icons.bookmark_add_outlined, size: 16),
-                label: const Text('保存卦例'),
-                style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () => _saveCurrentResult(context, pr, pr.liuyaoResult!),
+                      icon: const Icon(Icons.bookmark_add_outlined, size: 16),
+                      label: const Text('保存卦例'),
+                      style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () => _saveImage(_liuyaoScreenshotKey, context),
+                      icon: const Icon(Icons.image_outlined, size: 16),
+                      label: const Text('保存图片'),
+                      style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -646,6 +687,52 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     }
   }
 
+  /// 截图排盘结果并保存/分享
+  Future<void> _saveImage(GlobalKey key, BuildContext context) async {
+    try {
+      final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('截图失败：未找到排盘结果')),
+          );
+        }
+        return;
+      }
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+      final pngBytes = byteData.buffer.asUint8List();
+
+      // 保存到临时目录
+      final tempDir = await getTemporaryDirectory();
+      final file = File(
+        '${tempDir.path}/qiankunyi_paipan_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+      await file.writeAsBytes(pngBytes);
+
+      // 分享图片
+      if (context.mounted) {
+        try {
+          await Share.shareXFiles(
+            [XFile(file.path)],
+            text: '乾坤易 · 排盘结果',
+          );
+        } catch (_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('图片已保存到: ${file.path}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存图片失败: $e')),
+        );
+      }
+    }
+  }
+
   void _saveCurrentResult(BuildContext context, PaipanProvider pr, PaipanResult result) {
     final guaCN = <GuaName, String>{
       GuaName.qian: '乾为天', GuaName.kun: '坤为地', GuaName.zhun: '水雷屯',
@@ -821,6 +908,11 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        RepaintBoundary(
+          key: _meihuaScreenshotKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
         // ── 装饰标题 ──
         Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -877,30 +969,55 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
           _buildTiYongEnhanced(result, p, t, c, gongCN, wxCN),
           const SizedBox(height: 12),
         ],
-
-        // ── 操作按钮 ──
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+              ], // RepaintBoundary children
+            ),
+          ),
+        // ── 操作按钮（2×2 四方格）──
+        Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            TextButton.icon(
-              onPressed: () => pr.clearMeihua(),
-              icon: const Icon(Icons.refresh, size: 16),
-              label: const Text('清空排盘'),
-              style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () => pr.clearMeihua(),
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('清空排盘'),
+                    style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () => _shareResult(context, result),
+                    icon: const Icon(Icons.copy_outlined, size: 16),
+                    label: const Text('复制结果'),
+                    style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            TextButton.icon(
-              onPressed: () => _shareResult(context, result),
-              icon: const Icon(Icons.copy_outlined, size: 16),
-              label: const Text('复制结果'),
-              style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
-            ),
-            const SizedBox(width: 12),
-            TextButton.icon(
-              onPressed: () => _saveCurrentResult(context, pr, result),
-              icon: const Icon(Icons.bookmark_add_outlined, size: 16),
-              label: const Text('保存卦例'),
-              style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () => _saveCurrentResult(context, pr, result),
+                    icon: const Icon(Icons.bookmark_add_outlined, size: 16),
+                    label: const Text('保存卦例'),
+                    style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () => _saveImage(_meihuaScreenshotKey, context),
+                    icon: const Icon(Icons.image_outlined, size: 16),
+                    label: const Text('保存图片'),
+                    style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
