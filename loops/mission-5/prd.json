@@ -13,7 +13,7 @@
         "下滑可关闭窗口"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "之前 US-4 移除了 DraggableScrollableSheet 改用 SingleChildScrollView，需重新引入并设合理 initialChildSize"
     },
     {
@@ -27,7 +27,7 @@
         "多轮对话正常"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "检查 _AiChatSection 中 _hasAssistantReply 逻辑、_messages 列表更新、输入框位置约束"
     },
     {
@@ -40,7 +40,7 @@
         "添加月令/日令/空亡 indicators 在四柱下方"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "对比 bazi_page.dart 和 case_page.dart 中 _buildBaziDetail 的差异，统一内容"
     },
     {
@@ -52,7 +52,7 @@
         "滚动行为一致"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "检查 bazi_page.dart 中 SingleChildScrollView/Column 的 padding 和 spacing"
     },
     {
@@ -65,7 +65,7 @@
         "包含天干/地支的基本属性、五行、藏干、类象等"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "复用 case_page.dart 的 _showGanZhiRef、_findTianGanInfo、_findDiZhiInfo 等方法"
     },
     {
@@ -77,7 +77,7 @@
         "所有 Tab 选项可完整访问"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "TabBar 添加 isScrollable: true"
     },
     {
@@ -90,7 +90,7 @@
         "干支小字不占用过多空间"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "使用 tyme4dart 获取节气信息；日历单元格内添加小字显示"
     },
     {
@@ -103,7 +103,7 @@
         "选择器风格与 app 国风主题一致"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "复用/参考已有日历组件，改为弹窗形式供八字页面使用"
     },
     {
@@ -117,7 +117,7 @@
         "布局在横屏下合理适配"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "使用 RepaintBoundary 截图；四方格用 GridView 或 Row+Expanded"
     },
     {
@@ -131,7 +131,7 @@
         "使用设备磁力传感器实时更新"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "利用传感器（flutter_compass 或 sensors 包）；设置页新增 _buildToolsSection"
     }
   ]
