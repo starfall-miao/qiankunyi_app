@@ -21,6 +21,7 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
   void initState() {
     super.initState();
     _cal = CalendarProvider();
+    Logger.instance.info('日期选择器', '打开，当前 ${_cal.year}年${_cal.month}月');
   }
 
   @override
@@ -32,7 +33,6 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    Logger.instance.info('日历选择器', '打开日期选择对话框');
     final p = Theme.of(context).colorScheme.primary;
     final t = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
     final bg = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB);
@@ -53,7 +53,7 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
             children: [
               // ── 顶部：干支年号 ──
               _buildHeader(yearGanZhi, p, t, isDark),
-              // ── 月份导航 ──
+              // ── 月份导航（仅箭头）──
               _buildNav(setDialogState, p, t),
               // ── 星期表头 ──
               _buildWeekdayHeader(p, t),
@@ -63,7 +63,16 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
                 child: _buildGrid(setDialogState, ctx, p, t),
               ),
               // ── 底部按钮 ──
-              _buildActions(ctx, p, t, setDialogState),
+              _buildActions(ctx, setDialogState, p, t),
+              // ── 错误提示 ──
+              if (_cal.hasError)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Text(
+                    '⚠ 数据异常，部分日期可能不可用',
+                    style: TextStyle(fontSize: 11, color: Colors.deepOrange.shade400),
+                  ),
+                ),
             ],
           );
         },
@@ -105,22 +114,25 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
           IconButton(
             icon: const Icon(Icons.chevron_left),
             onPressed: () {
-              Logger.instance.info('日历选择器', '上一月: ${_cal.year}-${_cal.month}');
               _cal.goToPrevMonth();
               upd(() {});
             },
             color: t,
+            tooltip: '上月',
           ),
-          Text('${_cal.year}年${_cal.month}月',
-              style: TextStyle(fontSize: 16, color: t.withAlpha(180))),
+          // 月份显示已在 _buildHeader 中，此处仅留箭头导航可读性
+          Text(
+            _cal.hasError ? '加载失败' : '${_cal.year}年${_cal.month}月',
+            style: TextStyle(fontSize: 14, color: t.withAlpha(160)),
+          ),
           IconButton(
             icon: const Icon(Icons.chevron_right),
             onPressed: () {
-              Logger.instance.info('日历选择器', '下一月: ${_cal.year}-${_cal.month}');
               _cal.goToNextMonth();
               upd(() {});
             },
             color: t,
+            tooltip: '下月',
           ),
         ],
       ),
@@ -144,6 +156,13 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
   }
 
   Widget _buildGrid(void Function(void Function()) upd, BuildContext ctx, Color p, Color t) {
+    if (_cal.days.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(child: Text('暂无日期数据', style: TextStyle(fontSize: 14))),
+      );
+    }
+
     // 填充空白以对齐星期
     final first = _cal.days.isNotEmpty ? _cal.days.first.weekday : 0;
     final List<Widget> cells = [];
@@ -155,7 +174,10 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
         day: day,
         primary: p,
         textColor: t,
-        onTap: () => Navigator.pop(ctx, day.gregorianDate),
+        onTap: () {
+          Logger.instance.info('日期选择器', '选中 ${day.gregorianDate}');
+          Navigator.pop(ctx, day.gregorianDate);
+        },
       ));
     }
     return GridView.count(
@@ -167,7 +189,7 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
     );
   }
 
-  Widget _buildActions(BuildContext ctx, Color p, Color t, void Function(void Function()) upd) {
+  Widget _buildActions(BuildContext ctx, void Function(void Function()) upd, Color p, Color t) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
       child: Row(
@@ -175,6 +197,7 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
         children: [
           TextButton(
             onPressed: () {
+              Logger.instance.info('日期选择器', '回到今天');
               _cal.goToToday();
               upd(() {});
             },
@@ -182,7 +205,7 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
           ),
           TextButton(
             onPressed: () {
-              Logger.instance.info('日历选择器', '取消选择');
+              Logger.instance.info('日期选择器', '取消选择');
               Navigator.pop(ctx);
             },
             child: Text('取消', style: TextStyle(color: t.withAlpha(180))),
@@ -215,10 +238,7 @@ class _DayCell extends StatelessWidget {
         : textColor;
 
     return GestureDetector(
-      onTap: () {
-        Logger.instance.info('日历选择器', '选择日期: ${day.gregorianDate}');
-        onTap();
-      },
+      onTap: onTap,
       child: Container(
         margin: const EdgeInsets.all(1.5),
         decoration: BoxDecoration(

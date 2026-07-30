@@ -4,6 +4,8 @@ library;
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+import '../utils/logger.dart';
+
 /// AI 解卦结果
 class AiResult {
   final String content;
@@ -57,8 +59,10 @@ class AiService {
         final choices = data['choices'] as List?;
         if (choices != null && choices.isNotEmpty) {
           final content = choices[0]['message']['content'] as String? ?? '';
+          Logger.instance.info('AI解卦成功', '响应长度: ${content.length}');
           return AiResult(content: content, success: true);
         }
+        Logger.instance.warn('AI返回空', 'choices为空');
         return AiResult.error('API 返回为空');
       } else {
         final body = response.body;
@@ -69,9 +73,11 @@ class AiService {
         } catch (_) {
           msg = body.length > 200 ? '${body.substring(0, 200)}...' : body;
         }
+        Logger.instance.error('AI API错误', 'HTTP ${response.statusCode}: $msg');
         return AiResult.error(msg);
       }
     } catch (e) {
+      Logger.instance.error('AI网络错误', '$e');
       return AiResult.error('网络错误: $e');
     }
   }

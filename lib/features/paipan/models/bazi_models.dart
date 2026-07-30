@@ -95,7 +95,7 @@ class BaziResult {
     'monthZhu': monthZhu.ganZhi,
     'dayZhu': dayZhu.ganZhi,
     'hourZhu': hourZhu.ganZhi,
-    'daYun': daYun.map((d) => d.ganZhi).toList(),
+    'daYun': daYun.map((d) => {'ganZhi': d.ganZhi, 'startAge': d.startAge}).toList(),
     'liuNian': liuNian,
   };
 
@@ -107,7 +107,32 @@ class BaziResult {
     monthZhu: _parseSiZhu(j['monthZhu'] as String? ?? ''),
     dayZhu: _parseSiZhu(j['dayZhu'] as String? ?? ''),
     hourZhu: _parseSiZhu(j['hourZhu'] as String? ?? ''),
-    daYun: (j['daYun'] as List?)?.map((e) => _parseDaYun(e as String? ?? '')).toList() ?? [],
+    daYun: () {
+      final raw = j['daYun'] as List? ?? [];
+      return raw.asMap().entries.map((entry) {
+        final i = entry.key;
+        final e = entry.value;
+        if (e is Map) {
+          // New format: list of maps
+          final ganZhi = (e['ganZhi'] as String?) ?? '';
+          final startAge = (e['startAge'] as int?) ?? (i + 1) * 10;
+          return DaYun(
+            startAge: startAge,
+            ganZhi: ganZhi,
+            tianGan: ganZhi.isNotEmpty ? ganZhi[0] : '',
+            diZhi: ganZhi.length > 1 ? ganZhi[1] : '',
+          );
+        }
+        // Old format: list of strings — regenerate age
+        final ganZhi = (e as String?) ?? '';
+        return DaYun(
+          startAge: (i + 1) * 10,
+          ganZhi: ganZhi,
+          tianGan: ganZhi.isNotEmpty ? ganZhi[0] : '',
+          diZhi: ganZhi.length > 1 ? ganZhi[1] : '',
+        );
+      }).toList();
+    }(),
     liuNian: j['liuNian'] as String?,
   );
 
