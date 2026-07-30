@@ -10,7 +10,6 @@ import '../../core/utils/logger.dart';
 import 'settings_provider.dart';
 import 'views/about_page.dart';
 import 'views/compass_page.dart';
-import 'widgets/compass_widget.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});

@@ -156,7 +156,7 @@ class CalendarProvider extends ChangeNotifier {
   void goToPrevMonth() {
     if (_month == 1) {
       if (_year <= kMinYear) {
-        Logger.instance.warn('万年历', '已达最小年份 ${kMinYear}年');
+        Logger.instance.warn('万年历', '已达最小年份 $kMinYear年');
         return;
       }
       _year--;
@@ -171,7 +171,7 @@ class CalendarProvider extends ChangeNotifier {
   void goToNextMonth() {
     if (_month == 12) {
       if (_year >= kMaxYear) {
-        Logger.instance.warn('万年历', '已达最大年份 ${kMaxYear}年');
+        Logger.instance.warn('万年历', '已达最大年份 $kMaxYear年');
         return;
       }
       _year++;
