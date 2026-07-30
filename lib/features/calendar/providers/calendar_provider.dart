@@ -1,6 +1,7 @@
 /// 万年历状态管理 — 基于 tyme4dart
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:tyme/tyme.dart' as tyme;
 import '../models/calendar_models.dart';
@@ -42,67 +43,72 @@ class CalendarProvider extends ChangeNotifier {
   }
 
   void _buildMonth() {
-    final monthObj = tyme.SolarMonth.fromYm(_year, _month);
-    final dayCount = monthObj.getDayCount();
-    final today = DateTime.now();
+    try {
+      final monthObj = tyme.SolarMonth.fromYm(_year, _month);
+      final dayCount = monthObj.getDayCount();
+      final today = DateTime.now();
 
-    _days = List.generate(dayCount, (i) {
-      final d = i + 1;
-      final solar = tyme.SolarDay.fromYmd(_year, _month, d);
-      final lunar = solar.getLunarDay();
-      final scd = solar.getSixtyCycleDay();
+      _days = List.generate(dayCount, (i) {
+        final d = i + 1;
+        final solar = tyme.SolarDay.fromYmd(_year, _month, d);
+        final lunar = solar.getLunarDay();
+        final scd = solar.getSixtyCycleDay();
 
-      // 公历
-      final date = DateTime(_year, _month, d);
+        // 公历
+        final date = DateTime(_year, _month, d);
 
-      // 农历
-      final lYear = lunar.getYear();
-      final lMonth = lunar.getMonth();
-      final lDay = lunar.getDay();
-      final lIsLeap = lunar.getLunarMonth().isLeap();
+        // 农历
+        final lYear = lunar.getYear();
+        final lMonth = lunar.getMonth();
+        final lDay = lunar.getDay();
+        final lIsLeap = lunar.getLunarMonth().isLeap();
 
-      // 干支
-      final yearGanZhi = scd.getYear().getName();
-      final monthGanZhi = scd.getMonth().getName();
-      final dayGanZhi = scd.getSixtyCycle().getName();
+        // 干支
+        final yearGanZhi = scd.getYear().getName();
+        final monthGanZhi = scd.getMonth().getName();
+        final dayGanZhi = scd.getSixtyCycle().getName();
 
-      // 生肖
-      final zodiac = scd.getYear().getEarthBranch().getZodiac().getName();
+        // 生肖
+        final zodiac = scd.getYear().getEarthBranch().getZodiac().getName();
 
-      // 星期: Tyme Week index 0=周日, 迁移到 0=周一, 6=周日
-      final tymeWeek = solar.getWeek().getIndex();
-      final wd = (tymeWeek + 6) % 7;
+        // 星期: Tyme Week index 0=周日, 迁移到 0=周一, 6=周日
+        final tymeWeek = solar.getWeek().getIndex();
+        final wd = (tymeWeek + 6) % 7;
 
-      // 节气
-      String? termName;
-      try {
-        final termDay = solar.getTermDay();
-        if (termDay.dayIndex == 0) {
-          termName = termDay.getSolarTerm().getName();
-        }
-      } catch (_) {}
+        // 节气
+        String? termName;
+        try {
+          final termDay = solar.getTermDay();
+          if (termDay.dayIndex == 0) {
+            termName = termDay.getSolarTerm().getName();
+          }
+        } catch (_) {}
 
-      // 年积日
-      final doy = date.difference(DateTime(_year, 1, 1)).inDays + 1;
+        // 年积日
+        final doy = date.difference(DateTime(_year, 1, 1)).inDays + 1;
 
-      // 是否今天
-      final isT = date.year == today.year &&
-          date.month == today.month &&
-          date.day == today.day;
+        // 是否今天
+        final isT = date.year == today.year &&
+            date.month == today.month &&
+            date.day == today.day;
 
-      return CalendarDayInfo(
-        gregorianDate: date,
-        lunarDate: LunarDate(year: lYear, month: lMonth, day: lDay, isLeap: lIsLeap),
-        yearGanZhi: yearGanZhi,
-        monthGanZhi: monthGanZhi,
-        dayGanZhi: dayGanZhi,
-        zodiac: zodiac,
-        solarTerm: termName,
-        dayOfYear: doy,
-        weekday: wd,
-        isToday: isT,
-      );
-    });
+        return CalendarDayInfo(
+          gregorianDate: date,
+          lunarDate: LunarDate(year: lYear, month: lMonth, day: lDay, isLeap: lIsLeap),
+          yearGanZhi: yearGanZhi,
+          monthGanZhi: monthGanZhi,
+          dayGanZhi: dayGanZhi,
+          zodiac: zodiac,
+          solarTerm: termName,
+          dayOfYear: doy,
+          weekday: wd,
+          isToday: isT,
+        );
+      });
+    } catch (e) {
+      _days = [];
+      debugPrint('CalendarProvider _buildMonth failed: $e');
+    }
   }
 
   void _rebuild() {
