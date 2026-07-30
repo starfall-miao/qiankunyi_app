@@ -1,4 +1,5 @@
 /// 二十四山罗盘小工具 — CustomPainter 绘制，支持点击弹出方位信息
+library;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
@@ -48,7 +49,7 @@ class _CompassWidgetState extends State<CompassWidget> {
 
     return LayoutBuilder(
       builder: (ctx, constraints) {
-        final size = math.min(constraints.maxWidth, 320);
+        final size = math.min(constraints.maxWidth, 320.0).toDouble();
         return GestureDetector(
           onTapDown: (details) {
             final center = size / 2;
