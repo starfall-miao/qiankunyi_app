@@ -309,9 +309,10 @@ class _CasePageState extends State<CasePage> {
       ),
       builder: (ctx) => DraggableScrollableSheet(
           initialChildSize: 0.6,
-          maxChildSize: 0.95,
+          maxChildSize: 1.0,
           minChildSize: 0.35,
           expand: false,
+          shouldCloseOnMinExtent: true,
           builder: (_, scrollCtrl) => SingleChildScrollView(
           controller: scrollCtrl,
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
