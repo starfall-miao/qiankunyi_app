@@ -9,6 +9,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/logger.dart';
 import 'settings_provider.dart';
 import 'views/about_page.dart';
+import 'views/compass_page.dart';
 import 'widgets/compass_widget.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -71,7 +72,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
             _buildSectionHeader(theme, '🧭 小工具'),
             const SizedBox(height: 8),
-            _buildCompassWidget(theme),
+            _buildCompassEntry(theme),
             const SizedBox(height: 16),
 
             _buildSectionHeader(theme, '🤖 AI 解卦配置'),
@@ -474,9 +475,28 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     const SizedBox(width: 6),
                     Expanded(
-                      child: Text(
-                        '[${e.time.hour.toString().padLeft(2,'0')}:${e.time.minute.toString().padLeft(2,'0')}:${e.time.second.toString().padLeft(2,'0')}] ${e.message}',
-                        style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '[${e.time.hour.toString().padLeft(2,'0')}:${e.time.minute.toString().padLeft(2,'0')}:${e.time.second.toString().padLeft(2,'0')}] ${e.message}',
+                            style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                          ),
+                          if (e.detail != null && e.detail!.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2, left: 4),
+                              child: Text(
+                                e.detail!,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontFamily: 'monospace',
+                                  color: e.level == LogLevel.error
+                                      ? Colors.red.shade300
+                                      : Colors.grey.shade600,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ],
@@ -494,18 +514,22 @@ class _SettingsPageState extends State<SettingsPage> {
 
   // ──────────────── 🧭 小工具 ────────────────
 
-  Widget _buildCompassWidget(ThemeData theme) {
+  Widget _buildCompassEntry(ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+    final t = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
     return _buildCard(
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 4),
-          const Center(child: CompassWidget()),
-          const SizedBox(height: 8),
-          Center(
-            child: Text('点击方位查看信息', style: TextStyle(fontSize: 12, color: theme.textTheme.bodySmall?.color?.withAlpha(150) ?? Colors.grey)),
-          ),
-        ],
+      ListTile(
+        leading: Icon(Icons.explore, color: theme.colorScheme.primary),
+        title: Text('罗盘', style: TextStyle(fontSize: 15, color: t)),
+        subtitle: Text('二十四山罗盘 · 点击方位查看详情',
+            style: TextStyle(fontSize: 12, color: t.withAlpha(150))),
+        trailing: Icon(Icons.chevron_right, color: t.withAlpha(120)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        contentPadding: EdgeInsets.zero,
+        onTap: () {
+          Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const CompassPage()));
+        },
       ),
     );
   }
