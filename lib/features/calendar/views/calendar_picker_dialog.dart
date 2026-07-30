@@ -3,6 +3,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import '../../../core/utils/logger.dart';
 import '../models/calendar_models.dart';
 import '../providers/calendar_provider.dart';
 
@@ -20,6 +21,7 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
   void initState() {
     super.initState();
     _cal = CalendarProvider();
+    Logger.instance.info('日期选择器', '打开，当前 ${_cal.year}年${_cal.month}月');
   }
 
   @override
@@ -51,7 +53,7 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
             children: [
               // ── 顶部：干支年号 ──
               _buildHeader(yearGanZhi, p, t, isDark),
-              // ── 月份导航 ──
+              // ── 月份导航（仅箭头）──
               _buildNav(setDialogState, p, t),
               // ── 星期表头 ──
               _buildWeekdayHeader(p, t),
@@ -61,7 +63,16 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
                 child: _buildGrid(setDialogState, ctx, p, t),
               ),
               // ── 底部按钮 ──
-              _buildActions(ctx, p, t),
+              _buildActions(ctx, setDialogState, p, t),
+              // ── 错误提示 ──
+              if (_cal.hasError)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Text(
+                    '⚠ 数据异常，部分日期可能不可用',
+                    style: TextStyle(fontSize: 11, color: Colors.deepOrange.shade400),
+                  ),
+                ),
             ],
           );
         },
@@ -102,15 +113,26 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
         children: [
           IconButton(
             icon: const Icon(Icons.chevron_left),
-            onPressed: () { _cal.goToPrevMonth(); upd(() {}); },
+            onPressed: () {
+              _cal.goToPrevMonth();
+              upd(() {});
+            },
             color: t,
+            tooltip: '上月',
           ),
-          Text('${_cal.year}年${_cal.month}月',
-              style: TextStyle(fontSize: 16, color: t.withAlpha(180))),
+          // 月份显示已在 _buildHeader 中，此处仅留箭头导航可读性
+          Text(
+            _cal.hasError ? '加载失败' : '${_cal.year}年${_cal.month}月',
+            style: TextStyle(fontSize: 14, color: t.withAlpha(160)),
+          ),
           IconButton(
             icon: const Icon(Icons.chevron_right),
-            onPressed: () { _cal.goToNextMonth(); upd(() {}); },
+            onPressed: () {
+              _cal.goToNextMonth();
+              upd(() {});
+            },
             color: t,
+            tooltip: '下月',
           ),
         ],
       ),
@@ -134,6 +156,13 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
   }
 
   Widget _buildGrid(void Function(void Function()) upd, BuildContext ctx, Color p, Color t) {
+    if (_cal.days.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(child: Text('暂无日期数据', style: TextStyle(fontSize: 14))),
+      );
+    }
+
     // 填充空白以对齐星期
     final first = _cal.days.isNotEmpty ? _cal.days.first.weekday : 0;
     final List<Widget> cells = [];
@@ -145,7 +174,10 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
         day: day,
         primary: p,
         textColor: t,
-        onTap: () => Navigator.pop(ctx, day.gregorianDate),
+        onTap: () {
+          Logger.instance.info('日期选择器', '选中 ${day.gregorianDate}');
+          Navigator.pop(ctx, day.gregorianDate);
+        },
       ));
     }
     return GridView.count(
@@ -157,18 +189,25 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
     );
   }
 
-  Widget _buildActions(BuildContext ctx, Color p, Color t) {
+  Widget _buildActions(BuildContext ctx, void Function(void Function()) upd, Color p, Color t) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           TextButton(
-            onPressed: () { _cal.goToToday(); setState(() {}); },
+            onPressed: () {
+              Logger.instance.info('日期选择器', '回到今天');
+              _cal.goToToday();
+              upd(() {});
+            },
             child: Text('今天', style: TextStyle(color: p)),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () {
+              Logger.instance.info('日期选择器', '取消选择');
+              Navigator.pop(ctx);
+            },
             child: Text('取消', style: TextStyle(color: t.withAlpha(180))),
           ),
         ],

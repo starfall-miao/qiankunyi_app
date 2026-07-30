@@ -31,6 +31,9 @@ class LogEntry {
         '${time.minute.toString().padLeft(2, '0')}:'
         '${time.second.toString().padLeft(2, '0')}.'
         '${time.millisecond.toString().padLeft(3, '0')}';
+    if (detail != null && detail!.isNotEmpty) {
+      return '[$ts][$levelTag] $message — $detail';
+    }
     return '[$ts][$levelTag] $message';
   }
 }
