@@ -3,6 +3,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import '../../../core/utils/logger.dart';
 import '../models/calendar_models.dart';
 import '../providers/calendar_provider.dart';
 
@@ -31,6 +32,7 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    Logger.instance.info('日历选择器', '打开日期选择对话框');
     final p = Theme.of(context).colorScheme.primary;
     final t = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
     final bg = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB);
@@ -61,7 +63,7 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
                 child: _buildGrid(setDialogState, ctx, p, t),
               ),
               // ── 底部按钮 ──
-              _buildActions(ctx, p, t),
+              _buildActions(ctx, p, t, setDialogState),
             ],
           );
         },
@@ -102,14 +104,22 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
         children: [
           IconButton(
             icon: const Icon(Icons.chevron_left),
-            onPressed: () { _cal.goToPrevMonth(); upd(() {}); },
+            onPressed: () {
+              Logger.instance.info('日历选择器', '上一月: ${_cal.year}-${_cal.month}');
+              _cal.goToPrevMonth();
+              upd(() {});
+            },
             color: t,
           ),
           Text('${_cal.year}年${_cal.month}月',
               style: TextStyle(fontSize: 16, color: t.withAlpha(180))),
           IconButton(
             icon: const Icon(Icons.chevron_right),
-            onPressed: () { _cal.goToNextMonth(); upd(() {}); },
+            onPressed: () {
+              Logger.instance.info('日历选择器', '下一月: ${_cal.year}-${_cal.month}');
+              _cal.goToNextMonth();
+              upd(() {});
+            },
             color: t,
           ),
         ],
@@ -157,18 +167,24 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
     );
   }
 
-  Widget _buildActions(BuildContext ctx, Color p, Color t) {
+  Widget _buildActions(BuildContext ctx, Color p, Color t, void Function(void Function()) upd) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           TextButton(
-            onPressed: () { _cal.goToToday(); setState(() {}); },
+            onPressed: () {
+              _cal.goToToday();
+              upd(() {});
+            },
             child: Text('今天', style: TextStyle(color: p)),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () {
+              Logger.instance.info('日历选择器', '取消选择');
+              Navigator.pop(ctx);
+            },
             child: Text('取消', style: TextStyle(color: t.withAlpha(180))),
           ),
         ],
@@ -199,7 +215,10 @@ class _DayCell extends StatelessWidget {
         : textColor;
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        Logger.instance.info('日历选择器', '选择日期: ${day.gregorianDate}');
+        onTap();
+      },
       child: Container(
         margin: const EdgeInsets.all(1.5),
         decoration: BoxDecoration(
