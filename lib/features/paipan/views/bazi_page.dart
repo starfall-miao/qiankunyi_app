@@ -793,7 +793,7 @@ class _BaziPageState extends State<BaziPage> {
                 const SizedBox(height: 6),
                 Text('类象', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t)),
                 const SizedBox(height: 2),
-                Text(info.meaning, style: TextStyle(fontSize: 12, color: t.withAlpha(200))),
+                Text(info.image, style: TextStyle(fontSize: 12, color: t.withAlpha(200))),
               ],
             ],
           ),
