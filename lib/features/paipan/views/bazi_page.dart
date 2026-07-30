@@ -104,11 +104,17 @@ class _BaziPageState extends State<BaziPage> {
                   // 日期
                   InkWell(
                     onTap: () async {
+                      _log.info('八字排盘', '打开日期选择器');
                       final d = await showDialog<DateTime>(
                         context: context,
                         builder: (_) => const CalendarPickerDialog(),
                       );
-                      if (d != null) setState(() => _birth = d);
+                      if (d != null) {
+                        _log.info('八字排盘', '选择日期: $d');
+                        setState(() => _birth = d);
+                      } else {
+                        _log.info('八字排盘', '取消日期选择');
+                      }
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

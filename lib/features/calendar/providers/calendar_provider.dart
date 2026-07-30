@@ -3,18 +3,28 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:tyme/tyme.dart' as tyme;
+import '../../../core/utils/logger.dart';
 import '../models/calendar_models.dart';
 
 class CalendarProvider extends ChangeNotifier {
+  static const int kMinYear = 1901;
+  static const int kMaxYear = 2100;
+
   late int _year;
   late int _month;
   List<CalendarDayInfo> _days = [];
   CalendarDayInfo? _selectedDay;
+  bool _hasError = false;
+  String _lastErrorMessage = '';
 
   int get year => _year;
   int get month => _month;
   List<CalendarDayInfo> get days => _days;
   CalendarDayInfo? get selectedDay => _selectedDay;
+  bool get hasError => _hasError;
+  String get lastErrorMessage => _lastErrorMessage;
+  bool get atMinYear => _year <= kMinYear;
+  bool get atMaxYear => _year >= kMaxYear;
 
   /// 获取第一天的星期偏移(0=周一, 6=周日)
   int get firstWeekday {
@@ -25,10 +35,9 @@ class CalendarProvider extends ChangeNotifier {
 
   CalendarProvider() {
     final now = DateTime.now();
-    _year = now.year;
+    _year = now.year.clamp(kMinYear, kMaxYear);
     _month = now.month;
-    _buildMonth();
-    _selectToday();
+    _safeBuildMonth();
   }
 
   void _selectToday() {
@@ -38,7 +47,23 @@ class CalendarProvider extends ChangeNotifier {
         return;
       }
     }
-    _selectedDay = _days.first;
+    if (_days.isNotEmpty) _selectedDay = _days.first;
+  }
+
+  /// 安全的月份构建（带异常保护）
+  void _safeBuildMonth() {
+    try {
+      _buildMonth();
+      _hasError = false;
+      _lastErrorMessage = '';
+    } catch (e, stack) {
+      _hasError = true;
+      _lastErrorMessage = e.toString();
+      Logger.instance.error('万年历构建失败', '$_year年$_month月: $e\n$stack');
+      _days = [];
+      _selectedDay = null;
+    }
+    _selectToday();
   }
 
   void _buildMonth() {
@@ -106,8 +131,8 @@ class CalendarProvider extends ChangeNotifier {
   }
 
   void _rebuild() {
-    _buildMonth();
-    if (_selectedDay != null) {
+    _safeBuildMonth();
+    if (_selectedDay != null && _days.isNotEmpty) {
       // 尽量保持选中同一天
       final oldDay = _selectedDay!.gregorianDate.day;
       for (final d in _days) {
@@ -124,30 +149,40 @@ class CalendarProvider extends ChangeNotifier {
 
   void goToPrevMonth() {
     if (_month == 1) {
+      if (_year <= kMinYear) {
+        Logger.instance.warn('万年历', '已达最小年份 ${kMinYear}年');
+        return;
+      }
       _year--;
       _month = 12;
     } else {
       _month--;
     }
+    Logger.instance.info('万年历导航', '上个月 → $_year年$_month月');
     _rebuild();
   }
 
   void goToNextMonth() {
     if (_month == 12) {
+      if (_year >= kMaxYear) {
+        Logger.instance.warn('万年历', '已达最大年份 ${kMaxYear}年');
+        return;
+      }
       _year++;
       _month = 1;
     } else {
       _month++;
     }
+    Logger.instance.info('万年历导航', '下个月 → $_year年$_month月');
     _rebuild();
   }
 
   void goToToday() {
     final now = DateTime.now();
-    _year = now.year;
+    _year = now.year.clamp(kMinYear, kMaxYear);
     _month = now.month;
-    _buildMonth();
-    _selectToday();
+    Logger.instance.info('万年历', '回到今天 → $_year年$_month月');
+    _safeBuildMonth();
     notifyListeners();
   }
 
