@@ -2,7 +2,6 @@
 library;
 
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -430,9 +429,9 @@ class _BaziPageState extends State<BaziPage> {
               ]),
             ),
             const SizedBox(height: 12),
-          ],   // RepaintBoundary child column end
-            ),
-          ),
+              ],   // close inner children
+            ),   // close inner Column
+          ),   // close RepaintBoundary
 
           // ── 操作按钮（2×2 四方格）──
           Column(
@@ -751,16 +750,17 @@ class _BaziPageState extends State<BaziPage> {
 
   /// 显示天干参考弹窗
   void _showGanRef(BuildContext ctx, String gan, Color t, Color p, bool dark) {
-    TianGanInfo? info;
+    TianGanInfo? temp;
     try {
-      info = tianGanList.firstWhere((g) => g.name == gan);
+      temp = tianGanList.firstWhere((g) => g.name == gan);
     } catch (_) {}
-    if (info == null) {
+    if (temp == null) {
       ScaffoldMessenger.of(ctx).showSnackBar(
         SnackBar(content: Text('暂无「$gan」的参考资料', style: const TextStyle(fontSize: 13))),
       );
       return;
     }
+    final info = temp!;
     showDialog(
       context: ctx,
       builder: (ctx2) => AlertDialog(
@@ -807,16 +807,17 @@ class _BaziPageState extends State<BaziPage> {
 
   /// 显示地支参考弹窗
   void _showZhiRef(BuildContext ctx, String zhi, Color t, Color p, bool dark) {
-    DiZhiInfo? info;
+    DiZhiInfo? temp;
     try {
-      info = diZhiList.firstWhere((z) => z.name == zhi);
+      temp = diZhiList.firstWhere((z) => z.name == zhi);
     } catch (_) {}
-    if (info == null) {
+    if (temp == null) {
       ScaffoldMessenger.of(ctx).showSnackBar(
         SnackBar(content: Text('暂无「$zhi」的参考资料', style: const TextStyle(fontSize: 13))),
       );
       return;
     }
+    final info = temp!;
     showDialog(
       context: ctx,
       builder: (ctx2) => AlertDialog(
