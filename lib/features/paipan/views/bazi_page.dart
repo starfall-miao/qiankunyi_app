@@ -429,6 +429,8 @@ class _BaziPageState extends State<BaziPage> {
               ]),
             ),
             const SizedBox(height: 12),
+          ],
+
               ],   // close inner children
             ),   // close inner Column
           ),   // close RepaintBoundary
@@ -760,7 +762,7 @@ class _BaziPageState extends State<BaziPage> {
       );
       return;
     }
-    final info = temp!;
+    final info = temp;
     showDialog(
       context: ctx,
       builder: (ctx2) => AlertDialog(
@@ -785,13 +787,9 @@ class _BaziPageState extends State<BaziPage> {
             children: [
               _refRow('五行', info.wuXing, t),
               _refRow('阴阳', info.yinYang, t),
-              _refRow('方位', info.fangWei, t),
-              if (info.season.isNotEmpty) _refRow('季节', info.season, t),
-              if (info.zangFu.isNotEmpty) _refRow('脏腑', info.zangFu, t),
-              if (info.meridian.isNotEmpty) _refRow('经络', info.meridian, t),
-              if (info.qi.isNotEmpty) _refRow('本气', info.qi, t),
-              if (info.shiShen.isNotEmpty) _refRow('十神', info.shiShen, t),
-              if (info.meaning.isNotEmpty) ...[
+              _refRow('方位', info.direction, t),
+              if (info.body.isNotEmpty) _refRow('对应身体', info.body, t),
+              if (info.image.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text('类象', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t)),
                 const SizedBox(height: 2),
@@ -817,7 +815,7 @@ class _BaziPageState extends State<BaziPage> {
       );
       return;
     }
-    final info = temp!;
+    final info = temp;
     showDialog(
       context: ctx,
       builder: (ctx2) => AlertDialog(
@@ -842,19 +840,15 @@ class _BaziPageState extends State<BaziPage> {
             children: [
               _refRow('五行', info.wuXing, t),
               _refRow('阴阳', info.yinYang, t),
-              _refRow('方位', info.fangWei, t),
+              _refRow('方位', info.direction, t),
               _refRow('月份', info.month, t),
-              if (info.time.isNotEmpty) _refRow('时辰', info.time, t),
-              if (info.zangFu.isNotEmpty) _refRow('脏腑', info.zangFu, t),
-              if (info.animal.isNotEmpty) _refRow('生肖', info.animal, t),
-              if (info.cangGan.isNotEmpty) _refRow('藏干', info.cangGan, t),
-              if (info.qi.isNotEmpty) _refRow('本气', info.qi, t),
-              if (info.shiShen.isNotEmpty) _refRow('十神', info.shiShen, t),
-              if (info.meaning.isNotEmpty) ...[
+              _refRow('时辰', info.hourRange, t),
+              _refRow('生肖', info.shengXiao, t),
+              if (info.image.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text('类象', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t)),
                 const SizedBox(height: 2),
-                Text(info.meaning, style: TextStyle(fontSize: 12, color: t.withAlpha(200))),
+                Text(info.image, style: TextStyle(fontSize: 12, color: t.withAlpha(200))),
               ],
             ],
           ),
