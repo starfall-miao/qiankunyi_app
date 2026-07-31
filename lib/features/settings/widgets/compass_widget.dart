@@ -246,8 +246,9 @@ class CompassPainter extends CustomPainter {
       final isSelected = i == selectedIndex;
       final angle = double.parse(m['angle']!) * math.pi / 180;
 
-      // 大刻度线
-      final innerR = radius * 0.45;
+      // 大刻度线：仅在外圈 0.72R~0.94R 环带绘制，
+      // 使二十四山文字（textR=0.62R）与内盘文字全部位于刻度线内侧空白带，互不重叠。
+      final innerR = radius * 0.72;
       final outerR = radius - 10;
       final tickPaint = Paint()
         ..color = isSelected ? gold : textColor.withAlpha(120)
