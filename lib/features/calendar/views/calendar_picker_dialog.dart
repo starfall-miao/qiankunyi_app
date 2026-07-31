@@ -45,8 +45,10 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
       ),
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
       child: ConstrainedBox(
-        // 限制对话框最大高度，避免小屏/横屏/桌面小窗口下内容溢出屏幕导致"点了没反应"
+        // 固定最小宽度样式（maxWidth 320，小屏可用宽度不足时自动收缩不溢出）+ 限制最大高度，
+        // 避免小屏/横屏/桌面小窗口下内容溢出屏幕导致"点了没反应"
         constraints: BoxConstraints(
+          maxWidth: 320,
           maxHeight: MediaQuery.sizeOf(context).height * 0.88,
         ),
         child: SafeArea(
@@ -59,8 +61,8 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
                 children: [
                   // ── 顶部：干支年号 ──
                   _buildHeader(yearGanZhi, p, t, isDark),
-                  // ── 月份导航（仅箭头）──
-                  _buildNav(setDialogState, p, t),
+                  // ── 月份导航（箭头 + 点击年月可快速选择）──
+                  _buildNav(setDialogState, ctx, p, t),
                   // ── 星期表头 ──
                   _buildWeekdayHeader(p, t),
                   // ── 日期网格：Flexible + 滚动视图，高度不足时可滚动而非溢出 ──
@@ -115,7 +117,7 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
     );
   }
 
-  Widget _buildNav(void Function(void Function()) upd, Color p, Color t) {
+  Widget _buildNav(void Function(void Function()) upd, BuildContext ctx, Color p, Color t) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: Row(
@@ -130,10 +132,27 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
             color: t,
             tooltip: '上月',
           ),
-          // 月份显示已在 _buildHeader 中，此处仅留箭头导航可读性
-          Text(
-            _cal.hasError ? '加载失败' : '${_cal.year}年${_cal.month}月',
-            style: TextStyle(fontSize: 14, color: t.withAlpha(160)),
+          // 点击年月文字可快速选择年月（与万年历页一致的 Dropdown 方案）
+          InkWell(
+            onTap: () => _showYearMonthPicker(ctx, upd),
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _cal.hasError ? '加载失败' : '${_cal.year}年${_cal.month}月',
+                    style: TextStyle(
+                        fontSize: 14,
+                        color: t.withAlpha(160),
+                        fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(Icons.arrow_drop_down, size: 18, color: p.withAlpha(180)),
+                ],
+              ),
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.chevron_right),
@@ -143,6 +162,79 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
             },
             color: t,
             tooltip: '下月',
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 快速选择年月 — 与万年历页 calendar_page.dart 的年月选择器一致：
+  /// 年/月两个 Dropdown，确定后 [_cal.goToYearMonth] 跳转并刷新网格。
+  void _showYearMonthPicker(BuildContext ctx, void Function(void Function()) upd) {
+    int y = _cal.year;
+    int m = _cal.month;
+    final isDark = Theme.of(ctx).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB);
+
+    showDialog(
+      context: ctx,
+      builder: (context) => AlertDialog(
+        backgroundColor: bg,
+        surfaceTintColor: bg,
+        title: const Text('选择年月'),
+        content: SizedBox(
+          width: 280,
+          child: Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<int>(
+                  initialValue: y,
+                  decoration: const InputDecoration(
+                    labelText: '年',
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  // 1901-2100，与 CalendarProvider.kMinYear/kMaxYear 一致
+                  items: List.generate(200, (i) => DropdownMenuItem(
+                    value: 1901 + i,
+                    child: Text('${1901 + i}'),
+                  )),
+                  onChanged: (v) => y = v ?? y,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: DropdownButtonFormField<int>(
+                  initialValue: m,
+                  decoration: const InputDecoration(
+                    labelText: '月',
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  items:
+                      List.generate(12, (i) => DropdownMenuItem(
+                    value: i + 1,
+                    child: Text('${i + 1}月'),
+                  )),
+                  onChanged: (v) => m = v ?? m,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Logger.instance.info('日期选择器', '快速选择 → $y年$m月');
+              _cal.goToYearMonth(y, m);
+              upd(() {});
+            },
+            child: const Text('确定'),
           ),
         ],
       ),
