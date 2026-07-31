@@ -185,7 +185,7 @@ class LiuyaoScreenshotTemplate extends StatelessWidget {
         _guaRow(benGua: benGua, bianGua: bianGua, huGua: huGua),
         const SizedBox(height: 12),
         _sectionTitle('每爻详解'),
-        ...benGua.yaos.reversed.map((y) => _yaoDetailCard(y)).toList(),
+        ...benGua.yaos.reversed.map((y) => _yaoDetailCard(y)),
         if (explanationTitle != null && explanationCi != null) ...[
           const SizedBox(height: 12),
           _sectionTitle('整卦解释'),
@@ -509,7 +509,7 @@ Widget _guaCard(String label, GuaModel gua) {
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _sText),
             ),
             const SizedBox(height: 6),
-            ...gua.yaos.reversed.map((y) => _guaLine(y)).toList(),
+            ...gua.yaos.reversed.map((y) => _guaLine(y)),
           ],
         ),
       ),
