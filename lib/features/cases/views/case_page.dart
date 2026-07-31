@@ -1393,9 +1393,10 @@ class _AiChatSectionState extends State<_AiChatSection> {
     setState(() {
       _localMessages = [..._localMessages, msg];
     });
-    // 持久化到 provider
+    // 持久化时过滤 error 消息（错误气泡仅显示在界面上，不写入卦例）
     final updated = widget.caseModel.copyWith(
-      aiMessages: _localMessages,
+      aiMessages:
+          _localMessages.where((m) => m.role != 'error').toList(),
     );
     context.read<CaseProvider>().updateCase(updated);
   }
@@ -1412,8 +1413,10 @@ class _AiChatSectionState extends State<_AiChatSection> {
     setState(() {
       _localMessages = [..._localMessages]..removeAt(index);
     });
+    // 持久化时过滤 error 消息（错误气泡仅显示在界面上，不写入卦例）
     final updated = widget.caseModel.copyWith(
-      aiMessages: _localMessages,
+      aiMessages:
+          _localMessages.where((m) => m.role != 'error').toList(),
     );
     context.read<CaseProvider>().updateCase(updated);
   }
