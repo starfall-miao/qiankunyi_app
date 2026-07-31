@@ -300,14 +300,25 @@ class _CasePageState extends State<CasePage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final t = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
 
-    showModalBottomSheet(
+    // 全屏/还原：控制 DraggableScrollableSheet 的高度（桌面端无触摸上滑手势，提供显式按钮）
+    final sheetCtrl = DraggableScrollableController();
+    var isFullscreen = false;
+    // 桌面宽屏放宽 Material 默认 640 宽度限制，避免详情窗口过窄
+    final screenW = MediaQuery.sizeOf(context).width;
+    final sheetConstraints =
+        BoxConstraints(maxWidth: screenW > 900 ? 720 : double.infinity);
+
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      constraints: sheetConstraints,
       backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (ctx) => DraggableScrollableSheet(
+      builder: (ctx) => StatefulBuilder(
+        builder: (_, setSheetState) => DraggableScrollableSheet(
+          controller: sheetCtrl,
           initialChildSize: 0.6,
           maxChildSize: 1.0,
           minChildSize: 0.35,
@@ -337,6 +348,26 @@ class _CasePageState extends State<CasePage> {
                   onPressed: () {
                     Navigator.pop(ctx);
                     _showEditDialog(context, c);
+                  },
+                ),
+                // 全屏 / 还原（桌面端也可一键展开全屏，手机端可配合上滑手势）
+                IconButton(
+                  icon: Icon(
+                      isFullscreen ? Icons.close_fullscreen : Icons.open_in_full,
+                      size: 20),
+                  tooltip: isFullscreen ? '还原半屏' : '全屏查看',
+                  onPressed: () {
+                    final target = isFullscreen ? 0.6 : 1.0;
+                    setSheetState(() => isFullscreen = !isFullscreen);
+                    try {
+                      sheetCtrl.animateTo(
+                        target,
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeOut,
+                      );
+                    } catch (_) {
+                      // controller 尚未 attach 时忽略（打开后极短时间内点击）
+                    }
                   },
                 ),
                 IconButton(
@@ -429,8 +460,9 @@ class _CasePageState extends State<CasePage> {
             ],
           ),
         ),
+        ),
       ),
-    );
+    ).whenComplete(sheetCtrl.dispose);
   }
 
   Widget _infoTag(String text, Color color) {
