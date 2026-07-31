@@ -11,10 +11,17 @@ class AiResult {
   final String content;
   final bool success;
   final String? errorMessage;
+  final int? statusCode;
 
-  AiResult({required this.content, required this.success, this.errorMessage});
+  AiResult({
+    required this.content,
+    required this.success,
+    this.errorMessage,
+    this.statusCode,
+  });
 
-  factory AiResult.error(String msg) => AiResult(content: '', success: false, errorMessage: msg);
+  factory AiResult.error(String msg, {int? statusCode}) =>
+      AiResult(content: '', success: false, errorMessage: msg, statusCode: statusCode);
 }
 
 /// AI 解卦服务
@@ -62,8 +69,8 @@ class AiService {
           Logger.instance.info('AI解卦成功', '响应长度: ${content.length}');
           return AiResult(content: content, success: true);
         }
-        Logger.instance.warn('AI返回空', 'choices为空');
-        return AiResult.error('API 返回为空');
+        Logger.instance.error('AI返回空', 'HTTP ${response.statusCode} choices为空');
+        return AiResult.error('API 返回为空', statusCode: response.statusCode);
       } else {
         final body = response.body;
         String msg = 'HTTP ${response.statusCode}';
@@ -74,10 +81,10 @@ class AiService {
           msg = body.length > 200 ? '${body.substring(0, 200)}...' : body;
         }
         Logger.instance.error('AI API错误', 'HTTP ${response.statusCode}: $msg');
-        return AiResult.error(msg);
+        return AiResult.error(msg, statusCode: response.statusCode);
       }
     } catch (e) {
-      Logger.instance.error('AI网络错误', '$e');
+      Logger.instance.error('AI网络错误', '请求异常: $e');
       return AiResult.error('网络错误: $e');
     }
   }

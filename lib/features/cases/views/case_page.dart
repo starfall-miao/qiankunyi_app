@@ -1317,9 +1317,14 @@ class _AiChatSectionState extends State<_AiChatSection> {
         _addAiMessage('user', prompt.truncated(200));
         _addAiMessage('assistant', result.content);
       } else {
+        Logger.instance.error('AI解卦失败',
+            'statusCode: ${result.statusCode ?? 'N/A'} 错误摘要: ${result.errorMessage}');
+        _addErrorMessage('解卦失败: ${result.errorMessage}');
         _showToast('解卦失败: ${result.errorMessage}');
       }
     } catch (e) {
+      Logger.instance.error('AI解卦失败', '网络错误: $e');
+      _addErrorMessage('网络错误: $e');
       _showToast('网络错误: $e');
     } finally {
       setState(() => _loading = false);
@@ -1351,10 +1356,12 @@ class _AiChatSectionState extends State<_AiChatSection> {
     setState(() => _loading = true);
     _questionCtrl.clear();
     try {
-      // 构建上下文：系统提示 + 之前的对话 + 当前问题
+      // 构建上下文：系统提示 + 之前的对话 + 当前问题（错误消息不进入 AI 上下文）
       final messages = <Map<String, String>>[
         {'role': 'system', 'content': '你是一位精通《周易》的资深术数专家。下面是对同一卦象的连续讨论。'},
-        ..._messages.map((m) => {'role': m.role, 'content': m.content}),
+        ..._messages
+            .where((m) => m.role == 'user' || m.role == 'assistant')
+            .map((m) => {'role': m.role, 'content': m.content}),
         {'role': 'user', 'content': text},
       ];
       final result = await AiService().chat(
@@ -1367,9 +1374,14 @@ class _AiChatSectionState extends State<_AiChatSection> {
         _addAiMessage('user', text);
         _addAiMessage('assistant', result.content);
       } else {
+        Logger.instance.error('AI追问失败',
+            'statusCode: ${result.statusCode ?? 'N/A'} 错误摘要: ${result.errorMessage}');
+        _addErrorMessage('追问失败: ${result.errorMessage}');
         _showToast('追问失败: ${result.errorMessage}');
       }
     } catch (e) {
+      Logger.instance.error('AI追问失败', '网络错误: $e');
+      _addErrorMessage('网络错误: $e');
       _showToast('网络错误: $e');
     } finally {
       setState(() => _loading = false);
@@ -1386,6 +1398,14 @@ class _AiChatSectionState extends State<_AiChatSection> {
       aiMessages: _localMessages,
     );
     context.read<CaseProvider>().updateCase(updated);
+  }
+
+  /// 错误消息仅显示在 AI 对话区（红色错误气泡），不持久化到卦例
+  void _addErrorMessage(String content) {
+    if (!mounted) return;
+    setState(() {
+      _localMessages = [..._localMessages, AiMessage(role: 'error', content: content)];
+    });
   }
 
   void _deleteAiMessage(int index) {
@@ -1458,16 +1478,26 @@ class _AiChatSectionState extends State<_AiChatSection> {
                 final i = entry.key;
                 final m = entry.value;
                 final isUser = m.role == 'user';
+                final isError = m.role == 'error';
+                final errColor = isDark
+                    ? const Color(0xFFE08A8A)
+                    : const Color(0xFFC0392B);
                 return Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: isUser
-                        ? (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF0EDE8))
-                        : (isDark ? const Color(0xFF252535) : const Color(0xFFFAF6F0)),
+                    color: isError
+                        ? (isDark ? const Color(0xFF3A2020) : const Color(0xFFFBEAEA))
+                        : isUser
+                            ? (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF0EDE8))
+                            : (isDark ? const Color(0xFF252535) : const Color(0xFFFAF6F0)),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: isUser ? t.withAlpha(20) : p.withAlpha(30),
+                      color: isError
+                          ? errColor.withAlpha(80)
+                          : isUser
+                              ? t.withAlpha(20)
+                              : p.withAlpha(30),
                     ),
                   ),
                   child: Column(
@@ -1475,17 +1505,19 @@ class _AiChatSectionState extends State<_AiChatSection> {
                     children: [
                       Row(children: [
                         Icon(
-                          isUser ? Icons.person : Icons.auto_awesome,
+                          isError
+                              ? Icons.error_outline
+                              : (isUser ? Icons.person : Icons.auto_awesome),
                           size: 14,
-                          color: isUser ? t : p,
+                          color: isError ? errColor : (isUser ? t : p),
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          isUser ? '你' : 'AI',
+                          isError ? '错误' : (isUser ? '你' : 'AI'),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: isUser ? t : p,
+                            color: isError ? errColor : (isUser ? t : p),
                           ),
                         ),
                         const Spacer(),
@@ -1496,7 +1528,10 @@ class _AiChatSectionState extends State<_AiChatSection> {
                         ),
                       ]),
                       const SizedBox(height: 4),
-                      if (isUser)
+                      if (isError)
+                        Text(m.content,
+                            style: TextStyle(fontSize: 13, color: errColor))
+                      else if (isUser)
                         Text(m.content, style: TextStyle(
                             fontSize: 13, color: t))
                       else

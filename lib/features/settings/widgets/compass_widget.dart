@@ -3,6 +3,8 @@ library;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
+import '../../../core/utils/logger.dart';
+
 // ============ 二十四山方位数据（含内盘） ============
 const List<Map<String, dynamic>> kTwentyFourMountains = [
   {'name': '壬', 'wx': '水', 'gua': '坎', 'angle': '345', 'dir': '正北', 'sx': '鼠'},
@@ -146,6 +148,8 @@ class _CompassWidgetState extends State<CompassWidget> {
                 }
               }
               setState(() => _selectedIndex = best);
+              final tapped = kTwentyFourMountains[best];
+              Logger.instance.info('罗盘点击', '选中: ${tapped['name']} 角度${tapped['angle']}°');
               _showInfo(ctx, best, isDark, t, gold);
             }
           },

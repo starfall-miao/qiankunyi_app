@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/foundation.dart';
+import '../../../core/utils/logger.dart';
 import '../models/bazi_models.dart';
 import '../engines/bazi_engine.dart';
 
@@ -28,6 +29,7 @@ class BaziProvider extends ChangeNotifier {
       _result = BaiZiEngine.calc(birth: birth, isMale: isMale, hourIndex: hourIndex);
     } catch (e) {
       debugPrint('八字排盘失败: $e');
+      Logger.instance.error('八字排盘失败', '$e');
     }
 
     _isCalculating = false;

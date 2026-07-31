@@ -230,6 +230,7 @@ class SettingsProvider extends ChangeNotifier {
     _prefs?.setString('ai_model', _aiModel);
     _prefs?.setString('ai_custom_model', '');
     notifyListeners();
+    Logger.instance.info('AI提供商预设', aiPresets[index].name);
   }
   set aiEndpoint(String v) {
     _aiEndpoint = v;
@@ -237,21 +238,25 @@ class SettingsProvider extends ChangeNotifier {
     _prefs?.setString('ai_endpoint', v);
     _prefs?.setInt('ai_preset_index', -1);
     notifyListeners();
+    Logger.instance.info('AI服务地址已更新');
   }
   set aiApiKey(String v) {
     _aiApiKey = v;
     _prefs?.setString('ai_apiKey', v);
     notifyListeners();
+    Logger.instance.info('AI API Key 已更新');
   }
   set aiModel(String v) {
     _aiModel = v;
     _prefs?.setString('ai_model', v);
     notifyListeners();
+    Logger.instance.info('AI模型已更新', v);
   }
   set aiCustomModel(String v) {
     _aiCustomModel = v;
     _prefs?.setString('ai_custom_model', v);
     notifyListeners();
+    Logger.instance.info('AI自定义模型已更新', v);
   }
   set aiEnabled(bool v) {
     _aiEnabled = v;

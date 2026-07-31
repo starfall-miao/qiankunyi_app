@@ -226,8 +226,7 @@ class _BaziPageState extends State<BaziPage> {
                     child: ElevatedButton.icon(
                       onPressed: _birth == null || bp.isCalculating
                           ? null
-                          : () => bp.calc(
-                              birth: _birth!, isMale: _isMale, hourIndex: _hourIndex),
+                          : () => _startPaipan(bp),
                       icon: bp.isCalculating
                           ? const SizedBox(
                               width: 18,
@@ -601,6 +600,18 @@ class _BaziPageState extends State<BaziPage> {
           ),
       ],
     );
+  }
+
+  /// 开始八字排盘（含日志记录）
+  Future<void> _startPaipan(BaziProvider bp) async {
+    _log.info('八字排盘', '开始排盘: 出生${_birth!.year}-${_birth!.month}-${_birth!.day} '
+        '性别${_isMale ? "男" : "女"} 时辰索引$_hourIndex');
+    try {
+      await bp.calc(birth: _birth!, isMale: _isMale, hourIndex: _hourIndex);
+      _log.info('八字排盘', '排盘完成');
+    } catch (e) {
+      _log.error('八字排盘失败', '$e');
+    }
   }
 
   /// 截图排盘结果并保存（浮窗预览 → 文件名编辑 → 选择目录 → 写入）
