@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/utils/logger.dart';
+import '../../../shared/widgets/gua_screenshot_template.dart';
 import '../../../shared/widgets/save_image_dialog.dart';
 import '../../calendar/views/calendar_picker_dialog.dart';
 import '../../cases/models/case_models.dart';
@@ -277,7 +278,6 @@ class _BaziPageState extends State<BaziPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           RepaintBoundary(
-            key: _baziScreenshotKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -441,6 +441,16 @@ class _BaziPageState extends State<BaziPage> {
               ],   // close inner children
             ),   // close inner Column
           ),   // close RepaintBoundary
+
+          // ── 截图专用紧凑模板（屏幕外，不影响页面显示；固定 400 宽+浅色国风）──
+          ScreenshotSource(
+            boundaryKey: _baziScreenshotKey,
+            child: BaziScreenshotTemplate(
+              birthText: '${r.birth.year}年${r.birth.month}月${r.birth.day}日 '
+                  '${_hourOptions[_hourIndex].split('\n')[0]} · ${r.isMale ? '男' : '女'}',
+              result: r,
+            ),
+          ),
 
           // ── 操作按钮（2×2 四方格）──
           Column(

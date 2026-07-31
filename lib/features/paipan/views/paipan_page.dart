@@ -8,7 +8,9 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/utils/logger.dart';
+import '../../../shared/widgets/gua_screenshot_template.dart';
 import '../../../shared/widgets/save_image_dialog.dart';
+import '../../reference/data/reference_data.dart';
 import '../providers/paipan_provider.dart';
 import '../../cases/providers/case_provider.dart';
 import '../../cases/models/case_models.dart';
@@ -204,6 +206,8 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
 
   Widget _liuyaoContent(BuildContext context, PaipanProvider pr, Color p,
       Color t, Color b, Color c, bool dark) {
+    final lr = pr.liuyaoResult;
+    final lrGuaCi = lr != null ? getGuaCi(lr.benGua.name) : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -289,7 +293,6 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
           RepaintBoundary(
-            key: _liuyaoScreenshotKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -418,6 +421,27 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
           Center(
             child: Text('💡 保存为卦例后可在详情页使用 AI 解卦与人工断语',
                 style: TextStyle(fontSize: 12, color: t.withAlpha(150))),
+          ),
+
+          // ── 截图专用紧凑模板（屏幕外，不影响页面显示；固定 400 宽+浅色国风）──
+          ScreenshotSource(
+            boundaryKey: _liuyaoScreenshotKey,
+            child: LiuyaoScreenshotTemplate(
+              timeText: formatCnTime(lr!.paipanTime),
+              infoTags: [
+                if (lr!.monthGanZhi != null) '月 ${lr!.monthGanZhi}',
+                if (lr!.dayGanZhi != null) '日 ${lr!.dayGanZhi}',
+                if (lr!.kongWang != null) '空 旬空:${lr!.kongWang!.join(" ")}',
+                '派 ${lr!.school == LiuyaoSchool.jingFangJianBan ? "京房简版" : "京房正宗"}',
+              ],
+              benGua: lr!.benGua,
+              bianGua: lr!.bianGua,
+              huGua: lr!.huGua,
+              explanationTitle: _guaNameCN[lr!.benGua.name],
+              explanationCi: lrGuaCi?.ci,
+              explanationXiang: lrGuaCi?.xiang,
+              explanationJiXiong: lrGuaCi?.jiXiong,
+            ),
           ),
         ],
       )
@@ -885,6 +909,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
   /// 梅花易数结果区域 — 三卦并排 + 体用生克
   Widget _meihuaResultSection(BuildContext context, PaipanProvider pr,
       PaipanResult result, Color p, Color t, Color b, Color c, bool dark) {
+    final mhGuaCi = getGuaCi(result.benGua.name);
     final gongCN = <GuaGong, String>{
       GuaGong.qian: '乾', GuaGong.dui: '兑', GuaGong.li: '离',
       GuaGong.zhen: '震', GuaGong.xun: '巽', GuaGong.kan: '坎',
@@ -894,8 +919,10 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
       WuXing.jin: '金', WuXing.mu: '木', WuXing.shui: '水', WuXing.huo: '火', WuXing.tu: '土',
     };
 
-    return RepaintBoundary(
-      key: _meihuaScreenshotKey,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+      RepaintBoundary(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1003,8 +1030,29 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
               style: TextStyle(fontSize: 12, color: t.withAlpha(150))),
         ),
       ],
-      ),   // close Column(
-    );      // close RepaintBoundary(
+      ),   // close child: Column(
+      ),   // close RepaintBoundary( 显示
+
+      // ── 截图专用紧凑模板（屏幕外，不影响页面显示；固定 400 宽+浅色国风）──
+      ScreenshotSource(
+        boundaryKey: _meihuaScreenshotKey,
+        child: MeihuaScreenshotTemplate(
+          timeText: formatCnTime(result.paipanTime),
+          infoTags: ['方式 ${result.method}'],
+          benGua: result.benGua,
+          bianGua: result.bianGua,
+          huGua: result.huGua,
+          tiYongText: result.benGua.yaos.length >= 6
+              ? MeihuaEngine.getTiYong(result)
+              : null,
+          explanationTitle: _guaNameCN[result.benGua.name],
+          explanationCi: mhGuaCi?.ci,
+          explanationXiang: mhGuaCi?.xiang,
+          explanationJiXiong: mhGuaCi?.jiXiong,
+        ),
+      ),
+      ],
+    );      // close 外层 Column
   }
 
   /// 月令/日令/空亡 等日期标签
