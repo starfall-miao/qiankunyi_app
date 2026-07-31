@@ -702,15 +702,77 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
       if (byteData == null) return;
       final pngBytes = byteData.buffer.asUint8List();
 
-      final tempDir = await getTemporaryDirectory();
-      final file = File(
-        '${tempDir.path}/qiankunyi_${DateTime.now().millisecondsSinceEpoch}.png',
-      );
-      await file.writeAsBytes(pngBytes);
+      // Show save dialog with image preview
+      final picker = FilePicker.platform;
+      if (picker == null) {
+        // Fallback to save to temp directory
+        final tempDir = await getTemporaryDirectory();
+        final file = File(
+          '${tempDir.path}/qiankunyi_${DateTime.now().millisecondsSinceEpoch}.png',
+        );
+        await file.writeAsBytes(pngBytes);
+        if (ctx.mounted) {
+          ScaffoldMessenger.of(ctx).showSnackBar(
+            SnackBar(content: Text('截图已保存: ${file.path}')),
+          );
+        }
+        return;
+      }
 
+      final suggestedPath = picker.platformPath;
+      final fileName = 'qiankunyi_${DateTime.now().millisecondsSinceEpoch}.png';
+      final file = File('$suggestedPath/$fileName');
+
+      // Show image preview dialog
       if (ctx.mounted) {
-        ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(content: Text('截图已保存: ${file.path}')),
+        showDialog(
+          context: ctx,
+          builder: (dialogCtx) => AlertDialog(
+            title: const Text('保存图片'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('文件名：'),
+                TextField(
+                  controller: TextEditingController(text: fileName),
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.image),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text('预览：'),
+                Image.memory(pngBytes, fit: BoxFit.contain),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(),
+                child: const Text('取消'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.of(dialogCtx).pop();
+                  try {
+                    await file.writeAsBytes(pngBytes);
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(content: Text('截图已保存: ${file.path}')),
+                      );
+                    }
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(content: Text('保存失败: $e')),
+                      );
+                    }
+                  }
+                },
+                child: const Text('保存'),
+              ),
+            ],
+          ),
         );
       }
     } catch (e) {

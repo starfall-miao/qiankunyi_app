@@ -1,34 +1,104 @@
-/// 二十四山罗盘小工具 — CustomPainter 绘制，支持点击弹出方位信息
+/// 完整二十四山罗盘 — CustomPainter 绘制，支持点击查看详细信息
 library;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// 二十四山方位数据
-const List<Map<String, String>> kTwentyFourMountains = [
-  {'name': '壬', 'wx': '水', 'gua': '坎', 'angle': '345'},
-  {'name': '子', 'wx': '水', 'gua': '坎', 'angle': '0', 'sx': '鼠', 'dir': '正北'},
-  {'name': '癸', 'wx': '水', 'gua': '坎', 'angle': '15'},
-  {'name': '丑', 'wx': '土', 'gua': '艮', 'angle': '30', 'sx': '牛'},
-  {'name': '艮', 'wx': '土', 'gua': '艮', 'angle': '45', 'dir': '东北'},
-  {'name': '寅', 'wx': '木', 'gua': '艮', 'angle': '60', 'sx': '虎'},
-  {'name': '甲', 'wx': '木', 'gua': '震', 'angle': '75'},
-  {'name': '卯', 'wx': '木', 'gua': '震', 'angle': '90', 'sx': '兔', 'dir': '正东'},
-  {'name': '乙', 'wx': '木', 'gua': '震', 'angle': '105'},
-  {'name': '辰', 'wx': '土', 'gua': '巽', 'angle': '120', 'sx': '龙'},
-  {'name': '巽', 'wx': '木', 'gua': '巽', 'angle': '135', 'dir': '东南'},
-  {'name': '巳', 'wx': '火', 'gua': '巽', 'angle': '150', 'sx': '蛇'},
-  {'name': '丙', 'wx': '火', 'gua': '离', 'angle': '165'},
-  {'name': '午', 'wx': '火', 'gua': '离', 'angle': '180', 'sx': '马', 'dir': '正南'},
-  {'name': '丁', 'wx': '火', 'gua': '离', 'angle': '195'},
-  {'name': '未', 'wx': '土', 'gua': '坤', 'angle': '210', 'sx': '羊'},
-  {'name': '坤', 'wx': '土', 'gua': '坤', 'angle': '225', 'dir': '西南'},
-  {'name': '申', 'wx': '金', 'gua': '坤', 'angle': '240', 'sx': '猴'},
-  {'name': '庚', 'wx': '金', 'gua': '兑', 'angle': '255'},
-  {'name': '酉', 'wx': '金', 'gua': '兑', 'angle': '270', 'sx': '鸡', 'dir': '正西'},
-  {'name': '辛', 'wx': '金', 'gua': '兑', 'angle': '285'},
-  {'name': '戌', 'wx': '土', 'gua': '乾', 'angle': '300', 'sx': '狗'},
-  {'name': '乾', 'wx': '金', 'gua': '乾', 'angle': '315', 'dir': '西北'},
-  {'name': '亥', 'wx': '水', 'gua': '乾', 'angle': '330', 'sx': '猪'},
+// ============ 二十四山方位数据（含内盘） ============
+const List<Map<String, dynamic>> kTwentyFourMountains = [
+  {'name': '壬', 'wx': '水', 'gua': '坎', 'angle': '345', 'dir': '正北', 'sx': '鼠'},
+  {'name': '子', 'wx': '水', 'gua': '坎', 'angle': '0', 'dir': '正北', 'sx': '鼠'},
+  {'name': '癸', 'wx': '水', 'gua': '坎', 'angle': '15', 'dir': '正北', 'sx': '鼠'},
+  {'name': '丑', 'wx': '土', 'gua': '艮', 'angle': '30', 'dir': '东北', 'sx': '牛'},
+  {'name': '艮', 'wx': '土', 'gua': '艮', 'angle': '45', 'dir': '东北', 'sx': '牛'},
+  {'name': '寅', 'wx': '木', 'gua': '艮', 'angle': '60', 'dir': '东北', 'sx': '虎'},
+  {'name': '甲', 'wx': '木', 'gua': '震', 'angle': '75', 'dir': '东北', 'sx': '虎'},
+  {'name': '卯', 'wx': '木', 'gua': '震', 'angle': '90', 'dir': '正东', 'sx': '兔'},
+  {'name': '乙', 'wx': '木', 'gua': '震', 'angle': '105', 'dir': '正东', 'sx': '兔'},
+  {'name': '辰', 'wx': '土', 'gua': '巽', 'angle': '120', 'dir': '东南', 'sx': '龙'},
+  {'name': '巽', 'wx': '木', 'gua': '巽', 'angle': '135', 'dir': '东南', 'sx': '龙'},
+  {'name': '巳', 'wx': '火', 'gua': '巽', 'angle': '150', 'dir': '东南', 'sx': '蛇'},
+  {'name': '丙', 'wx': '火', 'gua': '离', 'angle': '165', 'dir': '正南', 'sx': '马'},
+  {'name': '午', 'wx': '火', 'gua': '离', 'angle': '180', 'dir': '正南', 'sx': '马'},
+  {'name': '丁', 'wx': '火', 'gua': '离', 'angle': '195', 'dir': '正南', 'sx': '马'},
+  {'name': '未', 'wx': '土', 'gua': '坤', 'angle': '210', 'dir': '西南', 'sx': '羊'},
+  {'name': '坤', 'wx': '土', 'gua': '坤', 'angle': '225', 'dir': '西南', 'sx': '羊'},
+  {'name': '申', 'wx': '金', 'gua': '坤', 'angle': '240', 'dir': '西南', 'sx': '猴'},
+  {'name': '庚', 'wx': '金', 'gua': '兑', 'angle': '255', 'dir': '西南', 'sx': '猴'},
+  {'name': '酉', 'wx': '金', 'gua': '兑', 'angle': '270', 'dir': '正西', 'sx': '鸡'},
+  {'name': '辛', 'wx': '金', 'gua': '兑', 'angle': '285', 'dir': '正西', 'sx': '鸡'},
+  {'name': '戌', 'wx': '土', 'gua': '乾', 'angle': '300', 'dir': '西北', 'sx': '狗'},
+  {'name': '乾', 'wx': '金', 'gua': '乾', 'angle': '315', 'dir': '西北', 'sx': '狗'},
+  {'name': '亥', 'wx': '水', 'gua': '乾', 'angle': '330', 'dir': '西北', 'sx': '猪'},
+];
+
+// ============ 天干数据 ============
+const List<Map<String, String>> kHeavenlyStems = [
+  {'name': '甲', 'wx': '木', 'angle': '0', 'dir': '正东'},
+  {'name': '乙', 'wx': '木', 'angle': '30', 'dir': '东南'},
+  {'name': '丙', 'wx': '火', 'angle': '60', 'dir': '东南'},
+  {'name': '丁', 'wx': '火', 'angle': '90', 'dir': '正南'},
+  {'name': '戊', 'wx': '土', 'angle': '120', 'dir': '西南'},
+  {'name': '己', 'wx': '土', 'angle': '150', 'dir': '西南'},
+  {'name': '庚', 'wx': '金', 'angle': '180', 'dir': '正西'},
+  {'name': '辛', 'wx': '金', 'angle': '210', 'dir': '西北'},
+  {'name': '壬', 'wx': '水', 'angle': '240', 'dir': '西北'},
+  {'name': '癸', 'wx': '水', 'angle': '270', 'dir': '正北'},
+];
+
+// ============ 地支数据 ============
+const List<Map<String, String>> kEarthlyBranches = [
+  {'name': '子', 'wx': '水', 'angle': '330', 'dir': '正北', 'sx': '鼠'},
+  {'name': '丑', 'wx': '土', 'angle': '0', 'dir': '正北', 'sx': '牛'},
+  {'name': '寅', 'wx': '木', 'angle': '30', 'dir': '东北', 'sx': '虎'},
+  {'name': '卯', 'wx': '木', 'angle': '60', 'dir': '东北', 'sx': '兔'},
+  {'name': '辰', 'wx': '土', 'angle': '90', 'dir': '正东', 'sx': '龙'},
+  {'name': '巳', 'wx': '火', 'angle': '120', 'dir': '东南', 'sx': '蛇'},
+  {'name': '午', 'wx': '火', 'angle': '150', 'dir': '东南', 'sx': '马'},
+  {'name': '未', 'wx': '土', 'angle': '180', 'dir': '正南', 'sx': '羊'},
+  {'name': '申', 'wx': '金', 'angle': '210', 'dir': '西南', 'sx': '猴'},
+  {'name': '酉', 'wx': '金', 'angle': '240', 'dir': '西南', 'sx': '鸡'},
+  {'name': '戌', 'wx': '土', 'angle': '270', 'dir': '正西', 'sx': '狗'},
+  {'name': '亥', 'wx': '水', 'angle': '300', 'dir': '西北', 'sx': '猪'},
+];
+
+// ============ 十二长生数据 ============
+const List<Map<String, String>> kShiErChangSheng = [
+  {'name': '长生', 'wx': '水', 'angle': '30'},
+  {'name': '沐浴', 'wx': '水', 'angle': '60'},
+  {'name': '冠带', 'wx': '土', 'angle': '90'},
+  {'name': '临官', 'wx': '土', 'angle': '120'},
+  {'name': '帝旺', 'wx': '土', 'angle': '150'},
+  {'name': '衰', 'wx': '土', 'angle': '180'},
+  {'name': '病', 'wx': '火', 'angle': '210'},
+  {'name': '死', 'wx': '火', 'angle': '240'},
+  {'name': '墓', 'wx': '火', 'angle': '270'},
+  {'name': '绝', 'wx': '金', 'angle': '300'},
+  {'name': '胎', 'wx': '金', 'angle': '330'},
+  {'name': '养', 'wx': '金', 'angle': '0'},
+];
+
+// ============ 先天八卦 ============
+const List<Map<String, dynamic>> kXianTianBagua = [
+  {'name': '离', 'wx': '火', 'angle': '0', 'dir': '正南', 'symbol': '☲'},
+  {'name': '坤', 'wx': '土', 'angle': '45', 'dir': '西南', 'symbol': '☷'},
+  {'name': '兑', 'wx': '金', 'angle': '90', 'dir': '正西', 'symbol': '☱'},
+  {'name': '乾', 'wx': '金', 'angle': '135', 'dir': '西北', 'symbol': '☰'},
+  {'name': '坎', 'wx': '水', 'angle': '180', 'dir': '正北', 'symbol': '☵'},
+  {'name': '艮', 'wx': '土', 'angle': '225', 'dir': '东北', 'symbol': '☶'},
+  {'name': '震', 'wx': '木', 'angle': '270', 'dir': '正东', 'symbol': '☳'},
+  {'name': '巽', 'wx': '木', 'angle': '315', 'dir': '东南', 'symbol': '☴'},
+];
+
+// ============ 后天八卦 ============
+const List<Map<String, dynamic>> kHouTianBagua = [
+  {'name': '坎', 'wx': '水', 'angle': '0', 'dir': '正北', 'symbol': '☵'},
+  {'name': '坤', 'wx': '土', 'angle': '45', 'dir': '西南', 'symbol': '☷'},
+  {'name': '震', 'wx': '木', 'angle': '90', 'dir': '正东', 'symbol': '☳'},
+  {'name': '巽', 'wx': '木', 'angle': '135', 'dir': '东南', 'symbol': '☴'},
+  {'name': '离', 'wx': '火', 'angle': '180', 'dir': '正南', 'symbol': '☲'},
+  {'name': '乾', 'wx': '金', 'angle': '225', 'dir': '西北', 'symbol': '☰'},
+  {'name': '兑', 'wx': '金', 'angle': '270', 'dir': '正西', 'symbol': '☱'},
+  {'name': '艮', 'wx': '土', 'angle': '315', 'dir': '东北', 'symbol': '☶'},
 ];
 
 class CompassWidget extends StatefulWidget {
@@ -56,11 +126,9 @@ class _CompassWidgetState extends State<CompassWidget> {
             final dx = details.localPosition.dx - center;
             final dy = details.localPosition.dy - center;
             final dist = math.sqrt(dx * dx + dy * dy);
-            if (dist > size * 0.15 && dist < size * 0.47) {
-              // Convert to angle, 0° = top (north)
+            if (dist > size * 0.15 && dist < size * 0.48) {
               double deg = math.atan2(dx, -dy) * 180 / math.pi;
               if (deg < 0) deg += 360;
-              // Find closest mountain
               int best = 0;
               double bestDiff = 360;
               for (int i = 0; i < kTwentyFourMountains.length; i++) {
@@ -112,16 +180,24 @@ class _CompassWidgetState extends State<CompassWidget> {
           const SizedBox(width: 8),
           Text('二十四山', style: TextStyle(fontSize: 14, color: t.withAlpha(150))),
         ]),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _infoRow('五行', m['wx'] ?? '—', t),
-            _infoRow('卦象', m['gua'] ?? '—', t),
-            if ((m['sx'] ?? '').isNotEmpty) _infoRow('生肖', m['sx']!, t),
-            if ((m['dir'] ?? '').isNotEmpty) _infoRow('方位', m['dir']!, t),
-            _infoRow('角度', '${m['angle']}°', t),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _infoRow('五行', m['wx'] ?? '—', t),
+              _infoRow('卦象', m['gua'] ?? '—', t),
+              if ((m['sx'] ?? '').isNotEmpty) _infoRow('生肖', m['sx']!, t),
+              if ((m['dir'] ?? '').isNotEmpty) _infoRow('方位', m['dir']!, t),
+              _infoRow('角度', '${m['angle']}°', t),
+              const Divider(height: 24),
+              _infoRow('天干', kHeavenlyStems.firstWhere((s) => s['angle'] == m['angle'], orElse: () => {'name': '—'})['name'] ?? '—', t),
+              _infoRow('地支', kEarthlyBranches.firstWhere((s) => s['angle'] == m['angle'], orElse: () => {'name': '—'})['name'] ?? '—', t),
+              _infoRow('十二长生', kShiErChangSheng.firstWhere((s) => s['angle'] == m['angle'], orElse: () => {'name': '—'})['name'] ?? '—', t),
+              _infoRow('先天八卦', kXianTianBagua.firstWhere((s) => s['angle'] == m['angle'], orElse: () => {'name': '—'})['name'] ?? '—', t),
+              _infoRow('后天八卦', kHouTianBagua.firstWhere((s) => s['angle'] == m['angle'], orElse: () => {'name': '—'})['name'] ?? '—', t),
+            ],
+          ),
         ),
         actions: [TextButton(onPressed: () => Navigator.pop(ctx2), child: Text('关闭', style: TextStyle(color: t)))],
       ),
@@ -155,40 +231,41 @@ class CompassPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
     canvas.drawCircle(center, radius, bgPaint);
 
-    // Outer ring border
+    // ========== 外盘 ==========
+    // 外圈边框
     final borderPaint = Paint()
       ..color = gold.withAlpha(80)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawCircle(center, radius - 2, borderPaint);
-    canvas.drawCircle(center, radius * 0.48, borderPaint);
+      ..strokeWidth = 2;
+    canvas.drawCircle(center, radius - 3, borderPaint);
+    canvas.drawCircle(center, radius * 0.45, borderPaint);
 
-    // Draw 24 mountains (tick marks + labels)
+    // 绘制二十四山（外盘）
     for (int i = 0; i < kTwentyFourMountains.length; i++) {
       final m = kTwentyFourMountains[i];
-      final angle = double.parse(m['angle']!) * math.pi / 180;
       final isSelected = i == selectedIndex;
+      final angle = double.parse(m['angle']!) * math.pi / 180;
 
-      // Tick
-      final innerR = radius * 0.48;
-      final outerR = radius - 6;
+      // 大刻度线
+      final innerR = radius * 0.45;
+      final outerR = radius - 10;
       final tickPaint = Paint()
         ..color = isSelected ? gold : textColor.withAlpha(120)
-        ..strokeWidth = isSelected ? 2.5 : 1.0;
+        ..strokeWidth = isSelected ? 3.0 : 2.0;
       canvas.drawLine(
         Offset(center.dx + innerR * math.sin(angle), center.dy - innerR * math.cos(angle)),
         Offset(center.dx + outerR * math.sin(angle), center.dy - outerR * math.cos(angle)),
         tickPaint,
       );
 
-      // Label
-      final textR = radius * 0.73;
+      // 二十四山名称（外盘）
+      final textR = radius * 0.62;
       final tp = TextPainter(
         text: TextSpan(
           text: m['name']!,
           style: TextStyle(
             color: isSelected ? gold : textColor,
-            fontSize: isSelected ? 13 : 11,
+            fontSize: isSelected ? 14 : 12,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
           ),
         ),
@@ -204,18 +281,106 @@ class CompassPainter extends CustomPainter {
       );
     }
 
-    // Inner ring - 八卦
-    const baguaNames = ['离', '坤', '兑', '乾', '坎', '艮', '震', '巽'];
-    const baguaAngles = [0.0, 45, 90, 135, 180, 225, 270, 315]; // clockwise from top
-    for (int i = 0; i < 8; i++) {
-      final angle = baguaAngles[i] * math.pi / 180;
-      final textR = radius * 0.30;
+    // ========== 内盘 ==========
+    // 天池（中心）
+    final poolPaint = Paint()
+      ..color = gold.withAlpha(100)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, radius * 0.12, poolPaint);
+
+    // 十二长生（内盘第一圈）
+    for (int i = 0; i < kShiErChangSheng.length; i++) {
+      final s = kShiErChangSheng[i];
+      final angle = double.parse(s['angle']!) * math.pi / 180;
+      final textR = radius * 0.32;
+
       final tp = TextPainter(
         text: TextSpan(
-          text: baguaNames[i],
+          text: s['name']!,
+          style: TextStyle(
+            color: textColor.withAlpha(180),
+            fontSize: 9,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        textAlign: TextAlign.center,
+      )..layout();
+      tp.paint(
+        canvas,
+        Offset(
+          center.dx + textR * math.sin(angle) - tp.width / 2,
+          center.dy - textR * math.cos(angle) - tp.height / 2,
+        ),
+      );
+    }
+
+    // 地支（内盘第二圈）
+    for (int i = 0; i < kEarthlyBranches.length; i++) {
+      final b = kEarthlyBranches[i];
+      final angle = double.parse(b['angle']!) * math.pi / 180;
+      final textR = radius * 0.38;
+
+      final tp = TextPainter(
+        text: TextSpan(
+          text: b['name']!,
+          style: TextStyle(
+            color: textColor.withAlpha(200),
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        textAlign: TextAlign.center,
+      )..layout();
+      tp.paint(
+        canvas,
+        Offset(
+          center.dx + textR * math.sin(angle) - tp.width / 2,
+          center.dy - textR * math.cos(angle) - tp.height / 2,
+        ),
+      );
+    }
+
+    // 天干（内盘第三圈）
+    for (int i = 0; i < kHeavenlyStems.length; i++) {
+      final s = kHeavenlyStems[i];
+      final angle = double.parse(s['angle']!) * math.pi / 180;
+      final textR = radius * 0.44;
+
+      final tp = TextPainter(
+        text: TextSpan(
+          text: s['name']!,
+          style: TextStyle(
+            color: textColor.withAlpha(200),
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        textAlign: TextAlign.center,
+      )..layout();
+      tp.paint(
+        canvas,
+        Offset(
+          center.dx + textR * math.sin(angle) - tp.width / 2,
+          center.dy - textR * math.cos(angle) - tp.height / 2,
+        ),
+      );
+    }
+
+    // 先天八卦（内盘第四圈）
+    for (int i = 0; i < kXianTianBagua.length; i++) {
+      final b = kXianTianBagua[i];
+      final angle = double.parse(b['angle']!) * math.pi / 180;
+      final textR = radius * 0.50;
+
+      final tp = TextPainter(
+        text: TextSpan(
+          text: b['symbol']!,
           style: TextStyle(
             color: gold,
-            fontSize: 10,
+            fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -231,18 +396,36 @@ class CompassPainter extends CustomPainter {
       );
     }
 
-    // Center - 太极
-    final taiPaint = Paint()..color = gold.withAlpha(100);
-    canvas.drawCircle(center, radius * 0.12, taiPaint);
-    final tp = TextPainter(
-      text: const TextSpan(
-        text: '太极',
-        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-      ),
-      textDirection: TextDirection.ltr,
-      textAlign: TextAlign.center,
-    )..layout();
-    tp.paint(canvas, Offset(center.dx - tp.width / 2, center.dy - tp.height / 2));
+    // ========== 阴阳鱼 ==========
+    // 白鱼（阳）
+    final yangPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius * 0.12),
+      math.pi,
+      math.pi,
+      true,
+      yangPaint,
+    );
+
+    // 黑鱼（阴）
+    final yinPaint = Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.fill;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius * 0.12),
+      0,
+      math.pi,
+      false,
+      yinPaint,
+    );
+
+    // 阴阳鱼中心点
+    final centerDotPaint = Paint()
+      ..color = gold
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, radius * 0.04, centerDotPaint);
   }
 
   @override
