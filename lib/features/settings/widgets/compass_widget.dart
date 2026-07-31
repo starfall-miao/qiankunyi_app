@@ -119,7 +119,12 @@ class _CompassWidgetState extends State<CompassWidget> {
 
     return LayoutBuilder(
       builder: (ctx, constraints) {
-        final size = math.min(constraints.maxWidth, 320.0).toDouble();
+        // 基于可用宽/高自适应：size = min(可用宽, 可用高, 480)。
+        // 桌面宽屏可放大至 480，手机竖屏约 320~360，横屏/小窗取较小者防溢出。
+        final double size = math.min(
+          math.min(constraints.maxWidth, constraints.maxHeight),
+          480.0,
+        );
         return GestureDetector(
           onTapDown: (details) {
             final center = size / 2;

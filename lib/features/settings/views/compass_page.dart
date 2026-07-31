@@ -2,6 +2,7 @@
 /// 用户点击设置页「小工具 → 罗盘」后跳转到此页
 library;
 
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../widgets/compass_widget.dart';
 
@@ -25,25 +26,40 @@ class CompassPage extends StatelessWidget {
       ),
       backgroundColor: bg,
       body: SafeArea(
-        child: Column(
-          children: [
-            const Spacer(flex: 1),
-            // 罗盘控件
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: const CompassWidget(),
-            ),
-            const SizedBox(height: 16),
-            // 说明文字
-            Text(
-              '点击方位查看详细信息',
-              style: TextStyle(
-                fontSize: 13,
-                color: t.withAlpha(150),
+        child: LayoutBuilder(
+          builder: (ctx, constraints) {
+            // 底部说明文字预留区：16(SizedBox) + 约20(文字) + 16(底部边距)
+            const double hintBlock = 52.0;
+            // 罗盘基于 min(可用宽-32 边距, 可用高-说明区) 自适应，上限 480，下限 100，
+            // 桌面宽屏可放大至 480，手机竖屏/横屏取较小者居中显示且不溢出。
+            final double size = math.max(
+              math.min(
+                math.min(constraints.maxWidth - 32, constraints.maxHeight - hintBlock),
+                480.0,
               ),
-            ),
-            const Spacer(flex: 1),
-          ],
+              100.0,
+            );
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: size,
+                    height: size,
+                    child: const CompassWidget(),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '点击方位查看详细信息',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: t.withAlpha(150),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
