@@ -5,7 +5,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -703,26 +702,13 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
       if (byteData == null) return;
       final pngBytes = byteData.buffer.asUint8List();
 
-      // Show save dialog with image preview
-      final picker = FilePicker.platform;
-      if (picker == null) {
-        // Fallback to save to temp directory
-        final tempDir = await getTemporaryDirectory();
-        final file = File(
-          '${tempDir.path}/qiankunyi_${DateTime.now().millisecondsSinceEpoch}.png',
-        );
-        await file.writeAsBytes(pngBytes);
-        if (ctx.mounted) {
-          ScaffoldMessenger.of(ctx).showSnackBar(
-            SnackBar(content: Text('截图已保存: ${file.path}')),
-          );
-        }
-        return;
-      }
-
-      final suggestedPath = picker.platformPath;
+      // Let user choose save directory
+      final directory = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: '选择保存目录',
+      );
+      if (directory == null || directory.isEmpty) return;
       final fileName = 'qiankunyi_${DateTime.now().millisecondsSinceEpoch}.png';
-      final file = File('$suggestedPath/$fileName');
+      final file = File('$directory/$fileName');
 
       // Show image preview dialog
       if (ctx.mounted) {
