@@ -107,8 +107,10 @@ class _BaziPageState extends State<BaziPage> {
                       _log.info('八字排盘', '打开日期选择器');
                       final d = await showDialog<DateTime>(
                         context: context,
+                        useSafeArea: true,
                         builder: (_) => const CalendarPickerDialog(),
                       );
+                      if (!mounted) return;
                       if (d != null) {
                         _log.info('八字排盘', '选择日期: $d');
                         setState(() => _birth = d);

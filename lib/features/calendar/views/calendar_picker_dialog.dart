@@ -44,38 +44,48 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
         borderRadius: BorderRadius.circular(16),
       ),
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      child: StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          final yearGanZhi =
-              _cal.days.isNotEmpty ? _cal.days.first.yearGanZhi : '';
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ── 顶部：干支年号 ──
-              _buildHeader(yearGanZhi, p, t, isDark),
-              // ── 月份导航（仅箭头）──
-              _buildNav(setDialogState, p, t),
-              // ── 星期表头 ──
-              _buildWeekdayHeader(p, t),
-              // ── 日期网格 ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
-                child: _buildGrid(setDialogState, ctx, p, t),
-              ),
-              // ── 底部按钮 ──
-              _buildActions(ctx, setDialogState, p, t),
-              // ── 错误提示 ──
-              if (_cal.hasError)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: Text(
-                    '⚠ 数据异常，部分日期可能不可用',
-                    style: TextStyle(fontSize: 11, color: Colors.deepOrange.shade400),
+      child: ConstrainedBox(
+        // 限制对话框最大高度，避免小屏/横屏/桌面小窗口下内容溢出屏幕导致"点了没反应"
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.88,
+        ),
+        child: SafeArea(
+          child: StatefulBuilder(
+            builder: (ctx, setDialogState) {
+              final yearGanZhi =
+                  _cal.days.isNotEmpty ? _cal.days.first.yearGanZhi : '';
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ── 顶部：干支年号 ──
+                  _buildHeader(yearGanZhi, p, t, isDark),
+                  // ── 月份导航（仅箭头）──
+                  _buildNav(setDialogState, p, t),
+                  // ── 星期表头 ──
+                  _buildWeekdayHeader(p, t),
+                  // ── 日期网格：Flexible + 滚动视图，高度不足时可滚动而非溢出 ──
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+                      child: _buildGrid(setDialogState, ctx, p, t),
+                    ),
                   ),
-                ),
-            ],
-          );
-        },
+                  // ── 底部按钮 ──
+                  _buildActions(ctx, setDialogState, p, t),
+                  // ── 错误提示 ──
+                  if (_cal.hasError)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      child: Text(
+                        '⚠ 数据异常，部分日期可能不可用',
+                        style: TextStyle(fontSize: 11, color: Colors.deepOrange.shade400),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -163,11 +173,11 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
       );
     }
 
-    // 填充空白以对齐星期
-    final first = _cal.days.isNotEmpty ? _cal.days.first.weekday : 0;
+    // 填充空白以对齐星期（0=周一，前面补 weekday 个空格子）
+    final first = _cal.days.first.weekday;
     final List<Widget> cells = [];
     for (int i = 0; i < first; i++) {
-      cells.add(const Expanded(child: SizedBox()));
+      cells.add(const SizedBox());
     }
     for (final day in _cal.days) {
       cells.add(_DayCell(
@@ -180,11 +190,15 @@ class _CalendarPickerDialogState extends State<CalendarPickerDialog> {
         },
       ));
     }
-    return GridView.count(
+    // 固定每格高度 mainAxisExtent，避免 childAspectRatio 在小屏下把格子压得过矮
+    // 导致单元格内容溢出；FittedBox 兜底缩放保证不出现黄黑条纹。
+    return GridView(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 7,
-      childAspectRatio: 0.95,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 7,
+        mainAxisExtent: 46,
+      ),
       children: cells,
     );
   }
@@ -245,20 +259,25 @@ class _DayCell extends StatelessWidget {
           color: isToday ? primary.withAlpha(200) : null,
           borderRadius: BorderRadius.circular(6),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('${day.gregorianDate.day}',
-                style: TextStyle(fontSize: 14, fontWeight: isToday ? FontWeight.bold : FontWeight.w500, color: dateColor)),
-            Text(day.lunarDate.dayChinese,
-                style: TextStyle(fontSize: 8, color: isToday ? Colors.white.withAlpha(200) : textColor.withAlpha(120))),
-            Text(day.dayGanZhi,
-                style: TextStyle(fontSize: 7, color: isToday ? Colors.white.withAlpha(180) : textColor.withAlpha(80))),
-            if (day.solarTerm != null)
-              Text(day.solarTerm!,
-                  style: TextStyle(fontSize: 6, color: isToday ? Colors.white.withAlpha(200) : Colors.orange.withAlpha(180),
-                      fontWeight: FontWeight.w600)),
-          ],
+        // FittedBox 保证内容在小格内等比缩放，不产生 RenderFlex overflow
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('${day.gregorianDate.day}',
+                  style: TextStyle(fontSize: 14, fontWeight: isToday ? FontWeight.bold : FontWeight.w500, color: dateColor)),
+              Text(day.lunarDate.dayChinese,
+                  style: TextStyle(fontSize: 8, color: isToday ? Colors.white.withAlpha(200) : textColor.withAlpha(120))),
+              Text(day.dayGanZhi,
+                  style: TextStyle(fontSize: 7, color: isToday ? Colors.white.withAlpha(180) : textColor.withAlpha(80))),
+              if (day.solarTerm != null)
+                Text(day.solarTerm!,
+                    style: TextStyle(fontSize: 6, color: isToday ? Colors.white.withAlpha(200) : Colors.orange.withAlpha(180),
+                        fontWeight: FontWeight.w600)),
+            ],
+          ),
         ),
       ),
     );
