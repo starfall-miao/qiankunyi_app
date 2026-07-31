@@ -53,7 +53,18 @@ const _monthZhiWuXing = {
 };
 
 /// 计算大运（顺排/逆排）
-List<DaYun> _calcDaYun(String yearGan, String monthGan, String monthZhi, bool isMale) {
+/// - [birth] 公历出生日期（用于真实起运年龄计算）
+/// - [yearGan] 年干，用于阳年/阴年判定
+/// - [monthGan] 月干，大运干支起点
+/// - [monthZhi] 月支，大运干支起点
+/// - [isMale] true=男 false=女
+List<DaYun> _calcDaYun(
+  String yearGan,
+  String monthGan,
+  String monthZhi,
+  bool isMale,
+  DateTime birth,
+) {
   // 阳年/阴年判定（年干阴阳）
   final yangGan = ['甲', '丙', '戊', '庚', '壬'];
   final isYangYear = yangGan.contains(yearGan);
@@ -61,7 +72,9 @@ List<DaYun> _calcDaYun(String yearGan, String monthGan, String monthZhi, bool is
   // 顺排：阳男阴女，逆排：阴男阳女
   final shunNi = isYangYear ^ !isMale;
 
-  // 简化大运
+  // 真实起运年龄（出生日到最近节的整数天数 ÷ 3，向下取整）
+  final qiYunAge = _calcQiYunAge(birth, shunNi);
+
   final result = <DaYun>[];
   final baseGanIdx = _tianGanCN.indexOf(monthGan);
   final baseZhiIdx = _diZhiCN.indexOf(monthZhi);
@@ -71,7 +84,7 @@ List<DaYun> _calcDaYun(String yearGan, String monthGan, String monthZhi, bool is
     final zhiIdx = shunNi ? (baseZhiIdx + i) % 12 : (baseZhiIdx - i + 12) % 12;
     final gan = _tianGanCN[ganIdx];
     final zhi = _diZhiCN[zhiIdx];
-    final startAge = (i + 1) * 10;
+    final startAge = qiYunAge + i * 10;
     result.add(DaYun(
       startAge: startAge,
       ganZhi: '$gan$zhi',
@@ -80,6 +93,31 @@ List<DaYun> _calcDaYun(String yearGan, String monthGan, String monthZhi, bool is
     ));
   }
   return result;
+}
+
+/// 计算真实起运年龄（整数岁，向下取整）
+/// 命理规则：3 天折合 1 岁，1 天折合 4 个月。
+/// - 顺排（阳男阴女）：从出生日算到**下一个节**（立春/惊蛰/清明等 12 节，非中气）的天数 ÷ 3
+/// - 逆排（阴男阳女）：从出生日算到**上一个节**的天数 ÷ 3
+/// 出生日恰逢节气时，顺排取下一个节、逆排取上一个节（从偏移 1 天开始扫描）。
+/// 返回整数岁（余数月份向下取整舍弃）；计算失败时回退默认值 10。
+int _calcQiYunAge(DateTime birth, bool shunNi) {
+  try {
+    // 节气间隔约 15 天，前后扫描 45 天必然能覆盖到最近的节
+    const maxScanDays = 45;
+    for (var offset = 1; offset <= maxScanDays; offset++) {
+      final dt = birth.add(Duration(days: shunNi ? offset : -offset));
+      final solar = tyme.SolarDay.fromYmd(dt.year, dt.month, dt.day);
+      final termDay = solar.getTermDay();
+      // dayIndex == 0 表示当天是节气日；isJie() 表示是 12 节之一（非中气）
+      if (termDay.dayIndex == 0 && termDay.getSolarTerm().isJie()) {
+        return offset ~/ 3;
+      }
+    }
+  } catch (_) {
+    // 节气数据异常时回退到旧默认值，避免排盘失败
+  }
+  return 10;
 }
 
 /// 计算五行旺衰（根据月令）
@@ -270,8 +308,8 @@ class BaiZiEngine {
       cangGan: cangGanHour,
     );
 
-    // 大运
-    final daYun = _calcDaYun(yearGan, monthGan, monthZhi, isMale);
+    // 大运（传入出生日期以计算真实起运年龄）
+    final daYun = _calcDaYun(yearGan, monthGan, monthZhi, isMale, birth);
 
     // 流年（当年）
     final now = DateTime.now();
