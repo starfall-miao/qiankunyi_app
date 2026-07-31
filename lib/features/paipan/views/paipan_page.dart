@@ -289,7 +289,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         // 排盘结果
         FadeTransition(
           opacity: _fadeAnim,
-          child: pr.liuyaoResult != null ? Column(
+          child: lr != null ? Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
           RepaintBoundary(
@@ -807,19 +807,26 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
           FilledButton(
             onPressed: () {
               if (titleCtrl.text.trim().isEmpty) return;
-              final cm = CaseModel.fromPaipanResult(
-                result: result,
-                title: titleCtrl.text.trim(),
-                notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
-                duanYu: duanYuCtrl.text.trim().isEmpty ? null : duanYuCtrl.text.trim(),
-              );
-              context.read<CaseProvider>().addCase(cm);
-              _log.info('保存卦例: ${cm.title}');
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('已保存到卦例库，可到卦例页查看详情和 AI 解卦'),
-                    duration: Duration(seconds: 3)),
-              );
+              try {
+                final cm = CaseModel.fromPaipanResult(
+                  result: result,
+                  title: titleCtrl.text.trim(),
+                  notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
+                  duanYu: duanYuCtrl.text.trim().isEmpty ? null : duanYuCtrl.text.trim(),
+                );
+                context.read<CaseProvider>().addCase(cm);
+                _log.info('保存卦例: ${cm.title}');
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('已保存到卦例库，可到卦例页查看详情和 AI 解卦'),
+                      duration: Duration(seconds: 3)),
+                );
+              } catch (e, st) {
+                _log.error('保存卦例失败', '$e\n$st');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('保存卦例失败: $e')),
+                );
+              }
             },
             child: const Text('保存'),
           ),
