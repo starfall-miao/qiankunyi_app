@@ -1,15 +1,14 @@
 // 排盘主页 — 全功能版
-import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/utils/logger.dart';
+import '../../../shared/widgets/save_image_dialog.dart';
 import '../providers/paipan_provider.dart';
 import '../../cases/providers/case_provider.dart';
 import '../../cases/models/case_models.dart';
@@ -685,7 +684,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     }
   }
 
-  /// 截图排盘结果并分享
+  /// 截图排盘结果并保存（浮窗预览 → 文件名编辑 → 选择目录 → 写入）
   Future<void> _saveImage(GlobalKey key, BuildContext ctx) async {
     try {
       final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
@@ -702,64 +701,15 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
       if (byteData == null) return;
       final pngBytes = byteData.buffer.asUint8List();
 
-      // Let user choose save directory
-      final directory = await FilePicker.platform.getDirectoryPath(
-        dialogTitle: '选择保存目录',
+      // 先弹出预览浮窗（可编辑文件名），点保存后才选择目录并写入
+      final savedPath = await saveImageWithDialog(
+        context: ctx,
+        pngBytes: pngBytes,
       );
-      if (directory == null || directory.isEmpty) return;
-      final fileName = 'qiankunyi_${DateTime.now().millisecondsSinceEpoch}.png';
-      final file = File('$directory/$fileName');
-
-      // Show image preview dialog
+      if (savedPath == null) return; // 用户在浮窗或目录选择中取消，不写文件
       if (ctx.mounted) {
-        showDialog(
-          context: ctx,
-          builder: (dialogCtx) => AlertDialog(
-            title: const Text('保存图片'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('文件名：'),
-                TextField(
-                  controller: TextEditingController(text: fileName),
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.image),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text('预览：'),
-                Image.memory(pngBytes, fit: BoxFit.contain),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogCtx).pop(),
-                child: const Text('取消'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  Navigator.of(dialogCtx).pop();
-                  try {
-                    await file.writeAsBytes(pngBytes);
-                    if (ctx.mounted) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(
-                        SnackBar(content: Text('截图已保存: ${file.path}')),
-                      );
-                    }
-                  } catch (e) {
-                    if (ctx.mounted) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(
-                        SnackBar(content: Text('保存失败: $e')),
-                      );
-                    }
-                  }
-                },
-                child: const Text('保存'),
-              ),
-            ],
-          ),
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(content: Text('截图已保存: $savedPath')),
         );
       }
     } catch (e) {

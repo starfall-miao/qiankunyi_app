@@ -1,16 +1,15 @@
 /// 八字排盘页面 — 国风卡片风格，与六爻/梅花一致
 library;
 
-import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/utils/logger.dart';
+import '../../../shared/widgets/save_image_dialog.dart';
 import '../../calendar/views/calendar_picker_dialog.dart';
 import '../../cases/models/case_models.dart';
 import '../../cases/providers/case_provider.dart';
@@ -594,7 +593,7 @@ class _BaziPageState extends State<BaziPage> {
     );
   }
 
-  /// 截图排盘结果并保存
+  /// 截图排盘结果并保存（浮窗预览 → 文件名编辑 → 选择目录 → 写入）
   Future<void> _saveImage(GlobalKey key, BuildContext ctx) async {
     try {
       final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
@@ -610,12 +609,16 @@ class _BaziPageState extends State<BaziPage> {
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) return;
       final pngBytes = byteData.buffer.asUint8List();
-      final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/qiankunyi_bazi_${DateTime.now().millisecondsSinceEpoch}.png');
-      await file.writeAsBytes(pngBytes);
+
+      // 先弹出预览浮窗（可编辑文件名），点保存后才选择目录并写入
+      final savedPath = await saveImageWithDialog(
+        context: ctx,
+        pngBytes: pngBytes,
+      );
+      if (savedPath == null) return; // 用户在浮窗或目录选择中取消，不写文件
       if (ctx.mounted) {
         ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(content: Text('截图已保存: ${file.path}')),
+          SnackBar(content: Text('截图已保存: $savedPath')),
         );
       }
     } catch (e) {
