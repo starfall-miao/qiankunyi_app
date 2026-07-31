@@ -64,6 +64,9 @@ dependencies:
   # File picker for save dialog
   file_picker: ^8.1.6
 
+  # Compass heading sensor (指南针方位角，0-360°，0=北)
+  flutter_compass: ^0.8.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

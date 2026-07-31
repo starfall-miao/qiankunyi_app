@@ -1,7 +1,11 @@
 /// 完整二十四山罗盘 — CustomPainter 绘制，支持点击查看详细信息
+/// 支持手机指南针传感器（flutter_compass）：有方位角时盘面随真实方位旋转，
+/// 无传感器/未授权时降级为手动点击模式。
 library;
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 
 import '../../../core/utils/logger.dart';
 
@@ -113,6 +117,61 @@ class CompassWidget extends StatefulWidget {
 class _CompassWidgetState extends State<CompassWidget> {
   int? _selectedIndex;
 
+  // ===== 指南针传感器状态 =====
+  StreamSubscription<CompassEvent>? _compassSub;
+  double? _heading; // 当前方位角（0-360°，0=北），null 表示无传感器/未生效
+
+  @override
+  void initState() {
+    super.initState();
+    _initCompass();
+  }
+
+  @override
+  void dispose() {
+    _compassSub?.cancel();
+    super.dispose();
+  }
+
+  /// 订阅指南针传感器流；桌面/网页/无磁力计设备 FlutterCompass.events 为 null，
+  /// 自动降级为手动点击模式（不崩溃）。
+  void _initCompass() {
+    try {
+      final events = FlutterCompass.events;
+      if (events == null) {
+        Logger.instance.info('罗盘指南针', '设备不支持指南针传感器，降级为点击模式');
+        return;
+      }
+      _compassSub = events.listen(
+        (event) {
+          final h = event.heading;
+          if (!mounted) return;
+          if (h == null || h < 0) {
+            // 无效方位角（Android 无传感器时可能返回 null/-1）：回到点击模式
+            if (_heading != null) {
+              setState(() => _heading = null);
+            }
+            return;
+          }
+          final norm = h % 360;
+          // 阈值 0.2°：避免传感器高频抖动造成无谓重建
+          if ((norm - (_heading ?? 0)).abs() > 0.2) {
+            setState(() => _heading = norm);
+          }
+        },
+        onError: (Object e) {
+          Logger.instance.error('罗盘指南针', '传感器流错误: $e');
+          if (mounted && _heading != null) {
+            setState(() => _heading = null);
+          }
+        },
+      );
+      Logger.instance.info('罗盘指南针', '已订阅指南针传感器流');
+    } catch (e) {
+      Logger.instance.error('罗盘指南针', '初始化失败: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -121,53 +180,117 @@ class _CompassWidgetState extends State<CompassWidget> {
 
     return LayoutBuilder(
       builder: (ctx, constraints) {
-        // 基于可用宽/高自适应：size = min(可用宽, 可用高, 480)。
+        // 基于可用宽/高自适应：size = min(可用宽, 可用高-状态行, 480)。
         // 桌面宽屏可放大至 480，手机竖屏约 320~360，横屏/小窗取较小者防溢出。
-        final double size = math.min(
-          math.min(constraints.maxWidth, constraints.maxHeight),
-          480.0,
+        final double size = math.max(
+          math.min(
+            math.min(constraints.maxWidth, constraints.maxHeight - 26),
+            480.0,
+          ),
+          60.0,
         );
-        return GestureDetector(
-          onTapDown: (details) {
-            final center = size / 2;
-            final dx = details.localPosition.dx - center;
-            final dy = details.localPosition.dy - center;
-            final dist = math.sqrt(dx * dx + dy * dy);
-            if (dist > size * 0.15 && dist < size * 0.48) {
-              double deg = math.atan2(dx, -dy) * 180 / math.pi;
-              if (deg < 0) deg += 360;
-              int best = 0;
-              double bestDiff = 360;
-              for (int i = 0; i < kTwentyFourMountains.length; i++) {
-                final a = double.parse(kTwentyFourMountains[i]['angle']!);
-                double diff = (deg - a).abs();
-                if (diff > 180) diff = 360 - diff;
-                if (diff < bestDiff) {
-                  bestDiff = diff;
-                  best = i;
-                }
-              }
-              setState(() => _selectedIndex = best);
-              final tapped = kTwentyFourMountains[best];
-              Logger.instance.info('罗盘点击', '选中: ${tapped['name']} 角度${tapped['angle']}°');
-              _showInfo(ctx, best, isDark, t, gold);
-            }
-          },
-          child: SizedBox(
-            width: size,
-            height: size,
-            child: CustomPaint(
-              painter: CompassPainter(
-                selectedIndex: _selectedIndex,
-                isDark: isDark,
-                textColor: t,
-                gold: gold,
+        final heading = _heading;
+        // 盘面旋转 -heading：使盘面「子」(0°/北) 对准真实北方，
+        // 设备正前方（屏幕顶部）指示的盘面刻度即当前方位。
+        final angle = heading != null ? -heading * math.pi / 180 : 0.0;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              alignment: Alignment.topCenter,
+              children: [
+                GestureDetector(
+                  onTapDown: (details) =>
+                      _onTapDown(ctx, details, size, isDark, t, gold),
+                  child: Transform.rotate(
+                    angle: angle,
+                    child: SizedBox(
+                      width: size,
+                      height: size,
+                      child: CustomPaint(
+                        painter: CompassPainter(
+                          selectedIndex: _selectedIndex,
+                          isDark: isDark,
+                          textColor: t,
+                          gold: gold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // 固定前方指示针（不随盘面旋转）：指向屏幕顶部 = 设备正前方，
+                // 指针所指的盘面刻度即手机朝向的方位。
+                if (heading != null)
+                  Positioned(
+                    top: 0,
+                    child: Icon(
+                      Icons.arrow_drop_down,
+                      size: 32,
+                      color: Colors.red.shade400,
+                    ),
+                  ),
+              ],
+            ),
+            // 状态行：有方位角显示当前朝向，无则提示点击
+            SizedBox(
+              height: 22,
+              child: Text(
+                heading != null
+                    ? '方位角 ${heading.toStringAsFixed(1)}° · 面向「${_headingMountainName(heading)}」'
+                    : '点击方位查看详细信息',
+                style: TextStyle(fontSize: 12, color: t.withAlpha(180)),
               ),
             ),
-          ),
+          ],
         );
       },
     );
+  }
+
+  /// 点击选方位：命中环带内计算点击角度（有方位角时需加回盘面旋转量），
+  /// 匹配最近的二十四山。
+  void _onTapDown(
+      BuildContext ctx, TapDownDetails details, double size, bool isDark,
+      Color t, Color gold) {
+    final center = size / 2;
+    final dx = details.localPosition.dx - center;
+    final dy = details.localPosition.dy - center;
+    final dist = math.sqrt(dx * dx + dy * dy);
+    if (dist > size * 0.15 && dist < size * 0.48) {
+      double deg = math.atan2(dx, -dy) * 180 / math.pi;
+      if (deg < 0) deg += 360;
+      final heading = _heading;
+      if (heading != null) {
+        // 盘面已逆时针旋转 heading，点击处对应的盘面角度 = 屏幕角度 + heading
+        deg = (deg + heading) % 360;
+      }
+      final best = _nearestMountain(deg);
+      setState(() => _selectedIndex = best);
+      final tapped = kTwentyFourMountains[best];
+      Logger.instance.info('罗盘点击', '选中: ${tapped['name']} 角度${tapped['angle']}°');
+      _showInfo(ctx, best, isDark, t, gold);
+    }
+  }
+
+  /// 查找与角度最接近的二十四山索引（0-23）
+  int _nearestMountain(double deg) {
+    int best = 0;
+    double bestDiff = 360;
+    for (int i = 0; i < kTwentyFourMountains.length; i++) {
+      final a = double.parse(kTwentyFourMountains[i]['angle']!);
+      double diff = (deg - a).abs();
+      if (diff > 180) diff = 360 - diff;
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        best = i;
+      }
+    }
+    return best;
+  }
+
+  /// 方位角对应的二十四山名称
+  String _headingMountainName(double heading) {
+    return kTwentyFourMountains[_nearestMountain(heading % 360)]['name']!;
   }
 
   void _showInfo(BuildContext ctx, int index, bool dark, Color t, Color gold) {

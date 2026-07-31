@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSMotionUsageDescription</key>
+	<string>用于罗盘指南针指示方位</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>用于获取罗盘指南针方位角（仅在使用罗盘时）</string>
 </dict>
 </plist>

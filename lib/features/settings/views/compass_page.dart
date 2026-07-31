@@ -50,7 +50,7 @@ class CompassPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '点击方位查看详细信息',
+                    '手机平放时盘面随方位自动旋转；也可点击方位查看详细信息',
                     style: TextStyle(
                       fontSize: 13,
                       color: t.withAlpha(150),
