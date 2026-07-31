@@ -29,6 +29,8 @@ class BaziPage extends StatefulWidget {
 class _BaziPageState extends State<BaziPage> {
   final _log = Logger.instance;
   final _baziScreenshotKey = GlobalKey();
+  // 大运横向滚动控制器（供 Scrollbar 显示/拖拽滚动条）
+  final _daYunScrollCtrl = ScrollController();
   DateTime? _birth;
   bool _isMale = true;
   int _hourIndex = 6; // 默认为午时 (索引6)
@@ -38,6 +40,12 @@ class _BaziPageState extends State<BaziPage> {
     '辰时\n07-09', '巳时\n09-11', '午时\n11-13', '未时\n13-15',
     '申时\n15-17', '酉时\n17-19', '戌时\n19-21', '亥时\n21-23',
   ];
+
+  @override
+  void dispose() {
+    _daYunScrollCtrl.dispose();
+    super.dispose();
+  }
 
   // 五行色
   static const _wxColors = <String, Color>{
@@ -382,34 +390,53 @@ class _BaziPageState extends State<BaziPage> {
           // ── 大运 ──
           if (r.daYun.isNotEmpty) ...[
             _sectionHeader(p, '大运'),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: r.daYun.map((dy) {
-                  return Container(
-                    width: 68,
-                    margin: const EdgeInsets.only(right: 6),
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                    decoration: BoxDecoration(
-                      color: dark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: b.withAlpha(60)),
-                    ),
-                    child: Column(
-                      children: [
-                        Text('${dy.startAge}岁',
-                            style: TextStyle(
-                                fontSize: 11, color: t.withAlpha(150))),
-                        const SizedBox(height: 2),
-                        Text(dy.ganZhi,
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: t)),
-                      ],
-                    ),
-                  );
-                }).toList(),
+            // 桌面/窄屏可横向滚动：允许鼠标/触控板拖拽 + 可见滚动条可拖拽拇指，
+            // 避免外层垂直滚动吞掉水平滚动手势导致"显示不全且无法左右滑动"。
+            ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                dragDevices: {
+                  ui.PointerDeviceKind.touch,
+                  ui.PointerDeviceKind.mouse,
+                  ui.PointerDeviceKind.stylus,
+                  ui.PointerDeviceKind.trackpad,
+                },
+              ),
+              child: Scrollbar(
+                controller: _daYunScrollCtrl,
+                thumbVisibility: true,
+                interactive: true,
+                radius: const Radius.circular(8),
+                child: SingleChildScrollView(
+                  controller: _daYunScrollCtrl,
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: r.daYun.map((dy) {
+                      return Container(
+                        width: 68,
+                        margin: const EdgeInsets.only(right: 6),
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: dark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: b.withAlpha(60)),
+                        ),
+                        child: Column(
+                          children: [
+                            Text('${dy.startAge}岁',
+                                style: TextStyle(
+                                    fontSize: 11, color: t.withAlpha(150))),
+                            const SizedBox(height: 2),
+                            Text(dy.ganZhi,
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: t)),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),
