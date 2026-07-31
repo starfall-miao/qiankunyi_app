@@ -609,6 +609,7 @@ class _BaziPageState extends State<BaziPage> {
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) return;
       final pngBytes = byteData.buffer.asUint8List();
+      if (!ctx.mounted) return; // 截图/编码 await 后页面可能已销毁，避免跨 async 间隙使用 context
 
       // 先弹出预览浮窗（可编辑文件名），点保存后才选择目录并写入
       final savedPath = await saveImageWithDialog(
