@@ -1558,6 +1558,9 @@ class _AiChatSectionState extends State<_AiChatSection> {
   StreamSubscription<String>? _streamSub;
   /// 正在流式更新的 assistant 消息（对象引用定位，避免删除其它消息后索引偏移）
   AiMessage? _streamingMsg;
+  /// 本次流式是否已执行首次自动滚动：首个增量到达时滚到底一次（让用户看到
+  /// 回复开始）；之后仅当用户接近底部时跟随滚动，不打断上滑回看排盘/历史。
+  bool _autoScrolled = false;
 
   List<AiMessage> get _messages => _localMessages;
 
@@ -1734,6 +1737,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
     setState(() {
       _loading = true;
       _streaming = true;
+      _autoScrolled = false;
     });
     try {
       // 关键步骤日志：开始请求（model、消息数；不打印 apiKey，避免明文泄漏）
@@ -1848,7 +1852,8 @@ class _AiChatSectionState extends State<_AiChatSection> {
     setState(() {
       _localMessages = [..._localMessages, msg];
     });
-    _scrollToBottom();
+    // 不在此处滚动：AI 解卦开始时保持用户当前阅读位置（排盘内容不被推走），
+    // 首个回复增量到达后再滚动（见 _appendStreamPiece），避免"内容瞬间消失"。
     return msg;
   }
 
@@ -1866,7 +1871,14 @@ class _AiChatSectionState extends State<_AiChatSection> {
       _localMessages[idx] = updated;
     });
     _streamingMsg = updated;
-    _scrollToBottom();
+    if (!_autoScrolled) {
+      // 首个增量到达：滚到底一次，让用户看到回复开始（打字机效果）
+      _autoScrolled = true;
+      _scrollToBottom();
+    } else {
+      // 后续增量：仅当用户接近底部时跟随滚动，不打断上滑回看
+      _scrollToBottomIfNear();
+    }
   }
 
   /// 用完整内容替换占位 assistant 消息（回退非流式成功后）
@@ -1968,7 +1980,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
     setState(() {
       _localMessages = [..._localMessages, msg];
     });
-    _scrollToBottom();
+    // 不在此处滚动：消息入列不打断用户当前阅读位置（回复出现时再滚动）
     // 持久化时过滤 error 消息（错误气泡仅显示在界面上，不写入卦例）。
     // 使用 CaseProvider.updateAiMessages 基于 provider 最新状态合并，串行 await 避免竞态。
     final id = widget.caseModel.id;
@@ -2058,6 +2070,16 @@ class _AiChatSectionState extends State<_AiChatSection> {
         curve: Curves.easeOut,
       );
     });
+  }
+
+  /// 仅当用户接近底部时跟随滚动（聊天式）：流式增量期间用户若在上滑回看
+  /// 排盘/历史，不强制拉回底部；只有视口仍在底部附近（阈值 120px）才跟随。
+  void _scrollToBottomIfNear() {
+    final sc = widget.parentScrollController;
+    if (sc == null || !sc.hasClients) return;
+    if (sc.position.maxScrollExtent - sc.position.pixels < 120) {
+      _scrollToBottom();
+    }
   }
 
   void _showToast(String msg) {
