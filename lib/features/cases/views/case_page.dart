@@ -2,6 +2,7 @@
 /// 展示已保存的卦例列表，支持搜索、删除和详情查看
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
 
@@ -1520,6 +1521,10 @@ class _AiChatSectionState extends State<_AiChatSection> {
   final TextEditingController _questionCtrl = TextEditingController();
   bool _loading = false;
   List<AiMessage> _localMessages = [];
+  /// 当前流式订阅（AI 解卦/追问流式输出期间非 null）
+  StreamSubscription<String>? _streamSub;
+  /// 正在流式更新的 assistant 消息（对象引用定位，避免删除其它消息后索引偏移）
+  AiMessage? _streamingMsg;
 
   List<AiMessage> get _messages => _localMessages;
 
@@ -1543,6 +1548,9 @@ class _AiChatSectionState extends State<_AiChatSection> {
 
   @override
   void dispose() {
+    // 停止流式订阅，避免对已 dispose 的 State 继续 setState（cancel 后不再派发事件）
+    _streamSub?.cancel();
+    _streamSub = null;
     _questionCtrl.dispose();
     super.dispose();
   }
@@ -1553,54 +1561,22 @@ class _AiChatSectionState extends State<_AiChatSection> {
       _showToast('请先在设置中启用 AI 解卦');
       return;
     }
-    setState(() => _loading = true);
-    try {
-      final isBazi = widget.caseModel.caseType == CaseType.bazi;
-      final systemPrompt = isBazi
-          ? '你是一位精通八字命理的资深命理专家。请根据排盘信息进行详细分析。'
-          : '你是一位精通《周易》的资深术数专家。';
-      final prompt = _buildPromptForType();
-      final messages = <Map<String, String>>[
-        {'role': 'system', 'content': systemPrompt},
-        {'role': 'user', 'content': prompt},
-      ];
-      // 关键步骤日志：开始请求（model、消息数；不打印 apiKey，避免明文泄漏）
-      Logger.instance.info('AI解卦开始',
-          'model: ${sp.effectiveAiModel} | messages: ${messages.length}');
-      final result = await AiService().chat(
-        endpoint: sp.aiEndpoint,
-        apiKey: sp.aiApiKey,
-        model: sp.effectiveAiModel,
-        messages: messages,
-      );
-      if (result.success) {
-        Logger.instance.info('AI解卦成功', 'content长度: ${result.content.length}');
-        // 重新解卦语义：若当前对话中已无 AI 回复（旧回复已被删除），先清空旧消息，
-        // 再写入新的一对 '你'/'AI'，避免再次解卦时旧卡片与新卡片堆叠重复。
-        if (!_hasAssistantReply && _localMessages.isNotEmpty) {
-          setState(() => _localMessages = []);
-        }
-        // 完整 prompt 入历史（不截断，避免污染后续追问上下文）；
-        // 连续两次持久化用 await 串行化，避免并发写 SharedPreferences 竞态丢失
-        await _addAiMessage('user', prompt);
-        await _addAiMessage('assistant', result.content);
-        Logger.instance.info('AI解卦持久化完成', '当前消息数: ${_localMessages.length}');
-      } else {
-        Logger.instance.error('AI解卦失败',
-            'statusCode: ${result.statusCode ?? 'N/A'} 错误摘要: ${result.errorMessage}');
-        _addErrorMessage('解卦失败: ${result.errorMessage}');
-        _showToast('解卦失败: ${result.errorMessage}');
-      }
-    } catch (e) {
-      Logger.instance.error('AI解卦失败', '网络错误: $e');
-      _addErrorMessage('网络错误: $e');
-      _showToast('网络错误: $e');
-    } finally {
-      // 成功/失败/异常都复位 loading；弹窗已关闭时避免对已 dispose 的 State 调 setState
-      if (mounted) {
-        setState(() => _loading = false);
-      }
-    }
+    final isBazi = widget.caseModel.caseType == CaseType.bazi;
+    final systemPrompt = isBazi
+        ? '你是一位精通八字命理的资深命理专家。请根据排盘信息进行详细分析。'
+        : '你是一位精通《周易》的资深术数专家。';
+    final prompt = _buildPromptForType();
+    final messages = <Map<String, String>>[
+      {'role': 'system', 'content': systemPrompt},
+      {'role': 'user', 'content': prompt},
+    ];
+    await _runStreamingAi(
+      messages: messages,
+      userContent: prompt,
+      clearBefore: true,
+      logTag: 'AI解卦',
+      errPrefix: '解卦失败',
+    );
   }
 
   String _buildPromptForType() {
@@ -1684,24 +1660,187 @@ class _AiChatSectionState extends State<_AiChatSection> {
       _showToast('请先在设置中启用 AI 解卦');
       return;
     }
-    setState(() => _loading = true);
+    final isBazi = widget.caseModel.caseType == CaseType.bazi;
+    final systemPrompt = isBazi
+        ? '你是一位精通八字命理的资深命理专家。下面是对同一命盘的连续讨论。'
+        : '你是一位精通《周易》的资深术数专家。下面是对同一卦象的连续讨论。';
+    // 构建上下文：系统提示 + 完整历史消息 + 当前问题（错误消息不进入 AI 上下文）
+    final messages = <Map<String, String>>[
+      {'role': 'system', 'content': systemPrompt},
+      ..._messages
+          .where((m) => m.role == 'user' || m.role == 'assistant')
+          .map((m) => {'role': m.role, 'content': m.content}),
+      {'role': 'user', 'content': text},
+    ];
     _questionCtrl.clear();
+    await _runStreamingAi(
+      messages: messages,
+      userContent: text,
+      clearBefore: false,
+      logTag: 'AI追问',
+      errPrefix: '追问失败',
+    );
+  }
+
+  /// 流式 AI 请求统一流程（解卦 / 追问共用）：
+  /// 1. '你' 消息立即入列并持久化（用户问题完整保留）
+  /// 2. 创建空 assistant 占位（UI 显示'正在生成…'），订阅 chatStream 增量更新内容
+  /// 3. 流完成：持久化最终完整文本；流异常或无内容：自动回退非流式 chat()
+  Future<void> _runStreamingAi({
+    required List<Map<String, String>> messages,
+    required String userContent,
+    required bool clearBefore,
+    required String logTag,
+    required String errPrefix,
+  }) async {
+    final sp = context.read<SettingsProvider>();
+    setState(() => _loading = true);
     try {
-      final isBazi = widget.caseModel.caseType == CaseType.bazi;
-      final systemPrompt = isBazi
-          ? '你是一位精通八字命理的资深命理专家。下面是对同一命盘的连续讨论。'
-          : '你是一位精通《周易》的资深术数专家。下面是对同一卦象的连续讨论。';
-      // 构建上下文：系统提示 + 完整历史消息 + 当前问题（错误消息不进入 AI 上下文）
-      final messages = <Map<String, String>>[
-        {'role': 'system', 'content': systemPrompt},
-        ..._messages
-            .where((m) => m.role == 'user' || m.role == 'assistant')
-            .map((m) => {'role': m.role, 'content': m.content}),
-        {'role': 'user', 'content': text},
-      ];
-      // 关键步骤日志：开始追问（model、消息数；不打印 apiKey，避免明文泄漏）
-      Logger.instance.info('AI追问开始',
+      // 关键步骤日志：开始请求（model、消息数；不打印 apiKey，避免明文泄漏）
+      Logger.instance.info('$logTag开始',
           'model: ${sp.effectiveAiModel} | messages: ${messages.length}');
+      // 重新解卦语义：若当前对话中已无 AI 回复（旧回复已被删除），先清空旧消息，
+      // 再写入新的一对 '你'/'AI'，避免再次解卦时旧卡片与新卡片堆叠重复。
+      if (clearBefore && !_hasAssistantReply && _localMessages.isNotEmpty) {
+        setState(() => _localMessages = []);
+      }
+      // 用户问题立即入列并持久化
+      await _addAiMessage('user', userContent);
+      // 创建 assistant 占位消息（内容为空、UI 显示'正在生成…'）。
+      // 占位不立即持久化（避免流式中途刷新残留空/半成品消息），
+      // 只在流式完成后用最终完整文本持久化一次。
+      final placeholder = _createAssistantPlaceholder();
+      if (placeholder == null) return; // 弹窗已关闭
+      _streamingMsg = placeholder;
+
+      final stream = AiService().chatStream(
+        endpoint: sp.aiEndpoint,
+        apiKey: sp.aiApiKey,
+        model: sp.effectiveAiModel,
+        messages: messages,
+      );
+      var receivedAny = false;
+      _streamSub = stream.listen(
+        (piece) {
+          if (!mounted || _streamingMsg == null) return;
+          receivedAny = true;
+          _appendStreamPiece(piece);
+        },
+        onError: (Object e) {
+          if (!mounted) return;
+          _streamSub = null;
+          final msg = _streamingMsg;
+          _streamingMsg = null;
+          if (msg == null) {
+            // 占位已被用户删除：不再回退，直接复位 loading
+            setState(() => _loading = false);
+            return;
+          }
+          Logger.instance.error('$logTag流式失败', '流错误: $e');
+          _fallbackToNonStreaming(
+            msg: msg,
+            messages: messages,
+            logTag: logTag,
+            errPrefix: errPrefix,
+          );
+        },
+        onDone: () {
+          if (!mounted) return;
+          _streamSub = null;
+          final msg = _streamingMsg;
+          _streamingMsg = null;
+          if (msg == null) return; // 占位已被删除/取消
+          if (receivedAny && msg.content.trim().isNotEmpty) {
+            // 流式成功：完整内容已随增量拼好，持久化最终文本
+            Logger.instance.info('$logTag流式完成', 'content长度: ${msg.content.length}');
+            _persistAiMessages(logTag);
+            setState(() => _loading = false);
+          } else {
+            // 流正常结束但未产出内容 → 回退非流式 chat()（网关不支持流式等场景）
+            Logger.instance.error('$logTag流式无内容', '回退非流式 chat()');
+            _fallbackToNonStreaming(
+              msg: msg,
+              messages: messages,
+              logTag: logTag,
+              errPrefix: errPrefix,
+            );
+          }
+        },
+      );
+    } catch (e) {
+      // 订阅创建阶段的异常（构建请求/网络连接失败等）
+      Logger.instance.error('$logTag失败', '网络错误: $e');
+      _handleStreamFailure(_streamingMsg, '$errPrefix: 网络错误: $e');
+      _streamingMsg = null;
+      _showToast('$errPrefix: 网络错误: $e');
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// 创建空的 assistant 占位消息（不持久化，流完成后再写最终文本）
+  AiMessage? _createAssistantPlaceholder() {
+    if (!mounted) return null;
+    final msg = AiMessage(role: 'assistant', content: '');
+    setState(() {
+      _localMessages = [..._localMessages, msg];
+    });
+    _scrollToBottom();
+    return msg;
+  }
+
+  /// 把流式增量文本追加到正在生成的 assistant 消息（打字机效果）。
+  /// 通过对象引用定位消息，删除其它消息导致的索引偏移不影响追加。
+  void _appendStreamPiece(String piece) {
+    if (!mounted) return;
+    final msg = _streamingMsg;
+    if (msg == null) return;
+    final idx = _localMessages.indexOf(msg);
+    if (idx < 0) return; // 占位已被删除
+    final updated = AiMessage(role: 'assistant', content: msg.content + piece);
+    setState(() {
+      _localMessages = [..._localMessages];
+      _localMessages[idx] = updated;
+    });
+    _streamingMsg = updated;
+    _scrollToBottom();
+  }
+
+  /// 用完整内容替换占位 assistant 消息（回退非流式成功后）
+  void _replaceAssistantContent(AiMessage msg, String content) {
+    if (!mounted) return;
+    final idx = _localMessages.indexOf(msg);
+    if (idx < 0) return;
+    setState(() {
+      _localMessages = [..._localMessages];
+      _localMessages[idx] = AiMessage(role: 'assistant', content: content);
+    });
+    _scrollToBottom();
+  }
+
+  /// 流式失败处理：移除空占位 assistant 消息，追加错误气泡（不持久化 error）
+  void _handleStreamFailure(AiMessage? msg, String display) {
+    if (!mounted) return;
+    if (msg != null) {
+      final idx = _localMessages.indexOf(msg);
+      if (idx >= 0) {
+        setState(() {
+          _localMessages = [..._localMessages]..removeAt(idx);
+        });
+      }
+    }
+    _addErrorMessage(display);
+  }
+
+  /// 流式失败/无内容时回退到原非流式 chat()，一次性返回完整内容，
+  /// 避免网关不支持流式时用户干等或看到空白卡片。
+  Future<void> _fallbackToNonStreaming({
+    required AiMessage msg,
+    required List<Map<String, String>> messages,
+    required String logTag,
+    required String errPrefix,
+  }) async {
+    final sp = context.read<SettingsProvider>();
+    try {
       final result = await AiService().chat(
         endpoint: sp.aiEndpoint,
         apiKey: sp.aiApiKey,
@@ -1709,25 +1848,45 @@ class _AiChatSectionState extends State<_AiChatSection> {
         messages: messages,
       );
       if (result.success) {
-        Logger.instance.info('AI追问成功', 'content长度: ${result.content.length}');
-        await _addAiMessage('user', text);
-        await _addAiMessage('assistant', result.content);
-        Logger.instance.info('AI追问持久化完成', '当前消息数: ${_localMessages.length}');
+        Logger.instance.info('$logTag回退成功', 'content长度: ${result.content.length}');
+        _replaceAssistantContent(msg, result.content);
+        await _persistAiMessages(logTag);
       } else {
-        Logger.instance.error('AI追问失败',
+        Logger.instance.error('$logTag回退失败',
             'statusCode: ${result.statusCode ?? 'N/A'} 错误摘要: ${result.errorMessage}');
-        _addErrorMessage('追问失败: ${result.errorMessage}');
-        _showToast('追问失败: ${result.errorMessage}');
+        _handleStreamFailure(msg, '$errPrefix: ${result.errorMessage}');
+        _showToast('$errPrefix: ${result.errorMessage}');
       }
     } catch (e) {
-      Logger.instance.error('AI追问失败', '网络错误: $e');
-      _addErrorMessage('网络错误: $e');
-      _showToast('网络错误: $e');
+      Logger.instance.error('$logTag回退失败', '网络错误: $e');
+      _handleStreamFailure(msg, '$errPrefix: 网络错误: $e');
+      _showToast('$errPrefix: 网络错误: $e');
     } finally {
       // 成功/失败/异常都复位 loading；弹窗已关闭时避免对已 dispose 的 State 调 setState
       if (mounted) {
         setState(() => _loading = false);
       }
+    }
+  }
+
+  /// 持久化当前消息列表（过滤 error；流式期间不调用，只存最终完整文本）
+  Future<void> _persistAiMessages(String logTag) async {
+    // 弹窗已关闭（widget 已 dispose）时不再访问 context / 持久化
+    if (!mounted) return;
+    final id = widget.caseModel.id;
+    if (id == null) {
+      Logger.instance.error('AI解卦', '卦例 id 为空，AI 消息仅显示不持久化');
+      return;
+    }
+    try {
+      final provider = context.read<CaseProvider>();
+      await provider.updateAiMessages(
+        id,
+        _localMessages.where((m) => m.role != 'error').toList(),
+      );
+      Logger.instance.info('$logTag持久化完成', '当前消息数: ${_localMessages.length}');
+    } catch (e) {
+      Logger.instance.error('AI解卦', 'AI 消息持久化失败: $e');
     }
   }
 
@@ -1765,6 +1924,14 @@ class _AiChatSectionState extends State<_AiChatSection> {
   Future<void> _deleteAiMessage(int index) async {
     // 防御：弹窗已关闭或 index 越界（如列表在重建前被并发修改）时直接忽略
     if (!mounted || index < 0 || index >= _localMessages.length) return;
+    // 若删除的是正在流式生成的 assistant 消息：先取消订阅，避免后续 chunk
+    // 继续 setState 更新已删除的消息（残留脏状态）；onDone/onError 不再触发。
+    final target = _localMessages[index];
+    if (identical(target, _streamingMsg)) {
+      _streamingMsg = null;
+      await _streamSub?.cancel();
+      _streamSub = null;
+    }
     setState(() {
       _localMessages = [..._localMessages]..removeAt(index);
     });
@@ -1777,7 +1944,10 @@ class _AiChatSectionState extends State<_AiChatSection> {
       final provider = context.read<CaseProvider>();
       await provider.updateAiMessages(
         id,
-        _localMessages.where((m) => m.role != 'error').toList(),
+        // 过滤 error 消息；流式中的半成品 assistant 不持久化（完成后才写最终文本）
+        _localMessages
+            .where((m) => m.role != 'error' && !identical(m, _streamingMsg))
+            .toList(),
       );
     } catch (e) {
       // 持久化失败不影响界面删除（setState 已先行执行），记录日志避免未处理异常
@@ -1939,6 +2109,14 @@ class _AiChatSectionState extends State<_AiChatSection> {
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                         )
+                      else if (m.content.trim().isEmpty && identical(m, _streamingMsg))
+                        // 流式生成中：内容为空时显示'正在生成…'打字机占位
+                        // （首个 chunk 到达前；首个 chunk 后内容逐步增长）
+                        Text('正在生成…',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontStyle: FontStyle.italic,
+                                color: p.withAlpha(160)))
                       else if (m.content.trim().isEmpty)
                         // 旧数据可能残留空 content 的 assistant 消息：显示友好占位，
                         // 不再出现"无内容的 AI 卡片"
