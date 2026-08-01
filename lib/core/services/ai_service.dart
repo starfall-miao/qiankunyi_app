@@ -47,6 +47,11 @@ class AiService {
         url = '$url/chat/completions';
       }
 
+      // 全链路日志：请求（endpoint、model、messages 数量、maxTokens；apiKey 打码不泄漏明文）
+      Logger.instance.info('AI解卦请求',
+          'endpoint: $url | model: $model | messages: ${messages.length} | '
+          'maxTokens: $maxTokens | apiKey: ${_maskApiKey(apiKey)}');
+
       final response = await http.post(
         Uri.parse(url),
         headers: {
@@ -61,16 +66,28 @@ class AiService {
         }),
       );
 
+      // 全链路日志：响应（statusCode + body 前 300 字符摘要）
+      Logger.instance.info('AI解卦响应',
+          'statusCode: ${response.statusCode} | body: ${_preview(response.body)}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final choices = data['choices'] as List?;
-        if (choices != null && choices.isNotEmpty) {
-          final content = choices[0]['message']['content'] as String? ?? '';
-          Logger.instance.info('AI解卦成功', '响应长度: ${content.length}');
-          return AiResult(content: content, success: true);
+        final rawChoices = data['choices'];
+        final choices = rawChoices is List ? rawChoices : null;
+        if (choices == null || choices.isEmpty) {
+          Logger.instance.error('AI返回空', 'HTTP ${response.statusCode} choices为空或缺失');
+          return AiResult.error('AI 返回内容为空或格式异常', statusCode: response.statusCode);
         }
-        Logger.instance.error('AI返回空', 'HTTP ${response.statusCode} choices为空');
-        return AiResult.error('API 返回为空', statusCode: response.statusCode);
+        // 健壮解析：content 可能为 String / List（分段）/ null / 缺失
+        final content = _extractContent(choices[0]);
+        if (content == null || content.isEmpty) {
+          Logger.instance.error('AI返回内容为空',
+              'HTTP ${response.statusCode} 解析出的 content 为空（null/缺失/空数组段）');
+          return AiResult.error('AI 返回内容为空或格式异常', statusCode: response.statusCode);
+        }
+        Logger.instance.info('AI解卦成功',
+            'choices: ${choices.length} | content长度: ${content.length}');
+        return AiResult(content: content, success: true);
       } else {
         final body = response.body;
         String msg = 'HTTP ${response.statusCode}';
@@ -88,6 +105,49 @@ class AiService {
       return AiResult.error('网络错误: $e');
     }
   }
+
+  /// 从单个 choice 中健壮地提取文本内容。
+  /// 兼容 OpenAI 标准（content 为 String）与 opencode 网关变体：
+  /// - content 为 List（分段数组，如 [{'type':'text','text':'...'}, ...] 或 ['...', ...]）
+  /// - content 为 null / 缺失 / 其他类型
+  /// 提取结果为空（null 或空白）时返回 null，由调用方判定为格式异常。
+  String? _extractContent(dynamic choice) {
+    if (choice is! Map) return null;
+    final message = choice['message'];
+    if (message is! Map) return null;
+    final content = message['content'];
+    if (content == null) return null;
+    if (content is String) {
+      final s = content.trim();
+      return s.isEmpty ? null : s;
+    }
+    if (content is List) {
+      final buf = StringBuffer();
+      for (final seg in content) {
+        if (seg is String) {
+          buf.write(seg);
+        } else if (seg is Map) {
+          final text = seg['text'];
+          if (text != null) buf.write(text.toString());
+        }
+      }
+      final s = buf.toString().trim();
+      return s.isEmpty ? null : s;
+    }
+    // 其他类型（数字/布尔等）兜底转字符串
+    final s = content.toString().trim();
+    return s.isEmpty ? null : s;
+  }
+
+  /// apiKey 日志打码：只显示前 4 位 + 后 4 位，中间 ****
+  static String _maskApiKey(String key) {
+    if (key.length <= 8) return '****';
+    return '${key.substring(0, 4)}****${key.substring(key.length - 4)}';
+  }
+
+  /// 日志摘要：超长文本截断到前 300 字符
+  static String _preview(String s) =>
+      s.length > 300 ? '${s.substring(0, 300)}...' : s;
 
   /// 构建 AI 解卦提示词 — 六爻
   String buildJieGuaPrompt(String paipanInfo) {

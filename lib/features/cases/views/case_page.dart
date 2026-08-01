@@ -1564,6 +1564,9 @@ class _AiChatSectionState extends State<_AiChatSection> {
         {'role': 'system', 'content': systemPrompt},
         {'role': 'user', 'content': prompt},
       ];
+      // 关键步骤日志：开始请求（model、消息数；不打印 apiKey，避免明文泄漏）
+      Logger.instance.info('AI解卦开始',
+          'model: ${sp.effectiveAiModel} | messages: ${messages.length}');
       final result = await AiService().chat(
         endpoint: sp.aiEndpoint,
         apiKey: sp.aiApiKey,
@@ -1571,10 +1574,12 @@ class _AiChatSectionState extends State<_AiChatSection> {
         messages: messages,
       );
       if (result.success) {
+        Logger.instance.info('AI解卦成功', 'content长度: ${result.content.length}');
         // 完整 prompt 入历史（不截断，避免污染后续追问上下文）；
         // 连续两次持久化用 await 串行化，避免并发写 SharedPreferences 竞态丢失
         await _addAiMessage('user', prompt);
         await _addAiMessage('assistant', result.content);
+        Logger.instance.info('AI解卦持久化完成', '当前消息数: ${_localMessages.length}');
       } else {
         Logger.instance.error('AI解卦失败',
             'statusCode: ${result.statusCode ?? 'N/A'} 错误摘要: ${result.errorMessage}');
@@ -1686,6 +1691,9 @@ class _AiChatSectionState extends State<_AiChatSection> {
             .map((m) => {'role': m.role, 'content': m.content}),
         {'role': 'user', 'content': text},
       ];
+      // 关键步骤日志：开始追问（model、消息数；不打印 apiKey，避免明文泄漏）
+      Logger.instance.info('AI追问开始',
+          'model: ${sp.effectiveAiModel} | messages: ${messages.length}');
       final result = await AiService().chat(
         endpoint: sp.aiEndpoint,
         apiKey: sp.aiApiKey,
@@ -1693,8 +1701,10 @@ class _AiChatSectionState extends State<_AiChatSection> {
         messages: messages,
       );
       if (result.success) {
+        Logger.instance.info('AI追问成功', 'content长度: ${result.content.length}');
         await _addAiMessage('user', text);
         await _addAiMessage('assistant', result.content);
+        Logger.instance.info('AI追问持久化完成', '当前消息数: ${_localMessages.length}');
       } else {
         Logger.instance.error('AI追问失败',
             'statusCode: ${result.statusCode ?? 'N/A'} 错误摘要: ${result.errorMessage}');
