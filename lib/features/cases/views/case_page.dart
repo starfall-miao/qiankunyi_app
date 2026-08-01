@@ -1575,6 +1575,11 @@ class _AiChatSectionState extends State<_AiChatSection> {
       );
       if (result.success) {
         Logger.instance.info('AI解卦成功', 'content长度: ${result.content.length}');
+        // 重新解卦语义：若当前对话中已无 AI 回复（旧回复已被删除），先清空旧消息，
+        // 再写入新的一对 '你'/'AI'，避免再次解卦时旧卡片与新卡片堆叠重复。
+        if (!_hasAssistantReply && _localMessages.isNotEmpty) {
+          setState(() => _localMessages = []);
+        }
         // 完整 prompt 入历史（不截断，避免污染后续追问上下文）；
         // 连续两次持久化用 await 串行化，避免并发写 SharedPreferences 竞态丢失
         await _addAiMessage('user', prompt);
@@ -1591,7 +1596,10 @@ class _AiChatSectionState extends State<_AiChatSection> {
       _addErrorMessage('网络错误: $e');
       _showToast('网络错误: $e');
     } finally {
-      setState(() => _loading = false);
+      // 成功/失败/异常都复位 loading；弹窗已关闭时避免对已 dispose 的 State 调 setState
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -1716,11 +1724,16 @@ class _AiChatSectionState extends State<_AiChatSection> {
       _addErrorMessage('网络错误: $e');
       _showToast('网络错误: $e');
     } finally {
-      setState(() => _loading = false);
+      // 成功/失败/异常都复位 loading；弹窗已关闭时避免对已 dispose 的 State 调 setState
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
   Future<void> _addAiMessage(String role, String content) async {
+    // 弹窗已关闭（widget 已 dispose）时不再改动本地消息状态
+    if (!mounted) return;
     final msg = AiMessage(role: role, content: content);
     setState(() {
       _localMessages = [..._localMessages, msg];
@@ -1750,6 +1763,8 @@ class _AiChatSectionState extends State<_AiChatSection> {
   }
 
   Future<void> _deleteAiMessage(int index) async {
+    // 防御：弹窗已关闭或 index 越界（如列表在重建前被并发修改）时直接忽略
+    if (!mounted || index < 0 || index >= _localMessages.length) return;
     setState(() {
       _localMessages = [..._localMessages]..removeAt(index);
     });
@@ -1758,11 +1773,24 @@ class _AiChatSectionState extends State<_AiChatSection> {
       Logger.instance.error('AI解卦', '卦例 id 为空，删除仅影响界面显示');
       return;
     }
-    final provider = context.read<CaseProvider>();
-    await provider.updateAiMessages(
-      id,
-      _localMessages.where((m) => m.role != 'error').toList(),
-    );
+    try {
+      final provider = context.read<CaseProvider>();
+      await provider.updateAiMessages(
+        id,
+        _localMessages.where((m) => m.role != 'error').toList(),
+      );
+    } catch (e) {
+      // 持久化失败不影响界面删除（setState 已先行执行），记录日志避免未处理异常
+      Logger.instance.error('AI解卦', '删除消息持久化失败: $e');
+    }
+  }
+
+  /// 用户消息的卡片展示文本：'你' 卡片避免展示冗长原始 prompt（prompt 全文仍
+  /// 完整保留在消息内容中，作为追问上下文与持久化数据），超长时折叠为前 60 字符。
+  String _displayUserContent(String content) {
+    final collapsed = content.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (collapsed.length <= 60) return collapsed;
+    return '${collapsed.substring(0, 60)}…';
   }
 
   /// 新消息后把详情弹窗滚动到底部，让用户直接看到 AI 回复（无需手动滑动）
@@ -1882,10 +1910,20 @@ class _AiChatSectionState extends State<_AiChatSection> {
                           ),
                         ),
                         const Spacer(),
-                        GestureDetector(
-                          onTap: () => _deleteAiMessage(i),
-                          child: Icon(Icons.close, size: 14,
-                              color: t.withAlpha(100)),
+                        // 叉叉：删除这条消息（删除 AI 回复后 _hasAssistantReply 重算，
+                        // '开始 AI 解卦'按钮会重新出现；删除追问回复后可重新追问）。
+                        // 用 IconButton 提供可靠命中区域（原 GestureDetector+14px Icon
+                        // 目标太小，点击易落空），带 tooltip 便于识别用途。
+                        IconButton(
+                          onPressed: () => _deleteAiMessage(i),
+                          tooltip: '删除这条消息',
+                          icon: Icon(Icons.close, size: 16,
+                              color: t.withAlpha(120)),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                              minWidth: 30, minHeight: 30),
+                          visualDensity: VisualDensity.compact,
+                          splashRadius: 14,
                         ),
                       ]),
                       const SizedBox(height: 4),
@@ -1893,8 +1931,22 @@ class _AiChatSectionState extends State<_AiChatSection> {
                         Text(m.content,
                             style: TextStyle(fontSize: 13, color: errColor))
                       else if (isUser)
-                        Text(m.content, style: TextStyle(
-                            fontSize: 13, color: t))
+                        // '你'卡片展示摘要（前 60 字符 + …），prompt 全文仍完整保留
+                        // 在消息内容中用于追问上下文；maxLines+ellipsis 兜底防溢出
+                        Text(
+                          _displayUserContent(m.content),
+                          style: TextStyle(fontSize: 13, color: t),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      else if (m.content.trim().isEmpty)
+                        // 旧数据可能残留空 content 的 assistant 消息：显示友好占位，
+                        // 不再出现"无内容的 AI 卡片"
+                        Text('（空回复）',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontStyle: FontStyle.italic,
+                                color: t.withAlpha(120)))
                       else
                         Markdown(
                           data: m.content,
