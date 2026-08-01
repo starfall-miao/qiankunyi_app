@@ -1399,27 +1399,35 @@ class _AiChatSectionState extends State<_AiChatSection> {
       sb.writeln('  时柱 ${r.hourZhu.ganZhi}（${r.hourZhu.wuXing}）');
       if (r.wuXingCounts.isNotEmpty) {
         sb.write('五行统计：');
-        r.wuXingCounts.forEach((k, v) => sb.write('$k $v  '));
+        for (final e in r.wuXingCounts.entries) {
+          sb.write('${e.key} ${e.value}  ');
+        }
         sb.writeln();
       }
       if (r.wuXingWangShuai.isNotEmpty) {
         sb.write('五行旺衰：');
-        r.wuXingWangShuai.forEach((k, v) => sb.write('$k$v  '));
+        for (final e in r.wuXingWangShuai.entries) {
+          sb.write('${e.key}${e.value}  ');
+        }
         sb.writeln();
       }
       if (r.shiShenMap.isNotEmpty) {
         sb.write('十神：');
-        r.shiShenMap.entries
+        final labels = r.shiShenMap.entries
             .where((e) => e.key != '日主')
             .map((e) => e.key.contains(':')
                 ? '${e.key.split(':')[1]}(${e.value})'
-                : '${e.key}(${e.value})')
-            .forEach((s) => sb.write('$s  '));
+                : '${e.key}(${e.value})');
+        for (final s in labels) {
+          sb.write('$s  ');
+        }
         sb.writeln();
       }
       if (r.daYun.isNotEmpty) {
         sb.write('大运：');
-        r.daYun.forEach((d) => sb.write('${d.startAge}岁${d.ganZhi}  '));
+        for (final d in r.daYun) {
+          sb.write('${d.startAge}岁${d.ganZhi}  ');
+        }
         sb.writeln();
       }
       if (r.liuNian != null && r.liuNian!.isNotEmpty) {
