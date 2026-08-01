@@ -36,6 +36,18 @@ class AiStreamException implements Exception {
       statusCode == null ? message : 'HTTP $statusCode: $message';
 }
 
+/// 流式增量片段：区分正式答案与推理过程。
+/// - [isReasoning] == false：标准 content 增量，应拼入最终消息（打字机效果）
+/// - [isReasoning] == true：reasoning_content 增量（DeepSeek 推理模型的思考
+///   过程），**不拼入最终消息**，仅用于流式活性判定（防止被误判"流式无内容"
+///   而回退），避免"思考过程+答案"拼接污染展示。
+class AiStreamPiece {
+  final String text;
+  final bool isReasoning;
+
+  const AiStreamPiece(this.text, {this.isReasoning = false});
+}
+
 /// AI 解卦服务
 class AiService {
   static final AiService _instance = AiService._();
@@ -126,8 +138,9 @@ class AiService {
   /// 以 `data: [DONE]` 结束；非 SSE 的一次性 JSON 响应也按行累积输出。
   ///
   /// 异常处理：非 2xx 或网络异常时在流上抛错（emit error），由调用方回退非流式 chat()。
-  /// 返回的 Stream 上每个事件是一段增量文本；调用方自行累积得到完整 content。
-  Stream<String> chatStream({
+  /// 返回的 Stream 上每个事件是一段增量（[AiStreamPiece]，区分答案/推理）；
+  /// 调用方自行累积得到完整 content（只累积 isReasoning == false 的片段）。
+  Stream<AiStreamPiece> chatStream({
     required String endpoint,
     required String apiKey,
     required String model,
@@ -201,7 +214,7 @@ class AiService {
             final data = _stripDataPrefix(line);
             if (data.trim() == '[DONE]') return;
             final piece = _extractStreamPiece(data, sseMode: true);
-            if (piece != null && piece.isNotEmpty) {
+            if (piece != null && piece.text.isNotEmpty) {
               yield piece;
             }
           } else if (line.startsWith('event:') ||
@@ -211,7 +224,7 @@ class AiService {
           } else if (!sawSseData && line.trim().isNotEmpty) {
             // 非 SSE 纯文本响应：直接累积为文本
             final piece = _extractStreamPiece(line.trim());
-            if (piece != null && piece.isNotEmpty) {
+            if (piece != null && piece.text.isNotEmpty) {
               yield piece;
             }
           }
@@ -228,13 +241,13 @@ class AiService {
           final data = _stripDataPrefix(line);
           if (data.trim() != '[DONE]') {
             final piece = _extractStreamPiece(data, sseMode: true);
-            if (piece != null && piece.isNotEmpty) {
+            if (piece != null && piece.text.isNotEmpty) {
               yield piece;
             }
           }
         } else if (!sawSseData && line.trim().isNotEmpty) {
           final piece = _extractStreamPiece(line.trim());
-          if (piece != null && piece.isNotEmpty) {
+          if (piece != null && piece.text.isNotEmpty) {
             yield piece;
           }
         }
@@ -305,7 +318,7 @@ class AiService {
   /// （如多行 JSON 被拆行产生的碎片），直接丢弃返回 null，避免碎片污染 content。
   /// 纯文本模式（sseMode=false）保持原累积行为。
   /// 返回 null 表示该行无有效增量（如 role/usage 事件、空 choices、解析失败碎片）。
-  String? _extractStreamPiece(String data, {bool sseMode = false}) {
+  AiStreamPiece? _extractStreamPiece(String data, {bool sseMode = false}) {
     final s = data.trim();
     if (s.isEmpty) return null;
     if (s.startsWith('{')) {
@@ -318,14 +331,20 @@ class AiService {
             if (choice is Map) {
               // OpenAI 兼容 SSE：增量在 delta.content；
               // DeepSeek 推理模型：推理阶段增量在 delta.reasoning_content
-              // （content 为空）。两者任一非空即产出，避免推理阶段被误判
-              // 为"流式无内容"而白白回退，也让用户能看到思考过程打字机效果。
+              // （content 为空）。两者任一非空即产出：content 增量标记为正式
+              // 答案（isReasoning=false），reasoning_content 增量标记为推理
+              // 过程（isReasoning=true），调用方只把前者拼入最终消息，避免
+              // "思考过程+答案"拼接污染展示。
               final delta = choice['delta'];
               if (delta is Map) {
                 final content = _extractStreamField(delta['content']);
-                if (content != null && content.isNotEmpty) return content;
+                if (content != null && content.isNotEmpty) {
+                  return AiStreamPiece(content);
+                }
                 final reasoning = _extractStreamField(delta['reasoning_content']);
-                if (reasoning != null && reasoning.isNotEmpty) return reasoning;
+                if (reasoning != null && reasoning.isNotEmpty) {
+                  return AiStreamPiece(reasoning, isReasoning: true);
+                }
                 return null;
               }
               // 兼容部分网关直接返回 message.content / message.reasoning_content
@@ -333,10 +352,14 @@ class AiService {
               final message = choice['message'];
               if (message is Map) {
                 final content = _extractStreamField(message['content']);
-                if (content != null && content.isNotEmpty) return content;
+                if (content != null && content.isNotEmpty) {
+                  return AiStreamPiece(content);
+                }
                 final reasoning =
                     _extractStreamField(message['reasoning_content']);
-                if (reasoning != null && reasoning.isNotEmpty) return reasoning;
+                if (reasoning != null && reasoning.isNotEmpty) {
+                  return AiStreamPiece(reasoning, isReasoning: true);
+                }
               }
             }
           }
@@ -349,7 +372,7 @@ class AiService {
         if (sseMode) return null;
       }
     }
-    return s;
+    return AiStreamPiece(s);
   }
 
   /// 从增量字段（content / reasoning_content）提取文本。

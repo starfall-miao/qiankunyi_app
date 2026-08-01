@@ -1555,7 +1555,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
   bool _streaming = false;
   List<AiMessage> _localMessages = [];
   /// 当前流式订阅（AI 解卦/追问流式输出期间非 null）
-  StreamSubscription<String>? _streamSub;
+  StreamSubscription<AiStreamPiece>? _streamSub;
   /// 正在流式更新的 assistant 消息（对象引用定位，避免删除其它消息后索引偏移）
   AiMessage? _streamingMsg;
   /// 本次流式是否已执行首次自动滚动：首个增量到达时滚到底一次（让用户看到
@@ -1757,23 +1757,44 @@ class _AiChatSectionState extends State<_AiChatSection> {
       if (placeholder == null) return; // 弹窗已关闭
       _streamingMsg = placeholder;
 
-      final stream = AiService().chatStream(
-        endpoint: sp.aiEndpoint,
-        apiKey: sp.aiApiKey,
-        model: sp.effectiveAiModel,
-        messages: messages,
-      );
+      final stream = AiService()
+          .chatStream(
+            endpoint: sp.aiEndpoint,
+            apiKey: sp.aiApiKey,
+            model: sp.effectiveAiModel,
+            messages: messages,
+          )
+          // 流式超时保护：两个增量事件间隔超过 90 秒（网关挂起/无数据）时，
+          // 在流上抛错 → 触发 onError → 自动回退非流式 chat()，避免用户
+          // 看到无限转圈只能反复重开弹窗（日志中多次"流式响应 200 但无
+          // 完成日志"即为挂起症状）。
+          .timeout(
+            const Duration(seconds: 90),
+            onTimeout: (sink) => sink.addError(
+              AiStreamException('流式超时（90 秒无数据）'),
+            ),
+          );
       var receivedAny = false;
+      // 推理过程累积（DeepSeek 推理模型思考阶段只有 reasoning_content 增量）。
+      // 仅用于兜底展示与"流式有活性"判定，不拼入最终消息。
+      var thinking = '';
       _streamSub = stream.listen(
         (piece) {
           if (!mounted || _streamingMsg == null) return;
           receivedAny = true;
           if (_loading) {
             // 发现 A：首个 chunk 到达后关闭转圈（AC4：转圈只在首个 chunk 前
-            // 显示；之后的进度由消息卡片的打字机效果呈现）
+            // 显示；之后的进度由消息卡片的打字机效果呈现）。注意推理阶段
+            // 的 reasoning 增量也属于首个 chunk，同样要关闭转圈。
             setState(() => _loading = false);
           }
-          _appendStreamPiece(piece);
+          if (piece.isReasoning) {
+            // 推理过程增量：只累积，不拼入消息，避免"思考过程+答案"拼接
+            // 污染展示（用户最终看到的消息只含正式答案）。
+            thinking += piece.text;
+            return;
+          }
+          _appendStreamPiece(piece.text);
         },
         onError: (Object e) {
           if (!mounted) return;
@@ -1811,8 +1832,19 @@ class _AiChatSectionState extends State<_AiChatSection> {
             return;
           }
           if (receivedAny && msg.content.trim().isNotEmpty) {
-            // 流式成功：完整内容已随增量拼好，持久化最终文本
+            // 流式成功：完整答案已随 content 增量拼好，持久化最终文本
             Logger.instance.info('$logTag流式完成', 'content长度: ${msg.content.length}');
+            _persistAiMessages(logTag);
+            setState(() {
+              _loading = false;
+              _streaming = false;
+            });
+          } else if (receivedAny && thinking.trim().isNotEmpty) {
+            // 网关只返回了推理过程（content 始终为空）：用推理内容兜底展示，
+            // 避免"流式有增量但界面空白"（DeepSeek 推理模型/部分网关场景）。
+            Logger.instance.info('$logTag流式完成(仅推理内容)',
+                '长度: ${thinking.trim().length}');
+            _replaceAssistantContent(msg, thinking.trim());
             _persistAiMessages(logTag);
             setState(() {
               _loading = false;
