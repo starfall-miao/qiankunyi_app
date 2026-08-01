@@ -1938,13 +1938,17 @@ class _AiChatSectionState extends State<_AiChatSection> {
   Future<void> _persistAiMessages(String logTag) async {
     // 弹窗已关闭（widget 已 dispose）时不再访问 context / 持久化
     if (!mounted) return;
+    // CI fix (US-003)：context 读取紧跟 mounted 守卫（任何其他语句之前）并缓存
+    // provider 复用，lint 完全识别该 guard，消除 use_build_context_synchronously
+    // （原实现 context.read 位于 try 块内且隔着分支，flow analysis 不认可守卫覆盖）。
+    // context.read 无副作用，id 为空的早退路径多读一次 provider 不影响行为。
+    final provider = context.read<CaseProvider>();
     final id = widget.caseModel.id;
     if (id == null) {
       Logger.instance.error('AI解卦', '卦例 id 为空，AI 消息仅显示不持久化');
       return;
     }
     try {
-      final provider = context.read<CaseProvider>();
       await provider.updateAiMessages(
         id,
         _localMessages.where((m) => m.role != 'error').toList(),
