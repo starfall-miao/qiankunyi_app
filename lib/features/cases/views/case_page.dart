@@ -455,7 +455,7 @@ class _CasePageState extends State<CasePage> {
               _ManualDuanYuEditor(caseModel: c),
               const SizedBox(height: 16),
               // ── AI 解卦 / 追问 ──
-              _AiChatSection(caseModel: c),
+              _AiChatSection(caseModel: c, parentScrollController: scrollCtrl),
               const SizedBox(height: 24),
             ],
           ),
@@ -1285,7 +1285,13 @@ class _ManualDuanYuEditorState extends State<_ManualDuanYuEditor> {
 /// AI 解卦 / 追问 对话组件
 class _AiChatSection extends StatefulWidget {
   final CaseModel caseModel;
-  const _AiChatSection({required this.caseModel});
+  /// 父级详情弹窗的滚动控制器：AI 新消息后自动滚动到底部（让用户直接看到回复）
+  final ScrollController? parentScrollController;
+
+  const _AiChatSection({
+    required this.caseModel,
+    this.parentScrollController,
+  });
 
   @override
   State<_AiChatSection> createState() => _AiChatSectionState();
@@ -1346,8 +1352,10 @@ class _AiChatSectionState extends State<_AiChatSection> {
         messages: messages,
       );
       if (result.success) {
-        _addAiMessage('user', prompt.truncated(200));
-        _addAiMessage('assistant', result.content);
+        // 完整 prompt 入历史（不截断，避免污染后续追问上下文）；
+        // 连续两次持久化用 await 串行化，避免并发写 SharedPreferences 竞态丢失
+        await _addAiMessage('user', prompt);
+        await _addAiMessage('assistant', result.content);
       } else {
         Logger.instance.error('AI解卦失败',
             'statusCode: ${result.statusCode ?? 'N/A'} 错误摘要: ${result.errorMessage}');
@@ -1365,16 +1373,67 @@ class _AiChatSectionState extends State<_AiChatSection> {
 
   String _buildPromptForType() {
     if (widget.caseModel.caseType == CaseType.bazi) {
-      return '【八字排盘信息】\n年柱：${widget.caseModel.guaName}\n'
-          '日柱：${widget.caseModel.guaGong}\n'
-          '排盘数据：${widget.caseModel.paipanData}\n\n'
-          '请分析此八字命盘，包括五行喜忌、十神、大运走势等。';
+      return _buildBaziPrompt();
     }
     return AiService().buildJieGuaPrompt(
       '卦名：${widget.caseModel.guaName}（${widget.caseModel.guaGong}宫）\n'
       '起卦方式：${widget.caseModel.method}\n'
       '排盘数据：${widget.caseModel.paipanData}',
     );
+  }
+
+  /// 构建八字提示词：从 paipanData 解析完整四柱/五行/十神/大运。
+  /// 不再用 guaName（实为年柱）/ guaGong（实为日柱）占位。
+  String _buildBaziPrompt() {
+    try {
+      final r = BaziResult.fromJson(
+        jsonDecode(widget.caseModel.paipanData) as Map<String, dynamic>,
+      );
+      final sb = StringBuffer('【八字排盘信息】\n');
+      sb.writeln('出生时间：${r.birth.toLocal()}');
+      sb.writeln('性别：${r.isMale ? '男' : '女'}');
+      sb.writeln('四柱：');
+      sb.writeln('  年柱 ${r.yearZhu.ganZhi}（${r.yearZhu.wuXing}）');
+      sb.writeln('  月柱 ${r.monthZhu.ganZhi}（${r.monthZhu.wuXing}）');
+      sb.writeln('  日柱 ${r.dayZhu.ganZhi}（${r.dayZhu.wuXing}，日元）');
+      sb.writeln('  时柱 ${r.hourZhu.ganZhi}（${r.hourZhu.wuXing}）');
+      if (r.wuXingCounts.isNotEmpty) {
+        sb.write('五行统计：');
+        r.wuXingCounts.forEach((k, v) => sb.write('$k $v  '));
+        sb.writeln();
+      }
+      if (r.wuXingWangShuai.isNotEmpty) {
+        sb.write('五行旺衰：');
+        r.wuXingWangShuai.forEach((k, v) => sb.write('$k$v  '));
+        sb.writeln();
+      }
+      if (r.shiShenMap.isNotEmpty) {
+        sb.write('十神：');
+        r.shiShenMap.entries
+            .where((e) => e.key != '日主')
+            .map((e) => e.key.contains(':')
+                ? '${e.key.split(':')[1]}(${e.value})'
+                : '${e.key}(${e.value})')
+            .forEach((s) => sb.write('$s  '));
+        sb.writeln();
+      }
+      if (r.daYun.isNotEmpty) {
+        sb.write('大运：');
+        r.daYun.forEach((d) => sb.write('${d.startAge}岁${d.ganZhi}  '));
+        sb.writeln();
+      }
+      if (r.liuNian != null && r.liuNian!.isNotEmpty) {
+        sb.writeln('流年：${r.liuNian}');
+      }
+      sb.writeln('\n请分析此八字命盘，包括五行喜忌、十神、大运走势等。');
+      return sb.toString();
+    } catch (e) {
+      // 旧数据解析失败时降级为简要信息（不再把年柱/日柱当卦名占位）
+      return '【八字排盘信息】\n'
+          '四柱：年柱${widget.caseModel.guaName} / 日柱${widget.caseModel.guaGong}\n'
+          '排盘数据：${widget.caseModel.paipanData}\n\n'
+          '请分析此八字命盘，包括五行喜忌、十神、大运走势等。';
+    }
   }
 
   Future<void> _askFollowUp() async {
@@ -1388,9 +1447,13 @@ class _AiChatSectionState extends State<_AiChatSection> {
     setState(() => _loading = true);
     _questionCtrl.clear();
     try {
-      // 构建上下文：系统提示 + 之前的对话 + 当前问题（错误消息不进入 AI 上下文）
+      final isBazi = widget.caseModel.caseType == CaseType.bazi;
+      final systemPrompt = isBazi
+          ? '你是一位精通八字命理的资深命理专家。下面是对同一命盘的连续讨论。'
+          : '你是一位精通《周易》的资深术数专家。下面是对同一卦象的连续讨论。';
+      // 构建上下文：系统提示 + 完整历史消息 + 当前问题（错误消息不进入 AI 上下文）
       final messages = <Map<String, String>>[
-        {'role': 'system', 'content': '你是一位精通《周易》的资深术数专家。下面是对同一卦象的连续讨论。'},
+        {'role': 'system', 'content': systemPrompt},
         ..._messages
             .where((m) => m.role == 'user' || m.role == 'assistant')
             .map((m) => {'role': m.role, 'content': m.content}),
@@ -1403,8 +1466,8 @@ class _AiChatSectionState extends State<_AiChatSection> {
         messages: messages,
       );
       if (result.success) {
-        _addAiMessage('user', text);
-        _addAiMessage('assistant', result.content);
+        await _addAiMessage('user', text);
+        await _addAiMessage('assistant', result.content);
       } else {
         Logger.instance.error('AI追问失败',
             'statusCode: ${result.statusCode ?? 'N/A'} 错误摘要: ${result.errorMessage}');
@@ -1420,17 +1483,24 @@ class _AiChatSectionState extends State<_AiChatSection> {
     }
   }
 
-  void _addAiMessage(String role, String content) {
+  Future<void> _addAiMessage(String role, String content) async {
     final msg = AiMessage(role: role, content: content);
     setState(() {
       _localMessages = [..._localMessages, msg];
     });
-    // 持久化时过滤 error 消息（错误气泡仅显示在界面上，不写入卦例）
-    final updated = widget.caseModel.copyWith(
-      aiMessages:
-          _localMessages.where((m) => m.role != 'error').toList(),
+    _scrollToBottom();
+    // 持久化时过滤 error 消息（错误气泡仅显示在界面上，不写入卦例）。
+    // 使用 CaseProvider.updateAiMessages 基于 provider 最新状态合并，串行 await 避免竞态。
+    final id = widget.caseModel.id;
+    if (id == null) {
+      Logger.instance.error('AI解卦', '卦例 id 为空，AI 消息仅显示不持久化');
+      return;
+    }
+    final provider = context.read<CaseProvider>();
+    await provider.updateAiMessages(
+      id,
+      _localMessages.where((m) => m.role != 'error').toList(),
     );
-    context.read<CaseProvider>().updateCase(updated);
   }
 
   /// 错误消息仅显示在 AI 对话区（红色错误气泡），不持久化到卦例
@@ -1439,18 +1509,37 @@ class _AiChatSectionState extends State<_AiChatSection> {
     setState(() {
       _localMessages = [..._localMessages, AiMessage(role: 'error', content: content)];
     });
+    _scrollToBottom();
   }
 
-  void _deleteAiMessage(int index) {
+  Future<void> _deleteAiMessage(int index) async {
     setState(() {
       _localMessages = [..._localMessages]..removeAt(index);
     });
-    // 持久化时过滤 error 消息（错误气泡仅显示在界面上，不写入卦例）
-    final updated = widget.caseModel.copyWith(
-      aiMessages:
-          _localMessages.where((m) => m.role != 'error').toList(),
+    final id = widget.caseModel.id;
+    if (id == null) {
+      Logger.instance.error('AI解卦', '卦例 id 为空，删除仅影响界面显示');
+      return;
+    }
+    final provider = context.read<CaseProvider>();
+    await provider.updateAiMessages(
+      id,
+      _localMessages.where((m) => m.role != 'error').toList(),
     );
-    context.read<CaseProvider>().updateCase(updated);
+  }
+
+  /// 新消息后把详情弹窗滚动到底部，让用户直接看到 AI 回复（无需手动滑动）
+  void _scrollToBottom() {
+    final sc = widget.parentScrollController;
+    if (sc == null || !sc.hasClients) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!sc.hasClients || !mounted) return;
+      sc.animateTo(
+        sc.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   void _showToast(String msg) {
@@ -1623,9 +1712,4 @@ class _AiChatSectionState extends State<_AiChatSection> {
       ),
     );
   }
-}
-
-extension _StringExtension on String {
-  String truncated(int maxLen) =>
-      length <= maxLen ? this : '${substring(0, maxLen)}…';
 }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/utils/logger.dart';
 import '../models/case_models.dart';
 
 /// 卦例管理 Provider — 支持 shared_preferences 持久化
@@ -75,13 +76,32 @@ class CaseProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 更新卦例
+  /// 更新卦例（找不到 id 时记录错误日志，不再静默失败）
   Future<void> updateCase(CaseModel updated) async {
     final index = _cases.indexWhere((c) => c.id == updated.id);
     if (index >= 0) {
       _cases[index] = updated;
       await _persist();
       notifyListeners();
+    } else {
+      Logger.instance.error('CaseProvider', 'updateCase 未找到卦例 id: ${updated.id}');
+    }
+  }
+
+  /// 更新卦例的 AI 对话历史。
+  /// 基于最新 [_cases] 中的对象合并（而非调用方传入的旧对象），
+  /// 避免连续两次 updateCase 并发写 SharedPreferences 时互相覆盖丢失消息。
+  Future<void> updateAiMessages(int id, List<AiMessage> aiMessages) async {
+    final index = _cases.indexWhere((c) => c.id == id);
+    if (index >= 0) {
+      _cases[index] = _cases[index].copyWith(
+        aiMessages: aiMessages,
+        updatedAt: DateTime.now(),
+      );
+      await _persist();
+      notifyListeners();
+    } else {
+      Logger.instance.error('CaseProvider', 'updateAiMessages 未找到卦例 id: $id');
     }
   }
 }
