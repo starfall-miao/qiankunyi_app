@@ -15,18 +15,32 @@ import 'package:flutter/material.dart';
 
 import '../../core/utils/logger.dart';
 
+/// 生成默认图片文件名：{prefix}_yyyyMMdd_HHmmss.png
+///
+/// 例：buildImageFileName('乾为天') → 乾为天_20260731_101530.png
+String buildImageFileName(String prefix) {
+  final t = DateTime.now();
+  String two(int v) => v.toString().padLeft(2, '0');
+  return '${prefix}_${t.year}${two(t.month)}${two(t.day)}_'
+      '${two(t.hour)}${two(t.minute)}${two(t.second)}.png';
+}
+
 /// 保存图片完整流程：预览浮窗(可编辑文件名) → 选择保存目录 → 写入文件。
 ///
+/// [defaultFileName]：默认文件名（建议带卦名，如 乾为天_20260731_101530.png）；
+/// 为空时回退为 qiankunyi_yyyyMMdd_HHmmss.png。用户可在浮窗中编辑。
 /// 返回保存后的文件路径；用户在浮窗取消或目录选择取消时返回 null（不写文件）。
 Future<String?> saveImageWithDialog({
   required BuildContext context,
   required Uint8List pngBytes,
+  String? defaultFileName,
 }) async {
   final log = Logger.instance;
   log.info('保存图片: 开始保存流程');
   final fileName = await showSaveImageDialog(
     context: context,
     pngBytes: pngBytes,
+    defaultFileName: defaultFileName,
   );
   if (fileName == null) {
     log.info('保存图片: 用户在预览浮窗取消，未保存');
@@ -58,19 +72,29 @@ Future<String?> saveImageWithDialog({
 Future<String?> showSaveImageDialog({
   required BuildContext context,
   required Uint8List pngBytes,
+  String? defaultFileName,
 }) {
   return showDialog<String>(
     context: context,
     barrierColor: Colors.black.withAlpha(140),
-    builder: (_) => _SaveImageDialog(pngBytes: pngBytes),
+    builder: (_) => _SaveImageDialog(
+      pngBytes: pngBytes,
+      defaultFileName: defaultFileName,
+    ),
   );
 }
 
 /// 预览浮窗：图片预览 + 文件名输入框 + 取消/保存按钮
 class _SaveImageDialog extends StatefulWidget {
-  const _SaveImageDialog({required this.pngBytes});
+  const _SaveImageDialog({
+    required this.pngBytes,
+    this.defaultFileName,
+  });
 
   final Uint8List pngBytes;
+
+  /// 默认文件名（可含卦名）；为空时使用 qiankunyi_ 前缀兜底
+  final String? defaultFileName;
 
   @override
   State<_SaveImageDialog> createState() => _SaveImageDialogState();
@@ -83,7 +107,7 @@ class _SaveImageDialogState extends State<_SaveImageDialog> {
   @override
   void initState() {
     super.initState();
-    _fileNameCtrl = TextEditingController(text: _defaultImageFileName());
+    _fileNameCtrl = TextEditingController(text: _initialFileName());
   }
 
   @override
@@ -92,12 +116,62 @@ class _SaveImageDialogState extends State<_SaveImageDialog> {
     super.dispose();
   }
 
-  /// 默认文件名：qiankunyi_yyyyMMdd_HHmmss.png
-  String _defaultImageFileName() {
-    final t = DateTime.now();
-    String two(int v) => v.toString().padLeft(2, '0');
-    return 'qiankunyi_${t.year}${two(t.month)}${two(t.day)}_'
-        '${two(t.hour)}${two(t.minute)}${two(t.second)}.png';
+  /// 初始文件名：优先使用传入的 defaultFileName（含卦名），否则回退通用前缀
+  String _initialFileName() {
+    final d = widget.defaultFileName;
+    if (d != null && d.trim().isNotEmpty) return d.trim();
+    return buildImageFileName('qiankunyi');
+  }
+
+  /// 全屏放大预览：黑色背景大图，支持双指/鼠标滚轮缩放，右上角关闭
+  void _showFullPreview() {
+    final screenSize = MediaQuery.sizeOf(context);
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withAlpha(220),
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: const EdgeInsets.all(12),
+        child: SizedBox(
+          // 显式约束，避免 Dialog+InteractiveViewer 在桌面端高度坍缩
+          width: screenSize.width * 0.95,
+          height: screenSize.height * 0.95,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: InteractiveViewer(
+                    maxScale: 5.0,
+                    minScale: 0.5,
+                    child: Center(
+                      child: Image.memory(
+                        widget.pngBytes,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                ),
+                // 右上角关闭按钮（避免 InteractiveViewer 手势吞掉背景点击）
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Material(
+                    color: Colors.black.withAlpha(120),
+                    shape: const CircleBorder(),
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      tooltip: '关闭大图',
+                      onPressed: () => Navigator.of(ctx).pop(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -139,14 +213,41 @@ class _SaveImageDialogState extends State<_SaveImageDialog> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    // 图片预览
+                    // 图片预览：点击可放大查看
                     Center(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.memory(
-                          widget.pngBytes,
-                          height: 180,
-                          fit: BoxFit.contain,
+                      child: GestureDetector(
+                        onTap: _showFullPreview,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.memory(
+                            widget.pngBytes,
+                            height: 180,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Center(
+                      child: InkWell(
+                        onTap: _showFullPreview,
+                        borderRadius: BorderRadius.circular(4),
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.zoom_in,
+                                  size: 14, color: textColor.withAlpha(140)),
+                              const SizedBox(width: 4),
+                              Text(
+                                '点击图片放大查看',
+                                style: TextStyle(
+                                    fontSize: 11, color: textColor.withAlpha(140)),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

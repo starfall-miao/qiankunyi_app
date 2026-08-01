@@ -663,6 +663,7 @@ class _BaziPageState extends State<BaziPage> {
       final savedPath = await saveImageWithDialog(
         context: ctx,
         pngBytes: pngBytes,
+        defaultFileName: buildImageFileName('八字排盘'),
       );
       if (savedPath == null) return; // 用户在浮窗或目录选择中取消，不写文件
       if (ctx.mounted) {

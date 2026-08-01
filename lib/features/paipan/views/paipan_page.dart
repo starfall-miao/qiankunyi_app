@@ -407,7 +407,14 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                   const SizedBox(width: 8),
                   Expanded(
                     child: TextButton.icon(
-                      onPressed: () => _saveImage(_liuyaoScreenshotKey, context),
+                      onPressed: () => _saveImage(
+                        _liuyaoScreenshotKey,
+                        context,
+                        guaName: lr != null
+                            ? (_guaNameCN[lr.benGua.name] ??
+                                lr.benGua.name.name)
+                            : null,
+                      ),
                       icon: const Icon(Icons.image_outlined, size: 16),
                       label: const Text('保存图片'),
                       style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
@@ -709,7 +716,9 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
   }
 
   /// 截图排盘结果并保存（浮窗预览 → 文件名编辑 → 选择目录 → 写入）
-  Future<void> _saveImage(GlobalKey key, BuildContext ctx) async {
+  ///
+  /// [guaName]：卦名中文（如 乾为天），用于默认文件名 {卦名}_时间戳.png
+  Future<void> _saveImage(GlobalKey key, BuildContext ctx, {String? guaName}) async {
     try {
       final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) {
@@ -730,6 +739,8 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
       final savedPath = await saveImageWithDialog(
         context: ctx,
         pngBytes: pngBytes,
+        defaultFileName:
+            guaName != null ? buildImageFileName(guaName) : null,
       );
       if (savedPath == null) return; // 用户在浮窗或目录选择中取消，不写文件
       if (ctx.mounted) {
@@ -1022,7 +1033,12 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                 )),
                 const SizedBox(width: 8),
                 Expanded(child: TextButton.icon(
-                  onPressed: () => _saveImage(_meihuaScreenshotKey, context),
+                  onPressed: () => _saveImage(
+                    _meihuaScreenshotKey,
+                    context,
+                    guaName: (_guaNameCN[result.benGua.name] ??
+                        result.benGua.name.name),
+                  ),
                   icon: const Icon(Icons.image_outlined, size: 16),
                   label: const Text('保存图片'),
                   style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
