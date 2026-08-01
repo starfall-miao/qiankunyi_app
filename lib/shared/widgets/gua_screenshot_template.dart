@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import '../../features/paipan/models/bazi_models.dart';
 import '../../features/paipan/models/gua_model.dart';
 import '../../features/paipan/models/yao_model.dart';
+import '../constants/yao_plain_desc.dart';
 
 // ═══════════════════ 固定国风配色（不随主题变化，反色修复关键） ═══════════════════
 const _sBg = Color(0xFFF5F0EB);
@@ -579,7 +580,7 @@ Widget _miniYaoLine(YaoModel yao) {
   );
 }
 
-/// 每爻详解小卡片：爻位 + 六神 + 干支 + 五行 + 六亲 + 旺衰 + 世应 + 特殊标记
+/// 每爻详解小卡片：爻位 + 六神 + 干支 + 五行 + 六亲 + 旺衰 + 世应 + 特殊标记 + 白话解释
 Widget _yaoDetailCard(YaoModel yao) {
   final liuShen = yao.liuShen;
   final lsColor = liuShen != null ? _sLiuShenColor[liuShen]! : _sSub;
@@ -591,6 +592,7 @@ Widget _yaoDetailCard(YaoModel yao) {
     if (yao.isHai) '害',
     if (yao.sanHeJu.isNotEmpty) '三合',
   ];
+  final plainDescs = _yaoPlainDescs(yao);
   return Container(
     margin: const EdgeInsets.only(bottom: 4),
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
@@ -599,101 +601,138 @@ Widget _yaoDetailCard(YaoModel yao) {
       borderRadius: BorderRadius.circular(6),
       border: Border.all(color: _sBorder),
     ),
-    child: Row(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 六神窄条（28 宽，与排盘页 GuaWidget 六神列对齐）
-        Container(
-          width: 28,
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          decoration: BoxDecoration(
-            color: lsColor.withAlpha(24),
-            borderRadius: BorderRadius.circular(3),
-            border: Border(left: BorderSide(color: lsColor, width: 2)),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            liuShen != null ? _sLiuShenCN[liuShen]!.substring(0, 1) : '—',
-            style: TextStyle(
-              fontSize: 10,
-              color: lsColor,
-              fontWeight: FontWeight.bold,
+        Row(
+          children: [
+            // 六神窄条（28 宽，与排盘页 GuaWidget 六神列对齐）
+            Container(
+              width: 28,
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              decoration: BoxDecoration(
+                color: lsColor.withAlpha(24),
+                borderRadius: BorderRadius.circular(3),
+                border: Border(left: BorderSide(color: lsColor, width: 2)),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                liuShen != null ? _sLiuShenCN[liuShen]!.substring(0, 1) : '—',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: lsColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            // 爻画列（40 宽，与排盘页 GuaWidget 爻画列对齐；动爻金色）
+            SizedBox(
+              width: 40,
+              child: _miniYaoLine(yao),
+            ),
+            const SizedBox(width: 6),
+            // 爻位名（初九/六二/九三…）
+            SizedBox(
+              width: 30,
+              child: Text(
+                _yaoPosFullName(yao),
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _sText),
+              ),
+            ),
+            // 阴阳 + 动静
+            Text(
+              yao.yinYang == YaoYinYang.yang ? '阳' : '阴',
+              style: const TextStyle(fontSize: 10, color: _sSub),
+            ),
+            if (yao.isMoving) ...[
+              const SizedBox(width: 2),
+              Text(
+                '动',
+                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _sGold),
+              ),
+            ],
+            const SizedBox(width: 6),
+            // 干支
+            Text(
+              _ganZhiText(yao),
+              style: const TextStyle(fontSize: 11, color: _sText),
+            ),
+            // 五行
+            if (yao.diZhi != null) ...[
+              const SizedBox(width: 6),
+              Text(
+                _sWuXingCN[_diZhiWuXing(yao.diZhi!)] ?? '',
+                style: TextStyle(fontSize: 10, color: _sWuXingColor(_diZhiWuXing(yao.diZhi!))),
+              ),
+            ],
+            // 六亲
+            if (yao.liuQin != LiuQin.none) ...[
+              const SizedBox(width: 6),
+              Text(
+                _sLiuQinCN[yao.liuQin] ?? '',
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: _sText),
+              ),
+            ],
+            // 旺衰
+            if (yao.wangShuai != null) ...[
+              const SizedBox(width: 6),
+              Text(
+                _sWangShuaiCN[yao.wangShuai] ?? '',
+                style: TextStyle(fontSize: 10, color: _sWangShuaiColor[yao.wangShuai]),
+              ),
+            ],
+            // 世应
+            if (yao.isShi)
+              _shiYingBadge('世', const Color(0xFFD32F2F))
+            else if (yao.isYing)
+              _shiYingBadge('应', const Color(0xFF1976D2)),
+            // 特殊标记（空/刑/冲/合/害/三合）：Expanded+Wrap 防止字段全显时溢出
+            if (marks.isNotEmpty)
+              Expanded(
+                child: Wrap(
+                  spacing: 2,
+                  runSpacing: 2,
+                  children: marks.map((m) => _markBadge(m)).toList(),
+                ),
+              ),
+          ],
+        ),
+        // 白话解释（与点击爻位弹窗 _showYaoRef 同源共享文本，'术语 — 白话'）
+        if (plainDescs.isNotEmpty) ...[
+          const SizedBox(height: 3),
+          Padding(
+            padding: const EdgeInsets.only(left: 34),
+            child: Text(
+              plainDescs.join(' ｜ '),
+              style: const TextStyle(fontSize: 9.5, color: _sSub, height: 1.35),
             ),
           ),
-        ),
-        const SizedBox(width: 6),
-        // 爻画列（40 宽，与排盘页 GuaWidget 爻画列对齐；动爻金色）
-        SizedBox(
-          width: 40,
-          child: _miniYaoLine(yao),
-        ),
-        const SizedBox(width: 6),
-        // 爻位名（初九/六二/九三…）
-        SizedBox(
-          width: 30,
-          child: Text(
-            _yaoPosFullName(yao),
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _sText),
-          ),
-        ),
-        // 阴阳 + 动静
-        Text(
-          yao.yinYang == YaoYinYang.yang ? '阳' : '阴',
-          style: const TextStyle(fontSize: 10, color: _sSub),
-        ),
-        if (yao.isMoving) ...[
-          const SizedBox(width: 2),
-          Text(
-            '动',
-            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _sGold),
-          ),
         ],
-        const SizedBox(width: 6),
-        // 干支
-        Text(
-          _ganZhiText(yao),
-          style: const TextStyle(fontSize: 11, color: _sText),
-        ),
-        // 五行
-        if (yao.diZhi != null) ...[
-          const SizedBox(width: 6),
-          Text(
-            _sWuXingCN[_diZhiWuXing(yao.diZhi!)] ?? '',
-            style: TextStyle(fontSize: 10, color: _sWuXingColor(_diZhiWuXing(yao.diZhi!))),
-          ),
-        ],
-        // 六亲
-        if (yao.liuQin != LiuQin.none) ...[
-          const SizedBox(width: 6),
-          Text(
-            _sLiuQinCN[yao.liuQin] ?? '',
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: _sText),
-          ),
-        ],
-        // 旺衰
-        if (yao.wangShuai != null) ...[
-          const SizedBox(width: 6),
-          Text(
-            _sWangShuaiCN[yao.wangShuai] ?? '',
-            style: TextStyle(fontSize: 10, color: _sWangShuaiColor[yao.wangShuai]),
-          ),
-        ],
-        // 世应
-        if (yao.isShi)
-          _shiYingBadge('世', const Color(0xFFD32F2F))
-        else if (yao.isYing)
-          _shiYingBadge('应', const Color(0xFF1976D2)),
-        // 特殊标记（空/刑/冲/合/害/三合）：Expanded+Wrap 防止字段全显时溢出
-        if (marks.isNotEmpty)
-          Expanded(
-            child: Wrap(
-              spacing: 2,
-              runSpacing: 2,
-              children: marks.map((m) => _markBadge(m)).toList(),
-            ),
-          ),
       ],
     ),
   );
+}
+
+/// 每爻白话解释条目（与点击爻位弹窗 _showYaoRef 同源共享文本）
+///
+/// 每条为「字段标签：术语 — 白话」，如 '旺衰：旺 — 力量最旺盛，如日中天。此爻能量最强，作用力大'。
+List<String> _yaoPlainDescs(YaoModel yao) {
+  return <String>[
+    if (yao.liuQin != LiuQin.none)
+      '六亲：${_sLiuQinCN[yao.liuQin]} — ${liuQinDesc(yao.liuQin)}',
+    if (yao.liuShen != null)
+      '六神：${_sLiuShenCN[yao.liuShen]} — ${liuShenDesc(yao.liuShen!)}',
+    if (yao.wangShuai != null) '旺衰：${wangShuaiDesc(yao.wangShuai!)}',
+    if (yao.isShi) '世爻：$shiYaoDesc',
+    if (yao.isYing) '应爻：$yingYaoDesc',
+    if (yao.isKongWang) '旬空：$kongWangDesc',
+    if (yao.isXing) '刑：$xingDesc',
+    if (yao.isChong) '冲：$chongDesc',
+    if (yao.isHe) '合：$heDesc',
+    if (yao.isHai) '害：$haiDesc',
+    if (yao.sanHeJu.isNotEmpty) '三合（${yao.sanHeJu.join('、')}）：$sanHeDesc',
+  ];
 }
 
 /// 世/应 徽章
