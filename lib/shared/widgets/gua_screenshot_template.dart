@@ -517,12 +517,51 @@ Widget _guaCard(String label, GuaModel gua) {
   );
 }
 
-/// 单根爻线（阳爻实线 / 阴爻两段，动爻金色）
+/// 单根爻线（阳爻实线 / 阴爻两段，动爻金色 + 闪电标记，与排盘页 GuaWidget 一致）
 Widget _guaLine(YaoModel yao) {
   final color = yao.isMoving ? _sGold : _sText;
   Widget segment() => Container(
         height: 4,
         margin: const EdgeInsets.symmetric(vertical: 3),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      );
+  final Widget line;
+  if (yao.yinYang == YaoYinYang.yang) {
+    line = segment();
+  } else {
+    line = Row(
+      children: [
+        Expanded(child: segment()),
+        const SizedBox(width: 8),
+        Expanded(child: segment()),
+      ],
+    );
+  }
+  if (!yao.isMoving) return line;
+  // 动爻：爻线变金色，右端加闪电符号（与排盘页 Icons.bolt 动爻标记一致）
+  return SizedBox(
+    height: 14,
+    child: Stack(
+      children: [
+        Align(alignment: Alignment.center, child: line),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Icon(Icons.bolt, size: 12, color: _sGold),
+        ),
+      ],
+    ),
+  );
+}
+
+/// 详解小卡片内的小爻画（40 宽列，与排盘页 GuaWidget 爻画列一致；动爻金色）
+Widget _miniYaoLine(YaoModel yao) {
+  final color = yao.isMoving ? _sGold : _sText;
+  Widget segment() => Container(
+        height: 4,
+        margin: const EdgeInsets.symmetric(vertical: 2),
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(2),
@@ -534,7 +573,7 @@ Widget _guaLine(YaoModel yao) {
   return Row(
     children: [
       Expanded(child: segment()),
-      const SizedBox(width: 8),
+      const SizedBox(width: 6),
       Expanded(child: segment()),
     ],
   );
@@ -562,9 +601,9 @@ Widget _yaoDetailCard(YaoModel yao) {
     ),
     child: Row(
       children: [
-        // 六神窄条
+        // 六神窄条（28 宽，与排盘页 GuaWidget 六神列对齐）
         Container(
-          width: 26,
+          width: 28,
           padding: const EdgeInsets.symmetric(vertical: 2),
           decoration: BoxDecoration(
             color: lsColor.withAlpha(24),
@@ -582,9 +621,15 @@ Widget _yaoDetailCard(YaoModel yao) {
           ),
         ),
         const SizedBox(width: 6),
+        // 爻画列（40 宽，与排盘页 GuaWidget 爻画列对齐；动爻金色）
+        SizedBox(
+          width: 40,
+          child: _miniYaoLine(yao),
+        ),
+        const SizedBox(width: 6),
         // 爻位名（初九/六二/九三…）
         SizedBox(
-          width: 34,
+          width: 30,
           child: Text(
             _yaoPosFullName(yao),
             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _sText),
@@ -637,8 +682,15 @@ Widget _yaoDetailCard(YaoModel yao) {
           _shiYingBadge('世', const Color(0xFFD32F2F))
         else if (yao.isYing)
           _shiYingBadge('应', const Color(0xFF1976D2)),
-        // 特殊标记（空/刑/冲/合/害/三合）
-        ...marks.map((m) => _markBadge(m)),
+        // 特殊标记（空/刑/冲/合/害/三合）：Expanded+Wrap 防止字段全显时溢出
+        if (marks.isNotEmpty)
+          Expanded(
+            child: Wrap(
+              spacing: 2,
+              runSpacing: 2,
+              children: marks.map((m) => _markBadge(m)).toList(),
+            ),
+          ),
       ],
     ),
   );
