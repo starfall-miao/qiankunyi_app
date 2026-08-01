@@ -144,10 +144,14 @@ class _SaveImageDialogState extends State<_SaveImageDialog> {
                   child: InteractiveViewer(
                     maxScale: 5.0,
                     minScale: 0.5,
-                    child: Center(
-                      child: Image.memory(
-                        widget.pngBytes,
-                        fit: BoxFit.contain,
+                    // SizedBox.expand 显式铺满视口，Center + BoxFit.contain
+                    // 保证放大预览同样水平垂直居中
+                    child: SizedBox.expand(
+                      child: Center(
+                        child: Image.memory(
+                          widget.pngBytes,
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                   ),
@@ -214,15 +218,23 @@ class _SaveImageDialogState extends State<_SaveImageDialog> {
                     ),
                     const SizedBox(height: 12),
                     // 图片预览：点击可放大查看
+                    // 用 SizedBox 显式限定预览区尺寸（高度 180、宽度撑满），
+                    // Image 在容器内 BoxFit.contain 等比缩放不裁切，外层
+                    // Center 保证图片水平垂直居中。此前 Image 直接依赖
+                    // 单边 height + 父级 loose 约束计算布局尺寸，部分版本
+                    // 下会以 maxWidth 主导导致预览图偏左上、Center 失效。
                     Center(
                       child: GestureDetector(
                         onTap: _showFullPreview,
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: Image.memory(
-                            widget.pngBytes,
+                          child: SizedBox(
+                            width: double.infinity,
                             height: 180,
-                            fit: BoxFit.contain,
+                            child: Image.memory(
+                              widget.pngBytes,
+                              fit: BoxFit.contain,
+                            ),
                           ),
                         ),
                       ),
