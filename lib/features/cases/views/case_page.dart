@@ -1519,7 +1519,12 @@ class _AiChatSection extends StatefulWidget {
 
 class _AiChatSectionState extends State<_AiChatSection> {
   final TextEditingController _questionCtrl = TextEditingController();
+  /// 首个 chunk 到达前为 true：头部显示转圈（AC4：转圈只在首个 chunk 前显示）
   bool _loading = false;
+  /// 流式请求进行中：首个 chunk 到达后 _loading=false（转圈关闭），但 _streaming
+  /// 保持 true 直到流结束/取消/删除，用于禁用'开始 AI 解卦'按钮与追问输入，
+  /// 避免流式中触发并发请求（与 _loading 分离，转圈与打字机不再全程并存）
+  bool _streaming = false;
   List<AiMessage> _localMessages = [];
   /// 当前流式订阅（AI 解卦/追问流式输出期间非 null）
   StreamSubscription<String>? _streamSub;
@@ -1693,8 +1698,13 @@ class _AiChatSectionState extends State<_AiChatSection> {
     required String logTag,
     required String errPrefix,
   }) async {
+    // 防御：已有流式请求进行中时忽略并发触发（按钮/追问区已隐藏，双保险）
+    if (_streaming || _streamSub != null) return;
     final sp = context.read<SettingsProvider>();
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _streaming = true;
+    });
     try {
       // 关键步骤日志：开始请求（model、消息数；不打印 apiKey，避免明文泄漏）
       Logger.instance.info('$logTag开始',
@@ -1724,6 +1734,11 @@ class _AiChatSectionState extends State<_AiChatSection> {
         (piece) {
           if (!mounted || _streamingMsg == null) return;
           receivedAny = true;
+          if (_loading) {
+            // 发现 A：首个 chunk 到达后关闭转圈（AC4：转圈只在首个 chunk 前
+            // 显示；之后的进度由消息卡片的打字机效果呈现）
+            setState(() => _loading = false);
+          }
           _appendStreamPiece(piece);
         },
         onError: (Object e) {
@@ -1732,8 +1747,11 @@ class _AiChatSectionState extends State<_AiChatSection> {
           final msg = _streamingMsg;
           _streamingMsg = null;
           if (msg == null) {
-            // 占位已被用户删除：不再回退，直接复位 loading
-            setState(() => _loading = false);
+            // 占位已被用户删除：不再回退，直接复位全部请求态
+            setState(() {
+              _loading = false;
+              _streaming = false;
+            });
             return;
           }
           Logger.instance.error('$logTag流式失败', '流错误: $e');
@@ -1749,12 +1767,23 @@ class _AiChatSectionState extends State<_AiChatSection> {
           _streamSub = null;
           final msg = _streamingMsg;
           _streamingMsg = null;
-          if (msg == null) return; // 占位已被删除/取消
+          if (msg == null) {
+            // 占位已被删除/取消：不再回退，直接复位全部请求态
+            // （发现 B：该早退路径同样必须复位，否则 _loading 永不复位卡死）
+            setState(() {
+              _loading = false;
+              _streaming = false;
+            });
+            return;
+          }
           if (receivedAny && msg.content.trim().isNotEmpty) {
             // 流式成功：完整内容已随增量拼好，持久化最终文本
             Logger.instance.info('$logTag流式完成', 'content长度: ${msg.content.length}');
             _persistAiMessages(logTag);
-            setState(() => _loading = false);
+            setState(() {
+              _loading = false;
+              _streaming = false;
+            });
           } else {
             // 流正常结束但未产出内容 → 回退非流式 chat()（网关不支持流式等场景）
             Logger.instance.error('$logTag流式无内容', '回退非流式 chat()');
@@ -1773,7 +1802,12 @@ class _AiChatSectionState extends State<_AiChatSection> {
       _handleStreamFailure(_streamingMsg, '$errPrefix: 网络错误: $e');
       _streamingMsg = null;
       _showToast('$errPrefix: 网络错误: $e');
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _streaming = false;
+        });
+      }
     }
   }
 
@@ -1862,9 +1896,12 @@ class _AiChatSectionState extends State<_AiChatSection> {
       _handleStreamFailure(msg, '$errPrefix: 网络错误: $e');
       _showToast('$errPrefix: 网络错误: $e');
     } finally {
-      // 成功/失败/异常都复位 loading；弹窗已关闭时避免对已 dispose 的 State 调 setState
+      // 成功/失败/异常都复位全部请求态；弹窗已关闭时避免对已 dispose 的 State 调 setState
       if (mounted) {
-        setState(() => _loading = false);
+        setState(() {
+          _loading = false;
+          _streaming = false;
+        });
       }
     }
   }
@@ -1931,6 +1968,15 @@ class _AiChatSectionState extends State<_AiChatSection> {
       _streamingMsg = null;
       await _streamSub?.cancel();
       _streamSub = null;
+      // 发现 B（高危）：取消订阅后 onDone/onError 不再触发，必须在这里同步复位
+      // 请求态，否则转圈与按钮/追问区锁定永久卡死；
+      // await 之后弹窗可能已关闭，需 mounted 守卫避免 setState-after-dispose。
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _streaming = false;
+        });
+      }
     }
     setState(() {
       _localMessages = [..._localMessages]..removeAt(index);
@@ -2013,7 +2059,9 @@ class _AiChatSectionState extends State<_AiChatSection> {
             const SizedBox(height: 8),
 
             // ── 首次 AI 解卦按钮 ──
-            if (!_hasAssistantReply && !_loading) ...[
+            // 发现 A：流式进行中（_streaming）也隐藏按钮——首个 chunk 后
+            // _loading 已复位，若无 _streaming 判断按钮会误现并可能并发触发
+            if (!_hasAssistantReply && !_loading && !_streaming) ...[
               Center(
                 child: TextButton.icon(
                   onPressed: _requestJieGua,
@@ -2146,7 +2194,9 @@ class _AiChatSectionState extends State<_AiChatSection> {
             ],
 
             // ── 有 AI 回复时显示追问输入 ──
-            if (_hasAssistantReply && !_loading) ...[
+            // 发现 A：流式进行中（_streaming）隐藏追问区，防止并发请求——
+            // 首个 chunk 后 _loading=false 但 _streaming=true，仍需保持隐藏
+            if (_hasAssistantReply && !_loading && !_streaming) ...[
               const SizedBox(height: 8),
               Row(children: [
                 Expanded(

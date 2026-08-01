@@ -200,7 +200,7 @@ class AiService {
             sawSseData = true;
             final data = _stripDataPrefix(line);
             if (data.trim() == '[DONE]') return;
-            final piece = _extractStreamPiece(data);
+            final piece = _extractStreamPiece(data, sseMode: true);
             if (piece != null && piece.isNotEmpty) {
               yield piece;
             }
@@ -227,7 +227,7 @@ class AiService {
         if (line.startsWith('data:')) {
           final data = _stripDataPrefix(line);
           if (data.trim() != '[DONE]') {
-            final piece = _extractStreamPiece(data);
+            final piece = _extractStreamPiece(data, sseMode: true);
             if (piece != null && piece.isNotEmpty) {
               yield piece;
             }
@@ -288,8 +288,11 @@ class AiService {
   /// 从 SSE 的 data 行提取增量文本块。
   /// - OpenAI 兼容 SSE：data 为 JSON（choices[0].delta.content，兼容 String / 分段 List）
   /// - 纯文本 chunk：data 非 JSON 时原样返回（非 SSE 网关直接输出文本）
-  /// 返回 null 表示该行无有效增量（如 role/usage 事件、空 choices）。
-  String? _extractStreamPiece(String data) {
+  /// [sseMode] 为 true 表示该行来自 SSE 的 data: 行：若 `{` 开头但 JSON 解析失败
+  /// （如多行 JSON 被拆行产生的碎片），直接丢弃返回 null，避免碎片污染 content。
+  /// 纯文本模式（sseMode=false）保持原累积行为。
+  /// 返回 null 表示该行无有效增量（如 role/usage 事件、空 choices、解析失败碎片）。
+  String? _extractStreamPiece(String data, {bool sseMode = false}) {
     final s = data.trim();
     if (s.isEmpty) return null;
     if (s.startsWith('{')) {
@@ -335,7 +338,9 @@ class AiService {
         // 是 JSON 但没有可提取的增量（role/usage/空 choices 等）→ 忽略
         return null;
       } catch (_) {
-        // 不是合法 JSON → 按纯文本 chunk 处理
+        // JSON 解析失败：SSE 模式下丢弃该行（多行拆分 JSON 的碎片会污染
+        // content）；纯文本模式按原样累积（可能是以 { 开头的普通文本）。
+        if (sseMode) return null;
       }
     }
     return s;
