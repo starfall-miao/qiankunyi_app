@@ -34,12 +34,21 @@ class CasePage extends StatefulWidget {
 }
 
 class _CasePageState extends State<CasePage> {
+  // 大运横向滚动控制器（供 Scrollbar 显示/拖拽滚动条，与排盘页 bazi_page.dart 一致）
+  final _daYunScrollCtrl = ScrollController();
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<CaseProvider>().loadCases();
     });
+  }
+
+  @override
+  void dispose() {
+    _daYunScrollCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -951,34 +960,53 @@ class _CasePageState extends State<CasePage> {
           // ── 大运 ──
           if (r.daYun.isNotEmpty) ...[
             sectionHeader('大运'),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: r.daYun.map((dy) {
-                  return Container(
-                    width: 68,
-                    margin: const EdgeInsets.only(right: 6),
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: b.withAlpha(60)),
-                    ),
-                    child: Column(
-                      children: [
-                        Text('${dy.startAge}岁',
-                            style: TextStyle(
-                                fontSize: 11, color: t.withAlpha(150))),
-                        const SizedBox(height: 2),
-                        Text(dy.ganZhi,
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: t)),
-                      ],
-                    ),
-                  );
-                }).toList(),
+            // 与排盘页 bazi_page.dart 大运一致：ScrollConfiguration 允许鼠标/触控板拖拽横向滚动，
+            // Scrollbar 提供可见滚动条（可拖拽拇指），避免外层纵向滚动吞掉横向手势导致"看起来不能滑动"。
+            ScrollConfiguration(
+              behavior: ScrollConfiguration.of(ctx).copyWith(
+                dragDevices: {
+                  ui.PointerDeviceKind.touch,
+                  ui.PointerDeviceKind.mouse,
+                  ui.PointerDeviceKind.stylus,
+                  ui.PointerDeviceKind.trackpad,
+                },
+              ),
+              child: Scrollbar(
+                controller: _daYunScrollCtrl,
+                thumbVisibility: true,
+                interactive: true,
+                radius: const Radius.circular(8),
+                child: SingleChildScrollView(
+                  controller: _daYunScrollCtrl,
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: r.daYun.map((dy) {
+                      return Container(
+                        width: 68,
+                        margin: const EdgeInsets.only(right: 6),
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: b.withAlpha(60)),
+                        ),
+                        child: Column(
+                          children: [
+                            Text('${dy.startAge}岁',
+                                style: TextStyle(
+                                    fontSize: 11, color: t.withAlpha(150))),
+                            const SizedBox(height: 2),
+                            Text(dy.ganZhi,
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: t)),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),
