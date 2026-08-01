@@ -1701,7 +1701,9 @@ class _AiChatSectionState extends State<_AiChatSection> {
     final messages = <Map<String, String>>[
       {'role': 'system', 'content': systemPrompt},
       ..._messages
-          .where((m) => m.role == 'user' || m.role == 'assistant')
+          .where((m) =>
+              (m.role == 'user' || m.role == 'assistant') &&
+              m.content.trim().isNotEmpty)
           .map((m) => {'role': m.role, 'content': m.content}),
       {'role': 'user', 'content': text},
     ];

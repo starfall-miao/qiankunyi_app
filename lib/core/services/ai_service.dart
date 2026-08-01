@@ -248,20 +248,33 @@ class AiService {
   /// 兼容 OpenAI 标准（content 为 String）与 opencode 网关变体：
   /// - content 为 List（分段数组，如 [{'type':'text','text':'...'}, ...] 或 ['...', ...]）
   /// - content 为 null / 缺失 / 其他类型
+  /// - DeepSeek 推理模型：content 为空但 reasoning_content 有内容（思考过程），
+  ///   此时用 reasoning_content 兜底，避免将推理模型的回复误判为"内容为空"。
   /// 提取结果为空（null 或空白）时返回 null，由调用方判定为格式异常。
   String? _extractContent(dynamic choice) {
     if (choice is! Map) return null;
     final message = choice['message'];
     if (message is! Map) return null;
-    final content = message['content'];
-    if (content == null) return null;
-    if (content is String) {
-      final s = content.trim();
+    final content = _extractContentField(message['content']);
+    if (content != null) return content;
+    // DeepSeek 推理模型兜底：content 缺失/为空时读取 reasoning_content
+    final reasoning = _extractContentField(message['reasoning_content']);
+    if (reasoning != null) return reasoning;
+    return null;
+  }
+
+  /// 从单个内容字段（content / reasoning_content）提取文本。
+  /// 兼容 String / 分段 List（[{'type':'text','text':'...'}, ...] 或 ['...', ...]）/
+  /// 其他类型兜底转字符串。字段为 null 或空白时返回 null。
+  String? _extractContentField(dynamic field) {
+    if (field == null) return null;
+    if (field is String) {
+      final s = field.trim();
       return s.isEmpty ? null : s;
     }
-    if (content is List) {
+    if (field is List) {
       final buf = StringBuffer();
-      for (final seg in content) {
+      for (final seg in field) {
         if (seg is String) {
           buf.write(seg);
         } else if (seg is Map) {
@@ -273,7 +286,7 @@ class AiService {
       return s.isEmpty ? null : s;
     }
     // 其他类型（数字/布尔等）兜底转字符串
-    final s = content.toString().trim();
+    final s = field.toString().trim();
     return s.isEmpty ? null : s;
   }
 
@@ -303,34 +316,27 @@ class AiService {
           if (choices is List && choices.isNotEmpty) {
             final choice = choices[0];
             if (choice is Map) {
-              // OpenAI 兼容 SSE：增量在 delta.content
+              // OpenAI 兼容 SSE：增量在 delta.content；
+              // DeepSeek 推理模型：推理阶段增量在 delta.reasoning_content
+              // （content 为空）。两者任一非空即产出，避免推理阶段被误判
+              // 为"流式无内容"而白白回退，也让用户能看到思考过程打字机效果。
               final delta = choice['delta'];
               if (delta is Map) {
-                final content = delta['content'];
-                if (content == null) return null;
-                if (content is String) {
-                  return content.isEmpty ? null : content;
-                }
-                if (content is List) {
-                  final buf = StringBuffer();
-                  for (final seg in content) {
-                    if (seg is String) {
-                      buf.write(seg);
-                    } else if (seg is Map) {
-                      final text = seg['text'];
-                      if (text != null) buf.write(text.toString());
-                    }
-                  }
-                  final t = buf.toString();
-                  return t.isEmpty ? null : t;
-                }
-                return content.toString();
+                final content = _extractStreamField(delta['content']);
+                if (content != null && content.isNotEmpty) return content;
+                final reasoning = _extractStreamField(delta['reasoning_content']);
+                if (reasoning != null && reasoning.isNotEmpty) return reasoning;
+                return null;
               }
-              // 兼容部分网关直接返回 message.content（非流式增量结构）
+              // 兼容部分网关直接返回 message.content / message.reasoning_content
+              //（非流式增量结构）
               final message = choice['message'];
               if (message is Map) {
-                final content = message['content'];
-                if (content is String && content.isNotEmpty) return content;
+                final content = _extractStreamField(message['content']);
+                if (content != null && content.isNotEmpty) return content;
+                final reasoning =
+                    _extractStreamField(message['reasoning_content']);
+                if (reasoning != null && reasoning.isNotEmpty) return reasoning;
               }
             }
           }
@@ -344,6 +350,27 @@ class AiService {
       }
     }
     return s;
+  }
+
+  /// 从增量字段（content / reasoning_content）提取文本。
+  /// 兼容 String / 分段 List；字段为 null 或空白时返回 null。
+  String? _extractStreamField(dynamic field) {
+    if (field == null) return null;
+    if (field is String) return field.isEmpty ? null : field;
+    if (field is List) {
+      final buf = StringBuffer();
+      for (final seg in field) {
+        if (seg is String) {
+          buf.write(seg);
+        } else if (seg is Map) {
+          final text = seg['text'];
+          if (text != null) buf.write(text.toString());
+        }
+      }
+      final t = buf.toString();
+      return t.isEmpty ? null : t;
+    }
+    return field.toString();
   }
 
   /// apiKey 日志打码：只显示前 4 位 + 后 4 位，中间 ****
