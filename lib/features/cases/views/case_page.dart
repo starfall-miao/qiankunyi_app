@@ -2013,8 +2013,9 @@ class _AiChatSectionState extends State<_AiChatSection> {
     setState(() {
       _localMessages = [..._localMessages]..removeAt(index);
     });
-    // async gap 之后使用 context 前需 context.mounted 守卫（use_build_context_synchronously）
-    if (!context.mounted) return;
+    // async gap（await cancel）之后使用 State.context 前需 State.mounted 守卫
+    // （use_build_context_synchronously 要求 State.context 用 mounted 而非 context.mounted）
+    if (!mounted) return;
     final id = widget.caseModel.id;
     if (id == null) {
       Logger.instance.error('AI解卦', '卦例 id 为空，删除仅影响界面显示');
