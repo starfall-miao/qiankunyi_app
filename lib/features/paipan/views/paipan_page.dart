@@ -410,10 +410,8 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                       onPressed: () => _saveImage(
                         _liuyaoScreenshotKey,
                         context,
-                        guaName: lr != null
-                            ? (_guaNameCN[lr.benGua.name] ??
-                                lr.benGua.name.name)
-                            : null,
+                        guaName: _guaNameCN[lr.benGua.name] ??
+                            lr.benGua.name.name,
                       ),
                       icon: const Icon(Icons.image_outlined, size: 16),
                       label: const Text('保存图片'),
