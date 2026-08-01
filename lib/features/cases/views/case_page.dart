@@ -3,22 +3,27 @@
 library;
 
 import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/services/ai_service.dart';
-import '../providers/case_provider.dart';
-import '../models/case_models.dart';
-import '../../paipan/models/paipan_result.dart';
+import '../../../shared/widgets/gua_screenshot_template.dart';
+import '../../../shared/widgets/save_image_dialog.dart';
 import '../../paipan/models/bazi_models.dart';
-import '../../reference/data/bazi_reference_data.dart';
 import '../../paipan/models/gua_model.dart';
+import '../../paipan/models/paipan_result.dart';
 import '../../paipan/models/yao_model.dart';
 import '../../paipan/views/gua_widget.dart';
+import '../../reference/data/bazi_reference_data.dart';
+import '../../reference/data/reference_data.dart';
 import '../../settings/settings_provider.dart';
+import '../models/case_models.dart';
+import '../providers/case_provider.dart';
 
 class CasePage extends StatefulWidget {
   const CasePage({super.key});
@@ -307,6 +312,8 @@ class _CasePageState extends State<CasePage> {
     final screenW = MediaQuery.sizeOf(context).width;
     final sheetConstraints =
         BoxConstraints(maxWidth: screenW > 900 ? 720 : double.infinity);
+    // 保存图片：屏幕外截图模板的 RepaintBoundary key（详情弹窗每次打开独立创建）
+    final caseShotKey = GlobalKey();
 
     showModalBottomSheet<void>(
       context: context,
@@ -384,6 +391,33 @@ class _CasePageState extends State<CasePage> {
                 Text('${methodToCN(c.method)} · ${c.createdAt.month}/${c.createdAt.day}',
                     style: TextStyle(fontSize: 12, color: t.withAlpha(120))),
               ]),
+              const SizedBox(height: 8),
+              // ── 操作按钮：复制结果 / 保存图片 ──
+              Row(children: [
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () => _copyCaseResult(ctx, c),
+                    icon: const Icon(Icons.copy_outlined, size: 16),
+                    label: const Text('复制结果'),
+                    style: TextButton.styleFrom(
+                        foregroundColor: t.withAlpha(200)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () => _saveCaseImage(
+                      caseShotKey,
+                      ctx,
+                      guaName: _displayGuaName(c.guaName),
+                    ),
+                    icon: const Icon(Icons.image_outlined, size: 16),
+                    label: const Text('保存图片'),
+                    style: TextButton.styleFrom(
+                        foregroundColor: t.withAlpha(200)),
+                  ),
+                ),
+              ]),
               if (c.notes != null && c.notes!.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Container(
@@ -457,12 +491,197 @@ class _CasePageState extends State<CasePage> {
               // ── AI 解卦 / 追问 ──
               _AiChatSection(caseModel: c, parentScrollController: scrollCtrl),
               const SizedBox(height: 24),
+              // ── 截图专用模板（屏幕外，不显示；与排盘页保持一致的紧凑国风模板）──
+              ScreenshotSource(
+                boundaryKey: caseShotKey,
+                child: baziResult != null
+                    ? BaziScreenshotTemplate(
+                        birthText:
+                            '${baziResult.birth.year}年${baziResult.birth.month}月'
+                            '${baziResult.birth.day}日 '
+                            '${baziResult.birth.hour}时 · '
+                            '${baziResult.isMale ? '男' : '女'}',
+                        result: baziResult,
+                      )
+                    : (result != null &&
+                            (c.caseType == CaseType.meihua ||
+                                result.method == 'meihua'))
+                        ? MeihuaScreenshotTemplate(
+                            timeText: formatCnTime(result.paipanTime),
+                            infoTags: ['方式 ${result.method}'],
+                            benGua: result.benGua,
+                            bianGua: result.bianGua,
+                            huGua: result.huGua,
+                            explanationTitle:
+                                guaNameCN[result.benGua.name],
+                            explanationCi:
+                                getGuaCi(result.benGua.name)?.ci,
+                            explanationXiang:
+                                getGuaCi(result.benGua.name)?.xiang,
+                            explanationJiXiong:
+                                getGuaCi(result.benGua.name)?.jiXiong,
+                          )
+                        : (result != null)
+                            ? LiuyaoScreenshotTemplate(
+                                timeText: formatCnTime(result.paipanTime),
+                                infoTags: [
+                                  if (result.monthGanZhi != null)
+                                    '月 ${result.monthGanZhi}',
+                                  if (result.dayGanZhi != null)
+                                    '日 ${result.dayGanZhi}',
+                                  if (result.kongWang != null)
+                                    '空 旬空:${result.kongWang!.join(" ")}',
+                                  '派 ${result.school == LiuyaoSchool.jingFangJianBan ? "京房简版" : "京房正宗"}',
+                                ],
+                                benGua: result.benGua,
+                                bianGua: result.bianGua,
+                                huGua: result.huGua,
+                                explanationTitle:
+                                    guaNameCN[result.benGua.name],
+                                explanationCi:
+                                    getGuaCi(result.benGua.name)?.ci,
+                                explanationXiang:
+                                    getGuaCi(result.benGua.name)?.xiang,
+                                explanationJiXiong:
+                                    getGuaCi(result.benGua.name)?.jiXiong,
+                              )
+                            : const SizedBox.shrink(),
+              ),
             ],
           ),
         ),
         ),
       ),
     ).whenComplete(sheetCtrl.dispose);
+  }
+
+  /// 复制排盘结果文本到剪贴板（六爻/梅花/八字）
+  void _copyCaseResult(BuildContext ctx, CaseModel c) {
+    PaipanResult? result;
+    BaziResult? baziResult;
+    try {
+      result = PaipanResult.fromJson(
+          jsonDecode(c.paipanData) as Map<String, dynamic>);
+    } catch (_) {
+      try {
+        baziResult = BaziResult.fromJson(
+            jsonDecode(c.paipanData) as Map<String, dynamic>);
+      } catch (_) {}
+    }
+
+    final sb = StringBuffer();
+    if (baziResult != null) {
+      final r = baziResult;
+      sb.writeln('【落·乾坤】八字排盘结果');
+      sb.writeln('━━━━━━━━━━━━━━');
+      sb.writeln('出生：${r.birth.year}/${r.birth.month}/${r.birth.day} '
+          '${r.birth.hour}:${r.birth.minute.toString().padLeft(2, '0')}');
+      sb.writeln('性别：${r.isMale ? "男" : "女"}');
+      sb.writeln('━━━━━━━━━━━━━━');
+      sb.writeln('年柱：${r.yearZhu.ganZhi}  ${r.yearZhu.wuXing}');
+      sb.writeln('月柱：${r.monthZhu.ganZhi}  ${r.monthZhu.wuXing}');
+      sb.writeln('日柱：${r.dayZhu.ganZhi}  ${r.dayZhu.wuXing}');
+      sb.writeln('时柱：${r.hourZhu.ganZhi}  ${r.hourZhu.wuXing}');
+      sb.writeln('━━━━━━━━━━━━━━');
+      if (r.wuXingWangShuai.isNotEmpty) {
+        sb.writeln('五行旺衰：');
+        sb.writeln(r.wuXingWangShuai.entries
+            .map((e) => '${e.key}: ${e.value}')
+            .join(' · '));
+      }
+      if (r.daYun.isNotEmpty) {
+        sb.writeln('━━━━━━━━━━━━━━');
+        sb.writeln('大运：${r.daYun.map((d) => '${d.ganZhi}(${d.startAge}岁起)').join('，')}');
+      }
+      if (r.liuNian != null) {
+        sb.writeln('流年：${r.liuNian}');
+      }
+    } else if (result != null) {
+      final wxCN = <WuXing, String>{
+        WuXing.jin: '金', WuXing.mu: '木', WuXing.shui: '水',
+        WuXing.huo: '火', WuXing.tu: '土',
+      };
+      final bn = guaNameCN[result.benGua.name] ?? result.benGua.name.name;
+      final bg = guaGongCN[result.benGua.gong] ?? '';
+      final bw = wxCN[result.benGua.wuXing] ?? '';
+      final timeStr =
+          '${result.paipanTime.year}/${result.paipanTime.month}/${result.paipanTime.day} '
+          '${result.paipanTime.hour}:${result.paipanTime.minute.toString().padLeft(2, '0')}';
+      final yaosStr = result.benGua.yaos
+          .map((y) => '${y.positionName}爻 '
+              '${y.yinYang == YaoYinYang.yang ? '———' : '— —'}'
+              '${y.isMoving ? ' ⚡动' : ''}')
+          .toList()
+          .reversed
+          .join('\n');
+      sb.writeln('【落·乾坤】排盘结果');
+      sb.writeln('━━━━━━━━━━━━━━');
+      sb.writeln('卦名：$bn');
+      sb.writeln('宫位：$bg宫 · 五行 $bw');
+      sb.writeln('方式：${methodToCN(c.method)}');
+      sb.writeln('时间：$timeStr');
+      sb.writeln('━━━━━━━━━━━━━━');
+      sb.writeln(yaosStr);
+      if (result.bianGua != null) {
+        final bn2 = guaNameCN[result.bianGua!.name] ?? result.bianGua!.name.name;
+        sb.writeln('━━━━━━━━━━━━━━');
+        sb.writeln('▸ 变卦：$bn2');
+      }
+      if (result.huGua != null) {
+        final bn3 = guaNameCN[result.huGua!.name] ?? result.huGua!.name.name;
+        sb.writeln('▸ 互卦：$bn3');
+      }
+    }
+    sb.writeln('━━━━━━━━━━━━━━');
+    sb.writeln('—— 来自「落·乾坤」');
+
+    Clipboard.setData(ClipboardData(text: sb.toString()));
+    Logger.instance.info('卦例详情', '复制排盘结果: ${c.title}');
+    if (ctx.mounted) {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        const SnackBar(content: Text('排盘结果已复制到剪贴板'),
+            duration: Duration(seconds: 2)),
+      );
+    }
+  }
+
+  /// 截取卦例详情模板并保存图片（浮窗预览 → 文件名编辑 → 选择目录 → 写入）
+  Future<void> _saveCaseImage(GlobalKey key, BuildContext ctx,
+      {required String guaName}) async {
+    try {
+      final boundary = key.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
+      if (boundary == null) {
+        if (ctx.mounted) {
+          ScaffoldMessenger.of(ctx).showSnackBar(
+            const SnackBar(content: Text('截图失败：未找到排盘结果')),
+          );
+        }
+        return;
+      }
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+      final pngBytes = byteData.buffer.asUint8List();
+      if (!ctx.mounted) return;
+      final savedPath = await saveImageWithDialog(
+        context: ctx,
+        pngBytes: pngBytes,
+        defaultFileName: buildImageFileName(guaName),
+      );
+      if (savedPath == null) return;
+      if (ctx.mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(content: Text('截图已保存: $savedPath')),
+        );
+      }
+    } catch (e) {
+      if (ctx.mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(content: Text('保存图片失败: $e')),
+        );
+      }
+    }
   }
 
   Widget _infoTag(String text, Color color) {
