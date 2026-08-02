@@ -2,6 +2,7 @@
 // 包含主题、配色、亚克力、字体、排盘规则等全部配置
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/theme_provider.dart';
@@ -440,13 +441,36 @@ class _SettingsPageState extends State<SettingsPage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text('运行日志'),
-            IconButton(
-              icon: const Icon(Icons.delete_outline, size: 20),
-              onPressed: () {
-                log.clear();
-                Navigator.of(ctx).pop();
-              },
-              tooltip: '清空日志',
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 复制全部日志（用户反馈"日志不能复制很不科学"）：
+                // 一键把全部日志拼成文本复制到剪贴板，便于粘贴给开发者排查
+                IconButton(
+                  icon: const Icon(Icons.copy, size: 20),
+                  onPressed: () {
+                    final buf = StringBuffer();
+                    for (final e in log.logs) {
+                      buf.writeln(
+                          '[${e.time.hour.toString().padLeft(2, '0')}:${e.time.minute.toString().padLeft(2, '0')}:${e.time.second.toString().padLeft(2, '0')}] ${e.levelTag} ${e.message}${e.detail != null && e.detail!.isNotEmpty ? ' | ${e.detail}' : ''}');
+                    }
+                    Clipboard.setData(ClipboardData(text: buf.toString()));
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      const SnackBar(content: Text('日志已复制到剪贴板'),
+                          duration: Duration(seconds: 1)),
+                    );
+                  },
+                  tooltip: '复制全部日志',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  onPressed: () {
+                    log.clear();
+                    Navigator.of(ctx).pop();
+                  },
+                  tooltip: '清空日志',
+                ),
+              ],
             ),
           ],
         ),
@@ -477,14 +501,16 @@ class _SettingsPageState extends State<SettingsPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          // SelectableText：日志可长按选择/复制（用户反馈
+                          // "日志不能复制很不科学"）
+                          SelectableText(
                             '[${e.time.hour.toString().padLeft(2,'0')}:${e.time.minute.toString().padLeft(2,'0')}:${e.time.second.toString().padLeft(2,'0')}] ${e.message}',
                             style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
                           ),
                           if (e.detail != null && e.detail!.isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(top: 2, left: 4),
-                              child: Text(
+                              child: SelectableText(
                                 e.detail!,
                                 style: TextStyle(
                                   fontSize: 11,

@@ -1561,6 +1561,13 @@ class _AiChatSectionState extends State<_AiChatSection> {
   /// 本次流式是否已执行首次自动滚动：首个增量到达时滚到底一次（让用户看到
   /// 回复开始）；之后仅当用户接近底部时跟随滚动，不打断上滑回看排盘/历史。
   bool _autoScrolled = false;
+  /// AI 解卦卡片自身的 GlobalKey：用于把详情弹窗滚动到 AI 区顶部（让用户看到
+  /// 回复与上方上下文，而不是钉死在最底部只剩输入框）。
+  final GlobalKey _cardKey = GlobalKey();
+  /// 推理过程累积（DeepSeek 推理模型思考阶段只有 reasoning_content 增量）。
+  /// 推理阶段 UI 显示'正在思考…'+ 思考过程小字（打字机效果），让用户感知
+  /// 流式输出；最终消息只保留正式答案（content），思考过程不拼入。
+  String _thinking = '';
 
   List<AiMessage> get _messages => _localMessages;
 
@@ -1738,6 +1745,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
       _loading = true;
       _streaming = true;
       _autoScrolled = false;
+      _thinking = '';
     });
     try {
       // 关键步骤日志：开始请求（model、消息数；不打印 apiKey，避免明文泄漏）
@@ -1790,8 +1798,11 @@ class _AiChatSectionState extends State<_AiChatSection> {
           }
           if (piece.isReasoning) {
             // 推理过程增量：只累积，不拼入消息，避免"思考过程+答案"拼接
-            // 污染展示（用户最终看到的消息只含正式答案）。
+            // 污染展示（用户最终看到的消息只含正式答案）。同时把思考过程
+            // 同步到 UI 小字（打字机），让用户看到"正在思考"的流式输出，
+            // 而不是几十秒毫无动静。
             thinking += piece.text;
+            setState(() => _thinking = thinking);
             return;
           }
           _appendStreamPiece(piece.text);
@@ -1838,7 +1849,10 @@ class _AiChatSectionState extends State<_AiChatSection> {
             setState(() {
               _loading = false;
               _streaming = false;
+              _thinking = '';
             });
+            // 完成后若用户仍在底部附近（未上滑回看），滚到 AI 区顶部展示结果
+            _scrollToAiSectionIfNear();
           } else if (receivedAny && thinking.trim().isNotEmpty) {
             // 网关只返回了推理过程（content 始终为空）：用推理内容兜底展示，
             // 避免"流式有增量但界面空白"（DeepSeek 推理模型/部分网关场景）。
@@ -1849,7 +1863,9 @@ class _AiChatSectionState extends State<_AiChatSection> {
             setState(() {
               _loading = false;
               _streaming = false;
+              _thinking = '';
             });
+            _scrollToAiSectionIfNear();
           } else {
             // 流正常结束但未产出内容 → 回退非流式 chat()（网关不支持流式等场景）
             Logger.instance.error('$logTag流式无内容', '回退非流式 chat()');
@@ -1904,13 +1920,13 @@ class _AiChatSectionState extends State<_AiChatSection> {
     });
     _streamingMsg = updated;
     if (!_autoScrolled) {
-      // 首个增量到达：滚到底一次，让用户看到回复开始（打字机效果）
+      // 首个答案增量到达：滚到 AI 区顶部，让用户看到回复开始（打字机效果）。
+      // 不再滚到最底部输入框——之前滚到底导致"内容全空只剩输入框"体感。
       _autoScrolled = true;
-      _scrollToBottom();
-    } else {
-      // 后续增量：仅当用户接近底部时跟随滚动，不打断上滑回看
-      _scrollToBottomIfNear();
+      _scrollToAiSection();
     }
+    // 后续增量：不自动滚动（流式期间持续滚动会与用户手势对抗，
+    // 表现为"一点都滑不动"；用户可自由上滑回看排盘/历史）。
   }
 
   /// 用完整内容替换占位 assistant 消息（回退非流式成功后）
@@ -1922,7 +1938,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
       _localMessages = [..._localMessages];
       _localMessages[idx] = AiMessage(role: 'assistant', content: content);
     });
-    _scrollToBottom();
+    _scrollToAiSection();
   }
 
   /// 流式失败处理：移除空占位 assistant 消息，追加错误气泡（不持久化 error）
@@ -2033,7 +2049,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
     setState(() {
       _localMessages = [..._localMessages, AiMessage(role: 'error', content: content)];
     });
-    _scrollToBottom();
+    _scrollToAiSection();
   }
 
   Future<void> _deleteAiMessage(int index) async {
@@ -2090,27 +2106,45 @@ class _AiChatSectionState extends State<_AiChatSection> {
     return '${collapsed.substring(0, 60)}…';
   }
 
-  /// 新消息后把详情弹窗滚动到底部，让用户直接看到 AI 回复（无需手动滑动）
-  void _scrollToBottom() {
+  /// 把详情弹窗滚动到 AI 解卦卡片顶部（留 12px 顶部空隙），让用户看到 AI
+  /// 回复与上方上下文。**不滚到最底部**——底部是输入框，钉死在底部会让用户
+  /// 产生"内容全空只剩输入框"的体感。
+  void _scrollToAiSection() {
     final sc = widget.parentScrollController;
     if (sc == null || !sc.hasClients) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!sc.hasClients || !mounted) return;
+      if (!mounted || !sc.hasClients) return;
+      final ctx = _cardKey.currentContext;
+      if (ctx == null) return;
+      final box = ctx.findRenderObject();
+      if (box is! RenderBox) return;
+      // AI 卡片顶部相对屏幕的 y；视口顶部相对屏幕的 y 之差即卡片距视口顶部距离
+      final cardTop = box.localToGlobal(Offset.zero).dy;
+      final viewportCtx = sc.position.context.storageContext;
+      double viewportTop = 0;
+      if (viewportCtx != null) {
+        final vbox = viewportCtx.findRenderObject();
+        if (vbox is RenderBox) viewportTop = vbox.localToGlobal(Offset.zero).dy;
+      }
+      final target = (sc.position.pixels + (cardTop - viewportTop) - 12)
+          .clamp(0.0, sc.position.maxScrollExtent)
+          .toDouble();
       sc.animateTo(
-        sc.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
+        target,
+        duration: const Duration(milliseconds: 250),
         curve: Curves.easeOut,
       );
     });
   }
 
-  /// 仅当用户接近底部时跟随滚动（聊天式）：流式增量期间用户若在上滑回看
-  /// 排盘/历史，不强制拉回底部；只有视口仍在底部附近（阈值 120px）才跟随。
-  void _scrollToBottomIfNear() {
+  /// 仅当用户接近底部（未上滑回看排盘/历史）时才滚动到 AI 区：
+  /// 完成/兜底提示时避免打断用户主动回看的阅读位置。
+  void _scrollToAiSectionIfNear() {
     final sc = widget.parentScrollController;
     if (sc == null || !sc.hasClients) return;
-    if (sc.position.maxScrollExtent - sc.position.pixels < 120) {
-      _scrollToBottom();
+    if (sc.position.maxScrollExtent - sc.position.pixels <
+        sc.position.viewportDimension * 0.5) {
+      _scrollToAiSection();
     }
   }
 
@@ -2130,6 +2164,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
     final t = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
 
     return Card(
+      key: _cardKey,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -2249,13 +2284,32 @@ class _AiChatSectionState extends State<_AiChatSection> {
                           overflow: TextOverflow.ellipsis,
                         )
                       else if (m.content.trim().isEmpty && identical(m, _streamingMsg))
-                        // 流式生成中：内容为空时显示'正在生成…'打字机占位
-                        // （首个 chunk 到达前；首个 chunk 后内容逐步增长）
-                        Text('正在生成…',
-                            style: TextStyle(
-                                fontSize: 13,
-                                fontStyle: FontStyle.italic,
-                                color: p.withAlpha(160)))
+                        // 流式生成中：内容为空（通常是 DeepSeek 推理模型几十秒
+                        // 的思考阶段，只有 reasoning 增量）→ 显示'正在思考…'，
+                        // 并把思考过程实时显示为灰色小字（打字机效果），让用户
+                        // 明确感知流式输出在进行，而不是毫无动静/以为没流式。
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('正在思考…',
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    fontStyle: FontStyle.italic,
+                                    color: p.withAlpha(160))),
+                            if (_thinking.trim().isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                _thinking.trim(),
+                                maxLines: 4,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontStyle: FontStyle.italic,
+                                    color: t.withAlpha(110)),
+                              ),
+                            ],
+                          ],
+                        )
                       else if (m.content.trim().isEmpty)
                         // 旧数据可能残留空 content 的 assistant 消息：显示友好占位，
                         // 不再出现"无内容的 AI 卡片"
