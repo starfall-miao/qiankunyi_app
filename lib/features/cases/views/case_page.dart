@@ -1977,7 +1977,8 @@ class _AiChatSectionState extends State<_AiChatSection> {
               _replaceAssistantContent(msg, clean, thinking: thinking);
             }
             Logger.instance.info('$logTag流式完成',
-                'content长度: ${clean.length} | content增量: $chunkCount | 推理增量: $reasoningCount');
+                'content长度: ${clean.length} | content增量: $chunkCount | 推理增量: $reasoningCount | '
+                '预览: ${clean.length > 40 ? clean.substring(0, 40) : clean}');
             _persistAiMessages(logTag);
             setState(() {
               _loading = false;
@@ -2041,28 +2042,12 @@ class _AiChatSectionState extends State<_AiChatSection> {
 
   /// 弹窗查看完整实时思考过程（流式推理阶段点击"思考过程"区域触发）。
   /// 流式期间思考可能长达数万字，卡片里只显示前 400 字符，这里全量可看。
+  /// 弹窗内部用 300ms 定时器自刷新，内容**实时跟随**思考增长（用户反馈
+  /// "弹窗中的内容并不是实时的"——不能只显示打开瞬间的快照）。
   void _showThinkingDialog() {
-    final content = _thinking.trim();
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('思考过程（实时）'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: SelectableText(
-              content.isEmpty ? '（暂无内容，思考生成中…）' : content,
-              style: const TextStyle(fontSize: 13, height: 1.6),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('关闭'),
-          ),
-        ],
-      ),
+      builder: (ctx) => _ThinkingDialog(getThinking: () => _thinking),
     );
   }
 
@@ -2570,18 +2555,11 @@ class _AiChatSectionState extends State<_AiChatSection> {
                         // " >>>解卦<<< " 标记，而 Markdown 把 ">>>" 解析为
                         // blockquote（引用块）语法，会破坏卡片布局导致
                         // 追问输入框错位到左上角；转义为全角后只当普通文本。
-                        Markdown(
-                          data: _sanitizeMarkdown(m.content),
-                          styleSheet: MarkdownStyleSheet(
-                            p: TextStyle(fontSize: 13, color: t),
-                            h1: TextStyle(fontSize: 16, color: t,
-                                fontWeight: FontWeight.bold),
-                            h2: TextStyle(fontSize: 15, color: t,
-                                fontWeight: FontWeight.bold),
-                            h3: TextStyle(fontSize: 14, color: t,
-                                fontWeight: FontWeight.bold),
-                            strong: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
+                        // 渲染包一层防御：flutter_markdown 对异常输入抛错时
+                        // 自动降级为纯文本（SelectableText），保证内容必显示。
+                        _AiMarkdownBody(
+                          raw: m.content,
+                          baseColor: t,
                         ),
                       // 思考过程折叠区（AI 消息）：完成后的思考不删除，
                       // 默认收起，点击展开查看完整内容（用户反馈"思考内容
@@ -2602,35 +2580,156 @@ class _AiChatSectionState extends State<_AiChatSection> {
             // 首个 chunk 后 _loading=false 但 _streaming=true，仍需保持隐藏
             if (_hasAssistantReply && !_loading && !_streaming) ...[
               const SizedBox(height: 8),
-              Row(children: [
-                Expanded(
-                  child: TextField(
-                    controller: _questionCtrl,
-                    decoration: InputDecoration(
-                      hintText: '输入追问…',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+              // 追问输入区固定为自身行高（Row 内 Expanded + 固定 IconButton），
+              // 防止内容流式重建时被 Markdown/长文本挤偏到弹窗左上角。
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.zero,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _questionCtrl,
+                        decoration: InputDecoration(
+                          hintText: '输入追问…',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          isDense: true,
+                        ),
+                        maxLines: 2,
+                        minLines: 1,
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => _askFollowUp(),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      isDense: true,
                     ),
-                    maxLines: 2,
-                    minLines: 1,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _askFollowUp(),
-                  ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: _askFollowUp,
+                      icon: Icon(Icons.send, color: p),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: _askFollowUp,
-                  icon: Icon(Icons.send, color: p),
-                ),
-              ]),
+              ),
             ],
           ],
         ),
       ),
+    );
+  }
+}
+
+/// AI 回复内容（Markdown 渲染 + 防御降级）。
+/// 用户反馈"解卦成功但界面没有内容显示"：flutter_markdown 对个别异常输入
+/// （未闭合语法、特殊字符组合等）可能抛错导致卡片空白/布局塌陷。这里把
+/// Markdown 渲染包在 try-catch 里，一旦抛错立即降级为纯文本 SelectableText，
+/// 保证内容永远可见。>>> / <<< 标记在渲染前转义为全角，防止被解析成
+/// blockquote 破坏布局。
+class _AiMarkdownBody extends StatefulWidget {
+  final String raw;
+  final Color baseColor;
+  const _AiMarkdownBody({
+    required this.raw,
+    required this.baseColor,
+  });
+
+  @override
+  State<_AiMarkdownBody> createState() => _AiMarkdownBodyState();
+}
+
+class _AiMarkdownBodyState extends State<_AiMarkdownBody> {
+  bool _usePlainText = false;
+
+  String get _sanitized => widget.raw
+      .replaceAll('>>>', '＞＞＞')
+      .replaceAll('<<<', '＜＜＜');
+
+  @override
+  Widget build(BuildContext context) {
+    if (_usePlainText) {
+      // 降级：纯文本完整展示（SelectableText 可长按复制）
+      return SelectableText(
+        widget.raw,
+        style: TextStyle(fontSize: 13, height: 1.6, color: widget.baseColor),
+      );
+    }
+    try {
+      return Markdown(
+        data: _sanitized,
+        styleSheet: MarkdownStyleSheet(
+          p: TextStyle(fontSize: 13, color: widget.baseColor),
+          h1: TextStyle(fontSize: 16, color: widget.baseColor,
+              fontWeight: FontWeight.bold),
+          h2: TextStyle(fontSize: 15, color: widget.baseColor,
+              fontWeight: FontWeight.bold),
+          h3: TextStyle(fontSize: 14, color: widget.baseColor,
+              fontWeight: FontWeight.bold),
+          strong: TextStyle(fontWeight: FontWeight.bold, color: widget.baseColor),
+          blockquote: TextStyle(fontSize: 13, color: widget.baseColor),
+        ),
+      );
+    } catch (e) {
+      // Markdown 解析/渲染异常 → 降级纯文本，内容不丢失
+      Logger.instance.warn('AI解卦', 'Markdown 渲染异常，降级纯文本: $e');
+      _usePlainText = true;
+      return SelectableText(
+        widget.raw,
+        style: TextStyle(fontSize: 13, height: 1.6, color: widget.baseColor),
+      );
+    }
+  }
+}
+
+/// 实时思考弹窗：内部 300ms 定时器触发 setState，通过 [getThinking] 回调
+/// 每次重建时读取最新的思考内容，实现"弹窗内容实时跟随"（不是打开瞬间快照）。
+class _ThinkingDialog extends StatefulWidget {
+  final String Function() getThinking;
+  const _ThinkingDialog({required this.getThinking});
+
+  @override
+  State<_ThinkingDialog> createState() => _ThinkingDialogState();
+}
+
+class _ThinkingDialogState extends State<_ThinkingDialog> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // 300ms 定时刷新：思考流式增长时弹窗内容实时更新
+    _timer = Timer.periodic(const Duration(milliseconds: 300), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final content = widget.getThinking().trim();
+    return AlertDialog(
+      title: Text('思考过程（实时 · ${content.length}字）'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          child: SelectableText(
+            content.isEmpty ? '（暂无内容，思考生成中…）' : content,
+            style: const TextStyle(fontSize: 13, height: 1.6),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('关闭'),
+        ),
+      ],
     );
   }
 }
