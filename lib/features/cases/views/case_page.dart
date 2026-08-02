@@ -1899,6 +1899,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
       _streamSub = stream.listen(
         (piece) {
           if (!mounted || _streamingMsg == null) return;
+          final msg = _streamingMsg!;
           receivedAny = true;
           if (_loading) {
             // 发现 A：首个 chunk 到达后关闭转圈（AC4：转圈只在首个 chunk 前

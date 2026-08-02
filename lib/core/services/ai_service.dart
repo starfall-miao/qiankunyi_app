@@ -87,7 +87,7 @@ class AiService {
       // 全链路日志：请求（endpoint、model、messages 数量、maxTokens；apiKey 打码不泄漏明文）
       Logger.instance.info('AI解卦请求',
           'endpoint: $url | model: $model | messages: ${messages.length} | '
-          'maxTokens: ${maxTokens ?? '无限制'} | apiKey: ${_maskApiKey(apiKey)}');
+          'maxTokens: $maxTokens | apiKey: ${_maskApiKey(apiKey)}');
 
       final response = await http.post(
         Uri.parse(url),
@@ -180,7 +180,7 @@ class AiService {
     // 全链路日志：请求（apiKey 打码，不泄漏明文）
     Logger.instance.info('AI解卦流式请求',
         'endpoint: $url | model: $model | messages: ${messages.length} | '
-        'maxTokens: ${maxTokens ?? '无限制'} | apiKey: ${_maskApiKey(apiKey)}');
+        'maxTokens: $maxTokens | apiKey: ${_maskApiKey(apiKey)}');
 
     final client = http.Client();
     try {
