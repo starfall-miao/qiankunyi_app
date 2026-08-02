@@ -1606,15 +1606,17 @@ class _AiChatSectionState extends State<_AiChatSection> {
     }
     final isBazi = widget.caseModel.caseType == CaseType.bazi;
     // 精简中文系统提示：明确输出格式要求（>>>解卦<<< 标记 + 逐行换行），
-    // 并强调"思考简短、正式输出详细"（避免推理模型把 token 花在思考阶段
-    // 导致 content 为空或被截断）。
+    // 并强制"思考极短、正式输出详细"——实测（2026-08-02）deepseek-v4-flash-free
+    // 若不禁制思考会输出超长 reasoning（甚至 20K+ 字符），把 max_tokens
+    // 配额耗尽导致 content 为空或流式永不完成；必须明确限定思考篇幅。
     final systemPrompt = isBazi
         ? '你是八字命理专家，根据排盘信息直接分析命盘。'
-            '思考过程尽量简短，不要复述排盘数据；正式结果要详细有条理，'
-            '用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
+            '思考控制在50字以内（只列关键要点），不要复述排盘数据；'
+            '正式结果要详细清晰有条理，用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
             '不同要点逐行输出，禁止挤在一行。'
-        : '你是六爻/梅花解卦专家。思考过程尽量简短，不要复述排盘数据；'
-            '正式结果要详细有条理，用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
+        : '你是六爻/梅花解卦专家。思考控制在50字以内（只列关键要点），'
+            '不要复述排盘数据；正式结果要详细清晰有条理，'
+            '用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
             '各爻逐行输出（初爻：…／二爻：…）；不同要点换行，禁止挤在一行。';
     final prompt = _buildPromptForType();
     final messages = <Map<String, String>>[
@@ -1754,8 +1756,8 @@ class _AiChatSectionState extends State<_AiChatSection> {
         sb.writeln('流年：${r.liuNian}');
       }
       sb.writeln('\n请分析此八字命盘，包括五行喜忌、十神、大运走势等。');
-      sb.writeln('【输出格式】思考过程尽量简短，不要复述排盘数据；');
-      sb.writeln('正式结果要详细有条理，用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；');
+      sb.writeln('【输出格式】思考控制在50字以内（只列关键要点），不要复述排盘数据；');
+      sb.writeln('正式结果要详细清晰有条理，用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；');
       sb.writeln('不同要点逐行输出，禁止挤在一行。');
       return sb.toString();
     } catch (e) {
@@ -1764,8 +1766,8 @@ class _AiChatSectionState extends State<_AiChatSection> {
           '四柱：年柱${widget.caseModel.guaName} / 日柱${widget.caseModel.guaGong}\n'
           '排盘数据：${widget.caseModel.paipanData}\n\n'
           '请分析此八字命盘，包括五行喜忌、十神、大运走势等。\n'
-          '【输出格式】思考过程尽量简短，不要复述排盘数据；'
-          '正式结果要详细有条理，用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
+          '【输出格式】思考控制在50字以内（只列关键要点），不要复述排盘数据；'
+          '正式结果要详细清晰有条理，用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
           '不同要点逐行输出，禁止挤在一行。';
     }
   }
@@ -1779,25 +1781,25 @@ class _AiChatSectionState extends State<_AiChatSection> {
       return;
     }
     final isBazi = widget.caseModel.caseType == CaseType.bazi;
-    // 追问沿用解卦的输出格式要求（>>>解卦<<< 标记 + 逐行换行 + 思考简短），
-    // 便于软件按同一逻辑提取正文。
+    // 追问沿用解卦的输出格式要求（>>>解卦<<< 标记 + 逐行换行 + 思考极短），
+    // 便于软件按同一逻辑提取正文。思考限定 ≤50 字：实测不限制时
+    // 推理模型输出超长思考导致 content 为空/流式永不完成。
     final systemPrompt = isBazi
         ? '你是八字命理专家，下面是对同一命盘的连续讨论。'
-            '思考过程尽量简短，不要复述排盘数据；回答详细有条理，'
-            '同样用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹正式内容；'
+            '思考控制在50字以内（只列关键要点），不要复述排盘数据；'
+            '回答详细清晰有条理，同样用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹正式内容；'
             '不同要点逐行输出，禁止挤在一行。'
         : '你是六爻/梅花解卦专家，下面是对同一卦象的连续讨论。'
-            '思考过程尽量简短，不要复述排盘数据；回答详细有条理，'
-            '同样用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹正式内容；'
+            '思考控制在50字以内（只列关键要点），不要复述排盘数据；'
+            '回答详细清晰有条理，同样用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹正式内容；'
             '各爻逐行输出；不同要点换行，禁止挤在一行。';
-    // 构建上下文：系统提示 + 完整历史消息 + 当前问题（错误消息不进入 AI 上下文）
+    // 构建上下文：系统提示 + 历史消息 + 当前问题（错误消息不进入 AI 上下文）。
+    // 上下文容量保护：按约 131k tokens（≈85k 中文字符）上限，超出时丢弃
+    // 最旧消息（保留最近的对话，保证追问多轮后不超模型窗口；正常追问
+    // 远达不到该上限，纯防御）。
     final messages = <Map<String, String>>[
       {'role': 'system', 'content': systemPrompt},
-      ..._messages
-          .where((m) =>
-              (m.role == 'user' || m.role == 'assistant') &&
-              m.content.trim().isNotEmpty)
-          .map((m) => {'role': m.role, 'content': m.content}),
+      ..._buildHistoryContext(systemPrompt, _messages),
       {'role': 'user', 'content': text},
     ];
     _questionCtrl.clear();
@@ -1808,6 +1810,27 @@ class _AiChatSectionState extends State<_AiChatSection> {
       logTag: 'AI追问',
       errPrefix: '追问失败',
     );
+  }
+
+  /// 构建追问上下文历史消息，带 131k tokens 容量保护。
+  /// 中文约 0.65 字/token，131072 tokens ≈ 85000 字符；从最近的对话开始
+  /// 累积，超出上限就丢弃更早的消息（保留最近上下文，追问多轮不超窗口）。
+  List<Map<String, String>> _buildHistoryContext(
+      String systemPrompt, List<AiMessage> history) {
+    // 131k tokens 上下文极限（用户指定，qwenpaw 同值）；≈85k 中文字符
+    const int maxContextChars = 85000;
+    final keep = <AiMessage>[];
+    var used = systemPrompt.length;
+    // 从最新往最旧累积：最新消息最相关，优先保留
+    for (final m in history.reversed) {
+      final cost = m.content.length;
+      if (used + cost > maxContextChars) break;
+      used += cost;
+      keep.add(m);
+    }
+    return keep.reversed
+        .map((m) => {'role': m.role, 'content': m.content})
+        .toList();
   }
 
   /// 流式 AI 请求统一流程（解卦 / 追问共用）：
@@ -1890,6 +1913,19 @@ class _AiChatSectionState extends State<_AiChatSection> {
             // 同步到 UI 小字（打字机），让用户看到"正在思考"的流式输出，
             // 而不是几十秒毫无动静。
             thinking += piece.text;
+            // 思考失控保护（实测 2026-08-02）：deepseek-v4-flash-free
+            // 思考可无限长（20K+ 字符仍不进入 content 阶段），导致流式
+            // 永不完成、UI 卡死。推理累积超 1.5 万字符仍无正式答案 →
+            // 主动取消流并用思考全文兜底，避免用户无限等待。
+            if (thinking.length > 15000 && msg.content.trim().isEmpty) {
+              Logger.instance.warn('$logTag思考过长',
+                  '推理 ${thinking.length} 字仍无正式答案，主动止损并展示思考内容');
+              _streamSub?.cancel();
+              _streamSub = null;
+              _streamingMsg = null;
+              _finishStreamingWithThinking(msg, thinking, logTag);
+              return;
+            }
             setState(() => _thinking = thinking);
             return;
           }
@@ -1950,24 +1986,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
             // 完成后若用户仍在底部附近（未上滑回看），滚到 AI 区顶部展示结果
             _scrollToAiSectionIfNear();
           } else if (receivedAny && thinking.trim().isNotEmpty) {
-            // 网关只返回了推理过程（content 始终为空）：用推理内容兜底展示，
-            // 避免"流式有增量但界面空白"（DeepSeek 推理模型/部分网关场景）。
-            // 注意：兜底直接用思考全文，不再做 _extractAiResult 提取——
-            // 思考过程里若出现" >>>解卦<<< "字样（模型模拟输出格式但未写完），
-            // 提取会只留下标记后的残句（用户反馈"只有'开头、'的输出"）。
-            // 兜底内容按纯文本渲染：思考过程含大量 Markdown 语法符号，
-            // 按 Markdown 渲染会被吃掉部分内容导致"显示不全"。
-            Logger.instance.info('$logTag流式完成(仅推理内容)',
-                '长度: ${thinking.trim().length} | 推理增量: $reasoningCount');
-            _replaceAssistantContent(msg, thinking.trim(),
-                plainText: true);
-            _persistAiMessages(logTag);
-            setState(() {
-              _loading = false;
-              _streaming = false;
-              _thinking = '';
-            });
-            _scrollToAiSectionIfNear();
+            _finishStreamingWithThinking(msg, thinking, logTag);
           } else {
             // 流正常结束但未产出内容 → 回退非流式 chat()（网关不支持流式等场景）
             Logger.instance.error('$logTag流式无内容', '回退非流式 chat()');
@@ -1993,6 +2012,57 @@ class _AiChatSectionState extends State<_AiChatSection> {
         });
       }
     }
+  }
+
+  /// 流式结束但只有推理内容（content 为空）时的统一兜底：
+  /// 用思考全文替换占位消息（纯文本渲染，避免 Markdown 吃掉符号）。
+  /// 三种场景复用：
+  /// 1. onDone 正常结束但 content 始终为空（网关只回推理）
+  /// 2. 思考失控主动止损（_thinking > 1.5 万字符无正式答案）
+  /// 3. （预留）其它异常路径
+  /// 注意：兜底直接用思考全文，不再 _extractAiResult 提取——思考过程里若
+  /// 出现" >>>解卦<<< "字样（模型模拟输出格式但未写完），提取会只留下
+  /// 标记后的残句（用户反馈"只有'开头、'的输出"）。
+  void _finishStreamingWithThinking(
+      AiMessage msg, String thinking, String logTag) {
+    Logger.instance.info('$logTag流式完成(仅推理内容)',
+        '长度: ${thinking.trim().length}');
+    _replaceAssistantContent(msg, thinking.trim(), plainText: true);
+    _persistAiMessages(logTag);
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      _streaming = false;
+      _thinking = '';
+    });
+    _scrollToAiSectionIfNear();
+  }
+
+  /// 弹窗查看完整实时思考过程（流式推理阶段点击"思考过程"区域触发）。
+  /// 流式期间思考可能长达数万字，卡片里只显示前 400 字符，这里全量可看。
+  void _showThinkingDialog() {
+    final content = _thinking.trim();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('思考过程（实时）'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: SelectableText(
+              content.isEmpty ? '（暂无内容，思考生成中…）' : content,
+              style: const TextStyle(fontSize: 13, height: 1.6),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
   }
 
   /// 创建空的 assistant 占位消息（不持久化，流完成后再写最终文本）
@@ -2438,16 +2508,42 @@ class _AiChatSectionState extends State<_AiChatSection> {
                               // 增量高频 setState，思考可能长达数万字，全量渲染
                               // 每帧布局会卡顿；截断既保留"流式进行中"的感知，
                               // 又避免性能问题（完成后的最终消息只含正式答案）。
-                              Text(
-                                _thinking.length > 400
-                                    ? '${_thinking.substring(0, 400)}…'
-                                    : _thinking.trim(),
-                                maxLines: 4,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    fontStyle: FontStyle.italic,
-                                    color: t.withAlpha(110)),
+                              // 整块可点击：弹窗查看完整实时思考（用户反馈
+                              // "思考内容输出不完整"——这里给全量入口）。
+                              GestureDetector(
+                                onTap: _showThinkingDialog,
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: t.withAlpha(8),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '思考过程（点击查看完整，${_thinking.length}字）',
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: p.withAlpha(170)),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        _thinking.length > 400
+                                            ? '${_thinking.substring(0, 400)}…'
+                                            : _thinking.trim(),
+                                        maxLines: 4,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            fontStyle: FontStyle.italic,
+                                            color: t.withAlpha(110)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ],
                           ],

@@ -60,9 +60,13 @@ class AiService {
     required String apiKey,
     required String model,
     required List<Map<String, String>> messages,
-    // 用户要求"删除限制"：默认 null 时不发送 max_tokens 字段，
-    // 由服务端使用模型自身默认值（避免 8192 上限把正式解卦结果截断）。
-    int? maxTokens,
+    // 实测结论（2026-08-02）：max_tokens 必须显式发送——
+    //   · 不传 → deepseek-v4-flash-free 思考无限长（120s+ 仍在 reasoning，
+    //     content 永远为空，流式永不完成 → UI 卡死无结果）
+    //   · 8192 → 思考耗光配额，content 为空
+    //   · 16384 → 思考 7K + 正式答案 842，流式正常完成（网关接受该值）
+    // 16384 是"能出正式答案 + 尽量少截断"的最优实测值。
+    int maxTokens = 16384,
     double temperature = 0.7,
   }) async {
     try {
@@ -77,8 +81,8 @@ class AiService {
         'model': model,
         'messages': messages,
         'temperature': temperature,
+        'max_tokens': maxTokens,
       };
-      if (maxTokens != null) body['max_tokens'] = maxTokens;
 
       // 全链路日志：请求（endpoint、model、messages 数量、maxTokens；apiKey 打码不泄漏明文）
       Logger.instance.info('AI解卦请求',
@@ -149,9 +153,13 @@ class AiService {
     required String apiKey,
     required String model,
     required List<Map<String, String>> messages,
-    // 用户要求"删除限制"：默认 null 时不发送 max_tokens 字段，
-    // 由服务端使用模型自身默认值（避免 8192 上限把正式解卦结果截断）。
-    int? maxTokens,
+    // 实测结论（2026-08-02）：max_tokens 必须显式发送——
+    //   · 不传 → deepseek-v4-flash-free 思考无限长（120s+ 仍在 reasoning，
+    //     content 永远为空，流式永不完成 → UI 卡死无结果）
+    //   · 8192 → 思考耗光配额，content 为空
+    //   · 16384 → 思考 7K + 正式答案 842，流式正常完成（网关接受该值）
+    // 16384 是"能出正式答案 + 尽量少截断"的最优实测值。
+    int maxTokens = 16384,
     double temperature = 0.7,
   }) async* {
     // 构建 URL（与 chat() 保持一致）
@@ -166,8 +174,8 @@ class AiService {
       'messages': messages,
       'temperature': temperature,
       'stream': true,
+      'max_tokens': maxTokens,
     };
-    if (maxTokens != null) body['max_tokens'] = maxTokens;
 
     // 全链路日志：请求（apiKey 打码，不泄漏明文）
     Logger.instance.info('AI解卦流式请求',
