@@ -2306,8 +2306,14 @@ class _AiChatSectionState extends State<_AiChatSection> {
                                     color: p.withAlpha(160))),
                             if (_thinking.trim().isNotEmpty) ...[
                               const SizedBox(height: 4),
+                              // 截断显示思考过程（前 400 字符 + …）：推理阶段
+                              // 增量高频 setState，思考可能长达数万字，全量渲染
+                              // 每帧布局会卡顿；截断既保留"流式进行中"的感知，
+                              // 又避免性能问题（完成后的最终消息只含正式答案）。
                               Text(
-                                _thinking.trim(),
+                                _thinking.length > 400
+                                    ? '${_thinking.substring(0, 400)}…'
+                                    : _thinking.trim(),
                                 maxLines: 4,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
