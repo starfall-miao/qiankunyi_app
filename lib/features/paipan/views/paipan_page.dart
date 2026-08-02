@@ -785,7 +785,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     // Dialog 让用户输入标题
     final titleCtrl = TextEditingController(text: '$guaNameCN — ${methodToCN(result.method)}');
     final notesCtrl = TextEditingController();
-    final duanYuCtrl = TextEditingController();
+    // 断语已迁移到卦例详情页（人工断语编辑器），保存对话框不再提供断语输入
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -803,12 +803,6 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
               decoration: const InputDecoration(labelText: '备注（可选）', hintText: '记录占问事项'),
               maxLines: 2,
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: duanYuCtrl,
-              decoration: const InputDecoration(labelText: '断语（可选）', hintText: '输入你的分析判断'),
-              maxLines: 3,
-            ),
           ],
         ),
         actions: [
@@ -821,7 +815,6 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                   result: result,
                   title: titleCtrl.text.trim(),
                   notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
-                  duanYu: duanYuCtrl.text.trim().isEmpty ? null : duanYuCtrl.text.trim(),
                 );
                 context.read<CaseProvider>().addCase(cm);
                 _log.info('保存卦例: ${cm.title}');

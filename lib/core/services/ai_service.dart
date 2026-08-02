@@ -60,7 +60,7 @@ class AiService {
     required String apiKey,
     required String model,
     required List<Map<String, String>> messages,
-    int maxTokens = 2048,
+    int maxTokens = 4096,
     double temperature = 0.7,
   }) async {
     try {
@@ -145,7 +145,7 @@ class AiService {
     required String apiKey,
     required String model,
     required List<Map<String, String>> messages,
-    int maxTokens = 2048,
+    int maxTokens = 4096,
     double temperature = 0.7,
   }) async* {
     // 构建 URL（与 chat() 保持一致）
@@ -406,22 +406,20 @@ class AiService {
   static String _preview(String s) =>
       s.length > 300 ? '${s.substring(0, 300)}...' : s;
 
-  /// 构建 AI 解卦提示词 — 六爻
+  /// 构建 AI 解卦提示词 — 六爻/梅花
+  /// 精简中文 prompt，要求模型用标识符标记正式结果（软件据此快速提取正文），
+  /// 并强制"初爻/二爻…"等并列信息逐行换行（避免输出挤在一行显示不全）。
   String buildJieGuaPrompt(String paipanInfo) {
-    return '''你是一位精通《周易》六爻占卜的资深术数专家。请根据以下排盘信息进行详细解卦。
+    return '''你是六爻/梅花解卦专家。根据排盘信息直接给出解卦结果。
+
+【输出格式·必须严格遵守】
+1. 正式结果必须用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹（这是给软件识别的标记，标记外不要输出任何其他内容）
+2. 各爻信息逐行输出，每行一个爻，格式：初爻：…／二爻：…／三爻：…／四爻：…／五爻：…／上爻：…（自下而上）
+3. 不同爻位、不同要点之间必须换行，禁止并列挤在一行
+4. 语言通俗易懂，不要复述排盘原始数据，直接给分析
 
 排盘信息：
-$paipanInfo
-
-请从以下几个方面进行分析：
-1. 卦象总论：本卦、变卦、互卦的基本含义
-2. 世应关系：世爻和应爻的位置与关系
-3. 六亲分析：各爻六亲的含义及其相互关系
-4. 六神分析：六神所主吉凶
-5. 旺衰判断：各爻的旺衰状态对事情的影响
-6. 综合断语：给出最终的判断和建议
-
-请用通俗易懂的语言解释，避免过于晦涩的术语。''';
+$paipanInfo''';
   }
 
   /// 构建 AI 纠错提示词

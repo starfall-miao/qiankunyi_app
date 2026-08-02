@@ -1605,9 +1605,15 @@ class _AiChatSectionState extends State<_AiChatSection> {
       return;
     }
     final isBazi = widget.caseModel.caseType == CaseType.bazi;
+    // 精简中文系统提示：明确输出格式要求（>>>解卦<<< 标记 + 逐行换行），
+    // 与 buildJieGuaPrompt/_buildBaziPrompt 中的格式要求保持一致。
     final systemPrompt = isBazi
-        ? '你是一位精通八字命理的资深命理专家。请根据排盘信息进行详细分析。'
-        : '你是一位精通《周易》的资深术数专家。';
+        ? '你是八字命理专家，根据排盘信息直接分析命盘。'
+            '正式结果用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
+            '不同要点逐行输出，禁止挤在一行；不要复述排盘数据，直接给分析。'
+        : '你是六爻/梅花解卦专家。正式结果用 >>>解卦<<< 开头、'
+            '>>>解卦结束<<< 结尾包裹；各爻逐行输出（初爻：…／二爻：…）；'
+            '不要复述排盘数据，直接给分析。';
     final prompt = _buildPromptForType();
     final messages = <Map<String, String>>[
       {'role': 'system', 'content': systemPrompt},
@@ -1685,13 +1691,17 @@ class _AiChatSectionState extends State<_AiChatSection> {
         sb.writeln('流年：${r.liuNian}');
       }
       sb.writeln('\n请分析此八字命盘，包括五行喜忌、十神、大运走势等。');
+      sb.writeln('【输出格式】正式结果用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；');
+      sb.writeln('不同要点逐行输出，禁止挤在一行；不要复述排盘数据，直接给分析。');
       return sb.toString();
     } catch (e) {
       // 旧数据解析失败时降级为简要信息（不再把年柱/日柱当卦名占位）
       return '【八字排盘信息】\n'
           '四柱：年柱${widget.caseModel.guaName} / 日柱${widget.caseModel.guaGong}\n'
           '排盘数据：${widget.caseModel.paipanData}\n\n'
-          '请分析此八字命盘，包括五行喜忌、十神、大运走势等。';
+          '请分析此八字命盘，包括五行喜忌、十神、大运走势等。\n'
+          '【输出格式】正式结果用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
+          '不同要点逐行输出，禁止挤在一行。';
     }
   }
 
@@ -1704,9 +1714,15 @@ class _AiChatSectionState extends State<_AiChatSection> {
       return;
     }
     final isBazi = widget.caseModel.caseType == CaseType.bazi;
+    // 追问沿用解卦的输出格式要求（>>>解卦<<< 标记 + 逐行换行），
+    // 便于软件按同一逻辑提取正文。
     final systemPrompt = isBazi
-        ? '你是一位精通八字命理的资深命理专家。下面是对同一命盘的连续讨论。'
-        : '你是一位精通《周易》的资深术数专家。下面是对同一卦象的连续讨论。';
+        ? '你是八字命理专家，下面是对同一命盘的连续讨论。'
+            '回答同样用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹正式内容；'
+            '不同要点逐行输出，禁止挤在一行；直接回答，不要复述排盘数据。'
+        : '你是六爻/梅花解卦专家，下面是对同一卦象的连续讨论。'
+            '回答同样用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹正式内容；'
+            '各爻逐行输出；直接回答，不要复述排盘数据。';
     // 构建上下文：系统提示 + 完整历史消息 + 当前问题（错误消息不进入 AI 上下文）
     final messages = <Map<String, String>>[
       {'role': 'system', 'content': systemPrompt},
@@ -1849,9 +1865,14 @@ class _AiChatSectionState extends State<_AiChatSection> {
             return;
           }
           if (receivedAny && msg.content.trim().isNotEmpty) {
-            // 流式成功：完整答案已随 content 增量拼好，持久化最终文本
+            // 流式成功：完整答案已随 content 增量拼好，提取标记内正文后
+            // 持久化最终文本（模型未按格式输出时提取结果=原文，不重复 setState）
+            final clean = _extractAiResult(msg.content);
+            if (clean != msg.content) {
+              _replaceAssistantContent(msg, clean);
+            }
             Logger.instance.info('$logTag流式完成',
-                'content长度: ${msg.content.length} | content增量: $chunkCount | 推理增量: $reasoningCount');
+                'content长度: ${clean.length} | content增量: $chunkCount | 推理增量: $reasoningCount');
             _persistAiMessages(logTag);
             setState(() {
               _loading = false;
@@ -1867,7 +1888,8 @@ class _AiChatSectionState extends State<_AiChatSection> {
             // 按 Markdown 渲染会被吃掉部分内容导致"显示不全"。
             Logger.instance.info('$logTag流式完成(仅推理内容)',
                 '长度: ${thinking.trim().length} | 推理增量: $reasoningCount');
-            _replaceAssistantContent(msg, thinking.trim(), plainText: true);
+            _replaceAssistantContent(msg, _extractAiResult(thinking.trim()),
+                plainText: true);
             _persistAiMessages(logTag);
             setState(() {
               _loading = false;
@@ -1938,6 +1960,27 @@ class _AiChatSectionState extends State<_AiChatSection> {
     // 表现为"一点都滑不动"；用户可自由上滑回看排盘/历史）。
   }
 
+  /// 从 AI 原始输出中提取正式解卦结果。
+  /// 用户要求：模型用标识符标记真正输出，方便软件快速获取真正结果
+  /// （AI 输出冗余 → 只需展示/保存标记内的正文）。
+  /// 优先提取 >>>解卦<<< ... >>>解卦结束<<< 之间的正文；
+  /// 模型未按格式输出时回退为原文（不丢弃任何内容）。
+  String _extractAiResult(String raw) {
+    var text = raw.trim();
+    const start = '>>>解卦<<<';
+    const end = '>>>解卦结束<<<';
+    final si = text.indexOf(start);
+    if (si >= 0) {
+      final ei = text.indexOf(end, si + start.length);
+      if (ei > si) {
+        return text.substring(si + start.length, ei).trim();
+      }
+      // 只有开头标记没有结尾标记：取开头标记之后的内容
+      return text.substring(si + start.length).trim();
+    }
+    return text;
+  }
+
   /// 用完整内容替换占位 assistant 消息（回退非流式成功后）
   void _replaceAssistantContent(AiMessage msg, String content,
       {bool plainText = false}) {
@@ -1987,7 +2030,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
       );
       if (result.success) {
         Logger.instance.info('$logTag回退成功', 'content长度: ${result.content.length}');
-        _replaceAssistantContent(msg, result.content);
+        _replaceAssistantContent(msg, _extractAiResult(result.content));
         await _persistAiMessages(logTag);
       } else {
         Logger.instance.error('$logTag回退失败',
