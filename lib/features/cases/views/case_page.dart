@@ -1568,6 +1568,17 @@ class _AiChatSectionState extends State<_AiChatSection> {
   /// 推理阶段 UI 显示'正在思考…'+ 思考过程小字（打字机效果），让用户感知
   /// 流式输出；最终消息只保留正式答案（content），思考过程不拼入。
   String _thinking = '';
+  /// 流式自动重试计数（信号灯超时/网络瞬断等场景最多重试 3 次）。
+  /// 与 _retryNote 配合在卡片上标注"连接中断，自动重试 n/3…"，防止
+  /// 瞬时网络错误直接丢结果（用户反馈"信号灯超时时应该自动重试三次"）。
+  int _streamRetry = 0;
+  static const int _maxStreamRetry = 3;
+  /// 重试提示文案：非空时显示在"正在思考…"上方，用户可见当前重试状态。
+  String _retryNote = '';
+  /// 本次请求是否为追问（追问时首个 chunk 滚到底部让输入框保持可见，
+  /// 而不是滚到 AI 卡片顶部把刚发完的输入框滚出屏幕——用户反馈
+  /// "追问框跑到左上角/找不到了"）。
+  bool _followUpMode = false;
 
   List<AiMessage> get _messages => _localMessages;
 
@@ -1809,6 +1820,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
       clearBefore: false,
       logTag: 'AI追问',
       errPrefix: '追问失败',
+      followUp: true,
     );
   }
 
@@ -1843,6 +1855,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
     required bool clearBefore,
     required String logTag,
     required String errPrefix,
+    bool followUp = false,
   }) async {
     // 防御：已有流式请求进行中时忽略并发触发（按钮/追问区已隐藏，双保险）
     if (_streaming || _streamSub != null) return;
@@ -1852,6 +1865,9 @@ class _AiChatSectionState extends State<_AiChatSection> {
       _streaming = true;
       _autoScrolled = false;
       _thinking = '';
+      _streamRetry = 0;
+      _retryNote = '';
+      _followUpMode = followUp;
     });
     try {
       // 关键步骤日志：开始请求（model、消息数；不打印 apiKey，避免明文泄漏）
@@ -1871,135 +1887,12 @@ class _AiChatSectionState extends State<_AiChatSection> {
       if (placeholder == null) return; // 弹窗已关闭
       _streamingMsg = placeholder;
 
-      final stream = AiService()
-          .chatStream(
-            endpoint: sp.aiEndpoint,
-            apiKey: sp.aiApiKey,
-            model: sp.effectiveAiModel,
-            messages: messages,
-          )
-          // 流式超时保护：推理模型思考阶段可能长时间无增量（DeepSeek 思考
-          // 较久才输出），超时窗口放宽到 180 秒；两个增量事件间隔超过 180 秒
-          // （网关挂起/无数据）时才在流上抛错 → 触发 onError → 自动回退
-          // 非流式 chat()，避免用户看到无限转圈只能反复重开弹窗。
-          .timeout(
-            const Duration(seconds: 180),
-            onTimeout: (sink) => sink.addError(
-              AiStreamException('流式超时（180 秒无数据）'),
-            ),
-          );
-      var receivedAny = false;
-      // 推理过程累积（DeepSeek 推理模型思考阶段只有 reasoning_content 增量）。
-      // 仅用于兜底展示与"流式有活性"判定，不拼入最终消息。
-      var thinking = '';
-      // 增量统计：用于诊断"没有流式输出"类反馈——块数 > 1 说明增量确实实时
-      // 分块到达（UI 展示问题）；块数 = 1 说明一次性返回（网关缓冲或解析问题）。
-      var chunkCount = 0;
-      var reasoningCount = 0;
-      _streamSub = stream.listen(
-        (piece) {
-          if (!mounted || _streamingMsg == null) return;
-          final msg = _streamingMsg!;
-          receivedAny = true;
-          if (_loading) {
-            // 发现 A：首个 chunk 到达后关闭转圈（AC4：转圈只在首个 chunk 前
-            // 显示；之后的进度由消息卡片的打字机效果呈现）。注意推理阶段
-            // 的 reasoning 增量也属于首个 chunk，同样要关闭转圈。
-            setState(() => _loading = false);
-          }
-          if (piece.isReasoning) {
-            reasoningCount++;
-            // 推理过程增量：只累积，不拼入消息，避免"思考过程+答案"拼接
-            // 污染展示（用户最终看到的消息只含正式答案）。同时把思考过程
-            // 同步到 UI 小字（打字机），让用户看到"正在思考"的流式输出，
-            // 而不是几十秒毫无动静。
-            thinking += piece.text;
-            // 思考失控保护（实测 2026-08-02）：deepseek-v4-flash-free
-            // 思考可无限长（20K+ 字符仍不进入 content 阶段），导致流式
-            // 永不完成、UI 卡死。推理累积超 1.5 万字符仍无正式答案 →
-            // 主动取消流并用思考全文兜底，避免用户无限等待。
-            if (thinking.length > 15000 && msg.content.trim().isEmpty) {
-              Logger.instance.warn('$logTag思考过长',
-                  '推理 ${thinking.length} 字仍无正式答案，主动止损并展示思考内容');
-              _streamSub?.cancel();
-              _streamSub = null;
-              _streamingMsg = null;
-              _finishStreamingWithThinking(msg, thinking, logTag);
-              return;
-            }
-            setState(() => _thinking = thinking);
-            return;
-          }
-          chunkCount++;
-          _appendStreamPiece(piece.text);
-        },
-        onError: (Object e) {
-          if (!mounted) return;
-          _streamSub = null;
-          final msg = _streamingMsg;
-          _streamingMsg = null;
-          if (msg == null) {
-            // 占位已被用户删除：不再回退，直接复位全部请求态
-            setState(() {
-              _loading = false;
-              _streaming = false;
-            });
-            return;
-          }
-          Logger.instance.error('$logTag流式失败', '流错误: $e');
-          _fallbackToNonStreaming(
-            msg: msg,
-            messages: messages,
-            logTag: logTag,
-            errPrefix: errPrefix,
-          );
-        },
-        onDone: () {
-          if (!mounted) return;
-          _streamSub = null;
-          final msg = _streamingMsg;
-          _streamingMsg = null;
-          if (msg == null) {
-            // 占位已被删除/取消：不再回退，直接复位全部请求态
-            // （发现 B：该早退路径同样必须复位，否则 _loading 永不复位卡死）
-            setState(() {
-              _loading = false;
-              _streaming = false;
-            });
-            return;
-          }
-          if (receivedAny && msg.content.trim().isNotEmpty) {
-            // 流式成功：完整答案已随 content 增量拼好，提取标记内正文后
-            // 持久化最终文本（模型未按格式输出时提取结果=原文，不重复 setState）。
-            // 思考过程随消息保存（thinking 字段），UI 折叠展示而非删掉。
-            final clean = _extractAiResult(msg.content);
-            if (clean != msg.content || thinking.trim().isNotEmpty) {
-              _replaceAssistantContent(msg, clean, thinking: thinking);
-            }
-            Logger.instance.info('$logTag流式完成',
-                'content长度: ${clean.length} | content增量: $chunkCount | 推理增量: $reasoningCount | '
-                '预览: ${clean.length > 40 ? clean.substring(0, 40) : clean}');
-            _persistAiMessages(logTag);
-            setState(() {
-              _loading = false;
-              _streaming = false;
-              _thinking = '';
-            });
-            // 完成后若用户仍在底部附近（未上滑回看），滚到 AI 区顶部展示结果
-            _scrollToAiSectionIfNear();
-          } else if (receivedAny && thinking.trim().isNotEmpty) {
-            _finishStreamingWithThinking(msg, thinking, logTag);
-          } else {
-            // 流正常结束但未产出内容 → 回退非流式 chat()（网关不支持流式等场景）
-            Logger.instance.error('$logTag流式无内容', '回退非流式 chat()');
-            _fallbackToNonStreaming(
-              msg: msg,
-              messages: messages,
-              logTag: logTag,
-              errPrefix: errPrefix,
-            );
-          }
-        },
+      // 发起流式并挂接监听（失败自动重试 3 次，详见 _attachStreamListener）
+      _attachStreamListener(
+        msg: placeholder,
+        messages: messages,
+        logTag: logTag,
+        errPrefix: errPrefix,
       );
     } catch (e) {
       // 订阅创建阶段的异常（构建请求/网络连接失败等）
@@ -2014,6 +1907,207 @@ class _AiChatSectionState extends State<_AiChatSection> {
         });
       }
     }
+  }
+
+  /// 挂接流式监听（解卦/追问/自动重试共用）。
+  /// - onData：增量打字机（推理累积 + 思考失控止损）
+  /// - onError：信号灯超时/网络瞬断等瞬时错误 → 自动重试（最多 3 次，
+  ///   UI 标注"连接中断，自动重试 n/3…"）；重试耗尽 → 回退非流式 chat()
+  /// - onDone：正常完成 → 提取标记内正文并持久化；仅推理内容 → 兜底展示；
+  ///   无任何内容 → 回退非流式 chat()
+  void _attachStreamListener({
+    required AiMessage msg,
+    required List<Map<String, String>> messages,
+    required String logTag,
+    required String errPrefix,
+  }) {
+    final sp = context.read<SettingsProvider>();
+    final stream = AiService()
+        .chatStream(
+          endpoint: sp.aiEndpoint,
+          apiKey: sp.aiApiKey,
+          model: sp.effectiveAiModel,
+          messages: messages,
+          logTag: logTag,
+        )
+        // 流式超时保护：推理模型思考阶段可能长时间无增量（DeepSeek 思考
+        // 较久才输出），超时窗口放宽到 180 秒；两个增量事件间隔超过 180 秒
+        // （网关挂起/无数据）时才在流上抛错 → 触发 onError → 自动重试/回退
+        .timeout(
+          const Duration(seconds: 180),
+          onTimeout: (sink) => sink.addError(
+            AiStreamException('流式超时（180 秒无数据）'),
+          ),
+        );
+    var receivedAny = false;
+    // 推理过程累积（DeepSeek 推理模型思考阶段只有 reasoning_content 增量）。
+    // 仅用于兜底展示与"流式有活性"判定，不拼入最终消息。
+    var thinking = '';
+    // 增量统计：用于诊断"没有流式输出"类反馈——块数 > 1 说明增量确实实时
+    // 分块到达（UI 展示问题）；块数 = 1 说明一次性返回（网关缓冲或解析问题）。
+    var chunkCount = 0;
+    var reasoningCount = 0;
+    _streamSub = stream.listen(
+      (piece) {
+        if (!mounted || _streamingMsg == null) return;
+        final cur = _streamingMsg!;
+        receivedAny = true;
+        if (_loading) {
+          // 发现 A：首个 chunk 到达后关闭转圈（AC4：转圈只在首个 chunk 前
+          // 显示；之后的进度由消息卡片的打字机效果呈现）。
+          setState(() => _loading = false);
+        }
+        if (piece.isReasoning) {
+          reasoningCount++;
+          // 推理过程增量：只累积，不拼入消息，避免"思考过程+答案"拼接
+          // 污染展示。同时把思考过程同步到 UI 小字（打字机）。
+          thinking += piece.text;
+          // 思考失控保护（实测 2026-08-02）：deepseek-v4-flash-free
+          // 思考可无限长（20K+ 字符仍不进入 content 阶段），导致流式
+          // 永不完成、UI 卡死。推理累积超 1.5 万字符仍无正式答案 →
+          // 主动取消流并用思考全文兜底，避免用户无限等待。
+          if (thinking.length > 15000 && cur.content.trim().isEmpty) {
+            Logger.instance.warn('$logTag思考过长',
+                '推理 ${thinking.length} 字仍无正式答案，主动止损并展示思考内容');
+            _streamSub?.cancel();
+            _streamSub = null;
+            _streamingMsg = null;
+            _finishStreamingWithThinking(cur, thinking, logTag);
+            return;
+          }
+          setState(() => _thinking = thinking);
+          return;
+        }
+        chunkCount++;
+        _appendStreamPiece(piece.text);
+      },
+      onError: (Object e) {
+        if (!mounted) return;
+        _streamSub = null;
+        final cur = _streamingMsg;
+        _streamingMsg = null;
+        if (cur == null) {
+          // 占位已被用户删除：不再回退，直接复位全部请求态
+          setState(() {
+            _loading = false;
+            _streaming = false;
+          });
+          return;
+        }
+        // 自动重试：信号灯超时/网络瞬断等瞬时错误，最多重试 3 次。
+        // 每次失败在卡片上标注"连接中断，自动重试 n/3…"，防止直接丢结果。
+        if (_streamRetry < _maxStreamRetry) {
+          _streamRetry++;
+          setState(() {
+            _retryNote = '连接中断，自动重试 $_streamRetry/$_maxStreamRetry…';
+          });
+          Logger.instance.warn('$logTag流式重试',
+              '第 $_streamRetry/$_maxStreamRetry 次 | 错误: $e');
+          _restartStreaming(
+            msg: cur,
+            messages: messages,
+            logTag: logTag,
+            errPrefix: errPrefix,
+          );
+          return;
+        }
+        Logger.instance.error('$logTag流式失败',
+            '流错误: $e（已自动重试 $_streamRetry 次）');
+        _fallbackToNonStreaming(
+          msg: cur,
+          messages: messages,
+          logTag: logTag,
+          errPrefix: errPrefix,
+        );
+      },
+      onDone: () {
+        if (!mounted) return;
+        _streamSub = null;
+        final cur = _streamingMsg;
+        _streamingMsg = null;
+        if (cur == null) {
+          // 占位已被删除/取消：不再回退，直接复位全部请求态
+          // （发现 B：该早退路径同样必须复位，否则 _loading 永不复位卡死）
+          setState(() {
+            _loading = false;
+            _streaming = false;
+          });
+          return;
+        }
+        if (receivedAny && cur.content.trim().isNotEmpty) {
+          // 流式成功：完整答案已随 content 增量拼好，提取标记内正文后
+          // 持久化最终文本。思考过程随消息保存（thinking 字段）折叠展示。
+          final clean = _extractAiResult(cur.content);
+          if (clean != cur.content || thinking.trim().isNotEmpty) {
+            _replaceAssistantContent(cur, clean, thinking: thinking);
+          }
+          Logger.instance.info('$logTag流式完成',
+              'content长度: ${clean.length} | content增量: $chunkCount | 推理增量: $reasoningCount | '
+              '预览: ${clean.length > 40 ? clean.substring(0, 40) : clean}');
+          _persistAiMessages(logTag);
+          setState(() {
+            _loading = false;
+            _streaming = false;
+            _thinking = '';
+            _retryNote = '';
+          });
+          // 完成后若用户仍在底部附近（未上滑回看），滚到 AI 区顶部展示结果
+          _scrollToAiSectionIfNear();
+        } else if (receivedAny && thinking.trim().isNotEmpty) {
+          _finishStreamingWithThinking(cur, thinking, logTag);
+        } else {
+          // 流正常结束但未产出内容 → 回退非流式 chat()（网关不支持流式等场景）
+          Logger.instance.error('$logTag流式无内容', '回退非流式 chat()');
+          _fallbackToNonStreaming(
+            msg: cur,
+            messages: messages,
+            logTag: logTag,
+            errPrefix: errPrefix,
+          );
+        }
+      },
+    );
+  }
+
+  /// 流式失败后自动重试：清空占位内容（断流残留的部分增量），重新发起流式。
+  /// 复用同一个占位消息，避免重试产生重复卡片。
+  /// 注意：AiMessage 不可变，清空内容必须替换为新对象；替换后**所有引用**
+  /// （_localMessages / _streamingMsg / 后续 _replaceAssistantContent 的参数）
+  /// 都要指向新对象，否则流式增量累积到旧对象上、UI 上永远显示空卡片。
+  void _restartStreaming({
+    required AiMessage msg,
+    required List<Map<String, String>> messages,
+    required String logTag,
+    required String errPrefix,
+  }) {
+    if (!mounted) return;
+    _thinking = '';
+    final idx = _localMessages.indexOf(msg);
+    if (idx >= 0) {
+      // 清空占位内容：断流时可能残留部分增量，重试从空开始
+      final fresh = AiMessage(role: 'assistant', content: '');
+      setState(() {
+        _localMessages = [..._localMessages];
+        _localMessages[idx] = fresh;
+      });
+      _streamingMsg = fresh;
+      _attachStreamListener(
+        msg: fresh,
+        messages: messages,
+        logTag: logTag,
+        errPrefix: errPrefix,
+      );
+      return;
+    }
+    // 占位已被删除：原对象重试（UI 上无占位卡片，流式完成后也写不进去；
+    // 仅保证状态复位，用户可重新发起）
+    _streamingMsg = msg;
+    _attachStreamListener(
+      msg: msg,
+      messages: messages,
+      logTag: logTag,
+      errPrefix: errPrefix,
+    );
   }
 
   /// 流式结束但只有推理内容（content 为空）时的统一兜底：
@@ -2036,6 +2130,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
       _loading = false;
       _streaming = false;
       _thinking = '';
+      _retryNote = '';
     });
     _scrollToAiSectionIfNear();
   }
@@ -2078,10 +2173,17 @@ class _AiChatSectionState extends State<_AiChatSection> {
     });
     _streamingMsg = updated;
     if (!_autoScrolled) {
-      // 首个答案增量到达：滚到 AI 区顶部，让用户看到回复开始（打字机效果）。
-      // 不再滚到最底部输入框——之前滚到底导致"内容全空只剩输入框"体感。
+      // 首个答案增量到达：让用户看到回复开始（打字机效果）。
+      // - 解卦：滚到 AI 区顶部（不再滚到最底部输入框——之前滚到底导致
+      //   "内容全空只剩输入框"体感）。
+      // - 追问：滚到底部，让最新回复 + 输入框同时可见（用户刚发完追问，
+      //   输入框不应被滚出屏幕——用户反馈"追问框跑到左上角/找不到了"）。
       _autoScrolled = true;
-      _scrollToAiSection();
+      if (_followUpMode) {
+        _scrollToBottom();
+      } else {
+        _scrollToAiSection();
+      }
     }
     // 后续增量：不自动滚动（流式期间持续滚动会与用户手势对抗，
     // 表现为"一点都滑不动"；用户可自由上滑回看排盘/历史）。
@@ -2115,7 +2217,12 @@ class _AiChatSectionState extends State<_AiChatSection> {
       {bool plainText = false, String? thinking}) {
     if (!mounted) return;
     final idx = _localMessages.indexOf(msg);
-    if (idx < 0) return;
+    if (idx < 0) {
+      // 诊断：占位消息不在本地列表（可能被删除/列表被重置），UI 不会更新
+      Logger.instance.warn('AI解卦', '替换失败：占位消息不在列表中 idx<0 | '
+          '列表长度: ${_localMessages.length} | 新内容长度: ${content.length}');
+      return;
+    }
     setState(() {
       _localMessages = [..._localMessages];
       _localMessages[idx] = AiMessage(
@@ -2125,7 +2232,9 @@ class _AiChatSectionState extends State<_AiChatSection> {
         thinking: thinking,
       );
     });
-    _scrollToAiSection();
+    // 回退/完成替换后仅在用户接近底部时才滚动（否则会打断正在回看排盘/
+    // 正在使用追问输入框的用户——用户反馈"追问框跑到左上角/找不到了"）。
+    _scrollToAiSectionIfNear();
   }
 
   /// 流式失败处理：移除空占位 assistant 消息，追加错误气泡（不持久化 error）
@@ -2139,11 +2248,13 @@ class _AiChatSectionState extends State<_AiChatSection> {
         });
       }
     }
+    setState(() => _retryNote = '');
     _addErrorMessage(display);
   }
 
   /// 流式失败/无内容时回退到原非流式 chat()，一次性返回完整内容，
   /// 避免网关不支持流式时用户干等或看到空白卡片。
+  /// 非流式请求同样自动重试最多 3 次（信号灯超时等瞬时网络错误场景）。
   Future<void> _fallbackToNonStreaming({
     required AiMessage msg,
     required List<Map<String, String>> messages,
@@ -2151,35 +2262,71 @@ class _AiChatSectionState extends State<_AiChatSection> {
     required String errPrefix,
   }) async {
     final sp = context.read<SettingsProvider>();
-    try {
-      final result = await AiService().chat(
-        endpoint: sp.aiEndpoint,
-        apiKey: sp.aiApiKey,
-        model: sp.effectiveAiModel,
-        messages: messages,
-      );
-      if (result.success) {
-        Logger.instance.info('$logTag回退成功', 'content长度: ${result.content.length}');
-        _replaceAssistantContent(msg, _extractAiResult(result.content));
-        await _persistAiMessages(logTag);
-      } else {
-        Logger.instance.error('$logTag回退失败',
-            'statusCode: ${result.statusCode ?? 'N/A'} 错误摘要: ${result.errorMessage}');
-        _handleStreamFailure(msg, '$errPrefix: ${result.errorMessage}');
-        _showToast('$errPrefix: ${result.errorMessage}');
-      }
-    } catch (e) {
-      Logger.instance.error('$logTag回退失败', '网络错误: $e');
-      _handleStreamFailure(msg, '$errPrefix: 网络错误: $e');
-      _showToast('$errPrefix: 网络错误: $e');
-    } finally {
-      // 成功/失败/异常都复位全部请求态；弹窗已关闭时避免对已 dispose 的 State 调 setState
-      if (mounted) {
+    int retry = 0;
+    while (retry < 3) {
+      retry++;
+      if (retry > 1) {
+        // async gap 之后：弹窗可能已关闭（dispose），先守卫再 setState
+        if (!mounted) return;
         setState(() {
-          _loading = false;
-          _streaming = false;
+          _retryNote = '连接中断，自动重试 $retry/3…';
         });
       }
+      try {
+        final result = await AiService().chat(
+          endpoint: sp.aiEndpoint,
+          apiKey: sp.aiApiKey,
+          model: sp.effectiveAiModel,
+          messages: messages,
+          logTag: logTag,
+        );
+        if (result.success) {
+          Logger.instance.info('$logTag回退成功',
+              'content长度: ${result.content.length} | 重试: $retry');
+          _replaceAssistantContent(msg, _extractAiResult(result.content));
+          await _persistAiMessages(logTag);
+          break;
+        } else {
+          // 非网络错误（如 401/限流）不必重试，直接展示错误
+          final code = result.statusCode ?? 0;
+          if (code >= 400 && code < 500) {
+            Logger.instance.error('$logTag回退失败',
+                'statusCode: $code 错误摘要: ${result.errorMessage}');
+            _handleStreamFailure(msg, '$errPrefix: ${result.errorMessage}');
+            _showToast('$errPrefix: ${result.errorMessage}');
+            break;
+          }
+          // 5xx/网络类错误：重试后仍失败再展示
+          if (retry >= 3) {
+            Logger.instance.error('$logTag回退失败',
+                'statusCode: $code 错误摘要: ${result.errorMessage}（已重试 $retry 次）');
+            _handleStreamFailure(msg, '$errPrefix: ${result.errorMessage}');
+            _showToast('$errPrefix: ${result.errorMessage}');
+          } else {
+            Logger.instance.warn('$logTag回退重试',
+                '第 $retry/3 次 | statusCode: $code');
+          }
+        }
+      } catch (e) {
+        if (retry >= 3) {
+          Logger.instance.error('$logTag回退失败',
+              '网络错误: $e（已重试 $retry 次）');
+          _handleStreamFailure(msg, '$errPrefix: 网络错误: $e');
+          _showToast('$errPrefix: 网络错误: $e');
+        } else {
+          Logger.instance.warn('$logTag回退重试',
+              '第 $retry/3 次 | 网络错误: $e');
+        }
+      }
+    }
+    // 成功/失败/异常都复位请求态；但仅当没有其它进行中的流式（如并发追问）
+    // 时才把 _streaming 复位，避免回退完成清掉其它请求的进行中状态。
+    if (mounted && _streamSub == null) {
+      setState(() {
+        _loading = false;
+        _streaming = false;
+        _retryNote = '';
+      });
     }
   }
 
@@ -2200,7 +2347,13 @@ class _AiChatSectionState extends State<_AiChatSection> {
     try {
       await provider.updateAiMessages(
         id,
-        _localMessages.where((m) => m.role != 'error').toList(),
+        // 过滤 error 消息 + 过滤仍在流式中的占位（避免并发场景——如流式失败
+        // 回退期间用户又发起追问——把追问的空占位一并持久化成空回复）。
+        // 流式完成后 _streamingMsg 已置 null，正常路径不受影响。
+        _localMessages
+            .where((m) =>
+                m.role != 'error' && !identical(m, _streamingMsg))
+            .toList(),
       );
       Logger.instance.info('$logTag持久化完成', '当前消息数: ${_localMessages.length}');
     } catch (e) {
@@ -2256,6 +2409,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
         setState(() {
           _loading = false;
           _streaming = false;
+          _retryNote = '';
         });
       }
     }
@@ -2319,6 +2473,21 @@ class _AiChatSectionState extends State<_AiChatSection> {
           .toDouble();
       sc.animateTo(
         target,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  /// 滚到详情弹窗底部（最新 AI 消息 + 追问输入框可见）。
+  /// 追问首个 chunk 时使用：用户刚发送追问，输入框保持在视野内。
+  void _scrollToBottom() {
+    final sc = widget.parentScrollController;
+    if (sc == null || !sc.hasClients) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !sc.hasClients) return;
+      sc.animateTo(
+        sc.position.maxScrollExtent,
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOut,
       );
@@ -2477,6 +2646,26 @@ class _AiChatSectionState extends State<_AiChatSection> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // 自动重试提示：网络瞬断时显示"连接中断，自动重试 n/3…"
+                            if (_retryNote.isNotEmpty) ...[
+                              Container(
+                                width: double.infinity,
+                                margin: const EdgeInsets.only(bottom: 4),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: p.withAlpha(14),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  _retryNote,
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: p),
+                                ),
+                              ),
+                            ],
                             Text('正在思考…',
                                 style: TextStyle(
                                     fontSize: 13,

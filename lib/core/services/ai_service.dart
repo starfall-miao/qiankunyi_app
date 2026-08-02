@@ -60,6 +60,8 @@ class AiService {
     required String apiKey,
     required String model,
     required List<Map<String, String>> messages,
+    /// 日志标签（解卦/追问共用本方法时区分日志，默认 'AI解卦'）
+    String logTag = 'AI解卦',
     // 实测结论（2026-08-02）：max_tokens 必须显式发送——
     //   · 不传 → deepseek-v4-flash-free 思考无限长（120s+ 仍在 reasoning，
     //     content 永远为空，流式永不完成 → UI 卡死无结果）
@@ -85,7 +87,7 @@ class AiService {
       };
 
       // 全链路日志：请求（endpoint、model、messages 数量、maxTokens；apiKey 打码不泄漏明文）
-      Logger.instance.info('AI解卦请求',
+      Logger.instance.info('$logTag请求',
           'endpoint: $url | model: $model | messages: ${messages.length} | '
           'maxTokens: $maxTokens | apiKey: ${_maskApiKey(apiKey)}');
 
@@ -99,7 +101,7 @@ class AiService {
       );
 
       // 全链路日志：响应（statusCode + body 前 300 字符摘要）
-      Logger.instance.info('AI解卦响应',
+      Logger.instance.info('$logTag响应',
           'statusCode: ${response.statusCode} | body: ${_preview(response.body)}');
 
       if (response.statusCode == 200) {
@@ -117,7 +119,7 @@ class AiService {
               'HTTP ${response.statusCode} 解析出的 content 为空（null/缺失/空数组段）');
           return AiResult.error('AI 返回内容为空或格式异常', statusCode: response.statusCode);
         }
-        Logger.instance.info('AI解卦成功',
+        Logger.instance.info('$logTag成功',
             'choices: ${choices.length} | content长度: ${content.length}');
         return AiResult(content: content, success: true);
       } else {
@@ -153,6 +155,8 @@ class AiService {
     required String apiKey,
     required String model,
     required List<Map<String, String>> messages,
+    /// 日志标签（解卦/追问共用本方法时区分日志，默认 'AI解卦'）
+    String logTag = 'AI解卦',
     // 实测结论（2026-08-02）：max_tokens 必须显式发送——
     //   · 不传 → deepseek-v4-flash-free 思考无限长（120s+ 仍在 reasoning，
     //     content 永远为空，流式永不完成 → UI 卡死无结果）
@@ -178,7 +182,7 @@ class AiService {
     };
 
     // 全链路日志：请求（apiKey 打码，不泄漏明文）
-    Logger.instance.info('AI解卦流式请求',
+    Logger.instance.info('$logTag流式请求',
         'endpoint: $url | model: $model | messages: ${messages.length} | '
         'maxTokens: $maxTokens | apiKey: ${_maskApiKey(apiKey)}');
 
@@ -191,7 +195,7 @@ class AiService {
       req.body = jsonEncode(body);
 
       final res = await client.send(req);
-      Logger.instance.info('AI解卦流式响应',
+      Logger.instance.info('$logTag流式响应',
           'statusCode: ${res.statusCode} | '
           'content-type: ${res.headers['content-type'] ?? 'N/A'}');
 
@@ -204,7 +208,7 @@ class AiService {
         } catch (_) {
           msg = errBody.length > 200 ? '${errBody.substring(0, 200)}...' : errBody;
         }
-        Logger.instance.error('AI解卦流式失败', msg);
+        Logger.instance.error('$logTag流式失败', msg);
         throw AiStreamException(msg, statusCode: res.statusCode);
       }
 
