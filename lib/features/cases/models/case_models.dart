@@ -64,23 +64,31 @@ class AiMessage {
   final String role;     // 'user' | 'assistant' | 'system'
   final String content;  // 消息内容
   final DateTime timestamp;
+  /// 是否按纯文本展示（不做 Markdown 渲染）。
+  /// 用于"仅推理内容"兜底消息：DeepSeek 推理模型的思考过程包含大量
+  /// `#`/`*`/`|` 等 Markdown 语法符号，按 Markdown 渲染会被吃掉部分内容
+  /// 导致"显示不全"；纯文本展示可完整保留原文。
+  final bool isPlainText;
 
   AiMessage({
     required this.role,
     required this.content,
     DateTime? timestamp,
+    this.isPlainText = false,
   }) : timestamp = timestamp ?? DateTime.now();
 
   Map<String, dynamic> toJson() => {
     'role': role,
     'content': content,
     'timestamp': timestamp.toIso8601String(),
+    'isPlainText': isPlainText,
   };
 
   factory AiMessage.fromJson(Map<String, dynamic> json) => AiMessage(
     role: json['role'] as String,
     content: json['content'] as String,
     timestamp: DateTime.parse(json['timestamp'] as String),
+    isPlainText: json['isPlainText'] as bool? ?? false,
   );
 }
 

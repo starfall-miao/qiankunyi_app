@@ -1863,9 +1863,11 @@ class _AiChatSectionState extends State<_AiChatSection> {
           } else if (receivedAny && thinking.trim().isNotEmpty) {
             // 网关只返回了推理过程（content 始终为空）：用推理内容兜底展示，
             // 避免"流式有增量但界面空白"（DeepSeek 推理模型/部分网关场景）。
+            // 兜底内容按纯文本渲染：思考过程含大量 Markdown 语法符号，
+            // 按 Markdown 渲染会被吃掉部分内容导致"显示不全"。
             Logger.instance.info('$logTag流式完成(仅推理内容)',
                 '长度: ${thinking.trim().length} | 推理增量: $reasoningCount');
-            _replaceAssistantContent(msg, thinking.trim());
+            _replaceAssistantContent(msg, thinking.trim(), plainText: true);
             _persistAiMessages(logTag);
             setState(() {
               _loading = false;
@@ -1937,13 +1939,18 @@ class _AiChatSectionState extends State<_AiChatSection> {
   }
 
   /// 用完整内容替换占位 assistant 消息（回退非流式成功后）
-  void _replaceAssistantContent(AiMessage msg, String content) {
+  void _replaceAssistantContent(AiMessage msg, String content,
+      {bool plainText = false}) {
     if (!mounted) return;
     final idx = _localMessages.indexOf(msg);
     if (idx < 0) return;
     setState(() {
       _localMessages = [..._localMessages];
-      _localMessages[idx] = AiMessage(role: 'assistant', content: content);
+      _localMessages[idx] = AiMessage(
+        role: 'assistant',
+        content: content,
+        isPlainText: plainText,
+      );
     });
     _scrollToAiSection();
   }
@@ -2105,12 +2112,12 @@ class _AiChatSectionState extends State<_AiChatSection> {
     }
   }
 
-  /// 用户消息的卡片展示文本：'你' 卡片避免展示冗长原始 prompt（prompt 全文仍
-  /// 完整保留在消息内容中，作为追问上下文与持久化数据），超长时折叠为前 60 字符。
+  /// 用户消息的卡片展示文本：折叠连续空白（避免多空格/换行挤爆布局），
+  /// **完整保留原文**——用户反馈"提示词显示不全"，不再截断前 60 字符；
+  /// prompt 全文同时用于追问上下文与持久化数据。
   String _displayUserContent(String content) {
     final collapsed = content.replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (collapsed.length <= 60) return collapsed;
-    return '${collapsed.substring(0, 60)}…';
+    return collapsed;
   }
 
   /// 把详情弹窗滚动到 AI 解卦卡片顶部（留 12px 顶部空隙），让用户看到 AI
@@ -2283,13 +2290,11 @@ class _AiChatSectionState extends State<_AiChatSection> {
                         Text(m.content,
                             style: TextStyle(fontSize: 13, color: errColor))
                       else if (isUser)
-                        // '你'卡片展示摘要（前 60 字符 + …），prompt 全文仍完整保留
-                        // 在消息内容中用于追问上下文；maxLines+ellipsis 兜底防溢出
+                        // '你'卡片展示完整 prompt（仅折叠空白，不截断）：
+                        // 用户反馈"提示词显示不全"，完整展示用户提交的内容
                         Text(
                           _displayUserContent(m.content),
                           style: TextStyle(fontSize: 13, color: t),
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
                         )
                       else if (m.content.trim().isEmpty && identical(m, _streamingMsg))
                         // 流式生成中：内容为空（通常是 DeepSeek 推理模型几十秒
@@ -2332,6 +2337,14 @@ class _AiChatSectionState extends State<_AiChatSection> {
                                 fontSize: 13,
                                 fontStyle: FontStyle.italic,
                                 color: t.withAlpha(120)))
+                      else if (m.isPlainText)
+                        // 纯文本消息（"仅推理内容"兜底）：完整展示原文。
+                        // 思考过程含大量 Markdown 语法符号，按 Markdown 渲染
+                        // 会被吃掉部分内容导致"显示不全"。
+                        Text(
+                          m.content,
+                          style: TextStyle(fontSize: 13, height: 1.5, color: t),
+                        )
                       else
                         Markdown(
                           data: m.content,
