@@ -2567,7 +2567,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
   }
 
   @override
-﻿  Widget build(BuildContext context) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final p = theme.colorScheme.primary;
     final isDark = theme.brightness == Brightness.dark;
