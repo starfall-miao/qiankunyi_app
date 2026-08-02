@@ -2119,12 +2119,13 @@ class _AiChatSectionState extends State<_AiChatSection> {
       final box = ctx.findRenderObject();
       if (box is! RenderBox) return;
       // AI 卡片顶部相对屏幕的 y；视口顶部相对屏幕的 y 之差即卡片距视口顶部距离
+      // （ScrollContext.storageContext 为非空 BuildContext，无需 null 判断）
       final cardTop = box.localToGlobal(Offset.zero).dy;
       final viewportCtx = sc.position.context.storageContext;
       double viewportTop = 0;
-      if (viewportCtx != null) {
-        final vbox = viewportCtx.findRenderObject();
-        if (vbox is RenderBox) viewportTop = vbox.localToGlobal(Offset.zero).dy;
+      final vbox = viewportCtx.findRenderObject();
+      if (vbox is RenderBox) {
+        viewportTop = vbox.localToGlobal(Offset.zero).dy;
       }
       final target = (sc.position.pixels + (cardTop - viewportTop) - 12)
           .clamp(0.0, sc.position.maxScrollExtent)
