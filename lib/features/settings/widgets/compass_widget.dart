@@ -1,11 +1,14 @@
 /// 完整二十四山罗盘 — CustomPainter 绘制，支持点击查看详细信息
-/// 支持手机指南针传感器（flutter_compass）：有方位角时盘面随真实方位旋转，
+/// 支持手机指南针传感器（flutter_device_compass）：有方位角时盘面随真实方位旋转，
 /// 无传感器/未授权时降级为手动点击模式。
 library;
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:math' as math;
+import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter_compass/flutter_compass.dart';
+import 'package:flutter_device_compass/flutter_device_compass.dart';
 
 import '../../../core/utils/logger.dart';
 
@@ -133,9 +136,17 @@ class _CompassWidgetState extends State<CompassWidget> {
     super.dispose();
   }
 
-  /// 订阅指南针传感器流；桌面/网页/无磁力计设备 FlutterCompass.events 为 null，
-  /// 自动降级为手动点击模式（不崩溃）。
+  /// 订阅指南针传感器流；仅 Android/iOS 尝试订阅：
+  /// - 桌面/网页没有原生实现，FlutterCompass.events 虽返回非 null Stream，
+  ///   但 listen 时 EventChannel 异步抛 MissingPluginException 且无法被
+  ///   onError 捕获（会冒泡到全局 ErrorWidget → "渲染异常" ERROR 日志），
+  ///   因此非移动端直接降级为手动点击模式。
+  /// - 移动端无磁力计/未授权时 heading 为 null/-1，同样自动降级。
   void _initCompass() {
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
+      Logger.instance.info('罗盘指南针', '非移动端，降级为点击模式');
+      return;
+    }
     try {
       final events = FlutterCompass.events;
       if (events == null) {
@@ -147,7 +158,8 @@ class _CompassWidgetState extends State<CompassWidget> {
           final h = event.heading;
           if (!mounted) return;
           if (h == null || h < 0) {
-            // 无效方位角（Android 无传感器时可能返回 null/-1）：回到点击模式
+            // 无效方位角（Android 无磁力计返回 null，部分设备返回 -1）：
+            // 回到点击模式
             if (_heading != null) {
               setState(() => _heading = null);
             }
@@ -220,15 +232,30 @@ class _CompassWidgetState extends State<CompassWidget> {
                 ),
                 // 固定前方指示针（不随盘面旋转）：指向屏幕顶部 = 设备正前方，
                 // 指针所指的盘面刻度即手机朝向的方位。
-                if (heading != null)
+                if (heading != null) ...[
                   Positioned(
-                    top: 0,
-                    child: Icon(
-                      Icons.arrow_drop_down,
-                      size: 32,
-                      color: Colors.red.shade400,
+                    top: -6,
+                    child: CustomPaint(
+                      size: const Size(34, 40),
+                      painter: _CompassPointerPainter(
+                        color: const Color(0xFFC0392B),
+                        gold: gold,
+                      ),
                     ),
                   ),
+                  // 底部小指针（设备后方，金色，弱化显示）
+                  Positioned(
+                    bottom: -4,
+                    child: CustomPaint(
+                      size: const Size(22, 22),
+                      painter: _CompassPointerPainter(
+                        color: gold.withAlpha(200),
+                        gold: gold.withAlpha(120),
+                        isRear: true,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
             // 状态行：有方位角显示当前朝向，无则提示点击
@@ -358,48 +385,75 @@ class CompassPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
+
+    // ========== 盘面底色：径向渐变（中心米白 → 边缘浅金），玉质层次感 ==========
     final bgPaint = Paint()
-      ..color = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2)
-      ..style = PaintingStyle.fill;
+      ..shader = ui.Gradient.radial(
+        center,
+        radius,
+        isDark
+            ? const [Color(0xFF2A2622), Color(0xFF3B332C), Color(0xFF241F1A)]
+            : const [Color(0xFFFEFCF8), Color(0xFFF6EFE2), Color(0xFFEDE1CC)],
+      );
     canvas.drawCircle(center, radius, bgPaint);
 
-    // ========== 外盘 ==========
-    // 外圈边框
-    final borderPaint = Paint()
-      ..color = gold.withAlpha(80)
+    // ========== 外圈双线金框 ==========
+    final goldStrong = Paint()
+      ..color = gold.withAlpha(160)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    canvas.drawCircle(center, radius - 3, borderPaint);
-    canvas.drawCircle(center, radius * 0.45, borderPaint);
+      ..strokeWidth = 2.4;
+    canvas.drawCircle(center, radius - 2, goldStrong);
+    final goldWeak = Paint()
+      ..color = gold.withAlpha(70)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    canvas.drawCircle(center, radius - 8, goldWeak);
 
-    // 绘制二十四山（外盘）
+    // ========== 精细刻度环（360° 四级刻度：45°/15°/5°/1°） ==========
+    for (int i = 0; i < 360; i++) {
+      final ang = i * math.pi / 180;
+      final dir = Offset(math.sin(ang), -math.cos(ang));
+      final p = Paint()..strokeWidth = 0.8;
+      if (i % 45 == 0) {
+        p.color = gold; p.strokeWidth = 2.2;
+        canvas.drawLine(center + dir * (radius - 9), center + dir * (radius - 19), p);
+      } else if (i % 15 == 0) {
+        p.color = gold.withAlpha(150); p.strokeWidth = 1.4;
+        canvas.drawLine(center + dir * (radius - 9), center + dir * (radius - 15), p);
+      } else if (i % 5 == 0) {
+        p.color = gold.withAlpha(90); p.strokeWidth = 1.0;
+        canvas.drawLine(center + dir * (radius - 9), center + dir * (radius - 12.5), p);
+      } else {
+        p.color = textColor.withAlpha(45); p.strokeWidth = 0.7;
+        canvas.drawLine(center + dir * (radius - 9), center + dir * (radius - 10.8), p);
+      }
+    }
+
+    // 细刻度内圈沿（视觉收边）
+    final tickInner = Paint()
+      ..color = gold.withAlpha(50)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8;
+    canvas.drawCircle(center, radius - 19, tickInner);
+
+    // ========== 二十四山（外盘大字，0.70R） ==========
     for (int i = 0; i < kTwentyFourMountains.length; i++) {
       final m = kTwentyFourMountains[i];
       final isSelected = i == selectedIndex;
       final angle = double.parse(m['angle']!) * math.pi / 180;
-
-      // 大刻度线：仅在外圈 0.72R~0.94R 环带绘制，
-      // 使二十四山文字（textR=0.62R）与内盘文字全部位于刻度线内侧空白带，互不重叠。
-      final innerR = radius * 0.72;
-      final outerR = radius - 10;
-      final tickPaint = Paint()
-        ..color = isSelected ? gold : textColor.withAlpha(120)
-        ..strokeWidth = isSelected ? 3.0 : 2.0;
-      canvas.drawLine(
-        Offset(center.dx + innerR * math.sin(angle), center.dy - innerR * math.cos(angle)),
-        Offset(center.dx + outerR * math.sin(angle), center.dy - outerR * math.cos(angle)),
-        tickPaint,
-      );
-
-      // 二十四山名称（外盘）
-      final textR = radius * 0.62;
+      final textR = radius * 0.70;
+      // 选中时先画浅金圆形底
+      if (isSelected) {
+        final selPaint = Paint()..color = gold.withAlpha(60);
+        canvas.drawCircle(center + Offset(textR * math.sin(angle), -textR * math.cos(angle)), radius * 0.085, selPaint);
+      }
       final tp = TextPainter(
         text: TextSpan(
           text: m['name']!,
           style: TextStyle(
-            color: isSelected ? gold : textColor,
-            fontSize: isSelected ? 14 : 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? gold : textColor.withAlpha(230),
+            fontSize: isSelected ? 15 : 13,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -414,106 +468,26 @@ class CompassPainter extends CustomPainter {
       );
     }
 
-    // ========== 内盘 ==========
-    // 天池（中心）
-    final poolPaint = Paint()
-      ..color = gold.withAlpha(100)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, radius * 0.12, poolPaint);
+    // ========== 环带分隔线 ==========
+    final sep = Paint()
+      ..color = gold.withAlpha(80)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    canvas.drawCircle(center, radius * 0.62, sep);
+    canvas.drawCircle(center, radius * 0.465, sep);
+    canvas.drawCircle(center, radius * 0.30, sep);
 
-    // 十二长生（内盘第一圈）
-    for (int i = 0; i < kShiErChangSheng.length; i++) {
-      final s = kShiErChangSheng[i];
-      final angle = double.parse(s['angle']!) * math.pi / 180;
-      final textR = radius * 0.32;
-
-      final tp = TextPainter(
-        text: TextSpan(
-          text: s['name']!,
-          style: TextStyle(
-            color: textColor.withAlpha(180),
-            fontSize: 9,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-        textAlign: TextAlign.center,
-      )..layout();
-      tp.paint(
-        canvas,
-        Offset(
-          center.dx + textR * math.sin(angle) - tp.width / 2,
-          center.dy - textR * math.cos(angle) - tp.height / 2,
-        ),
-      );
-    }
-
-    // 地支（内盘第二圈）
-    for (int i = 0; i < kEarthlyBranches.length; i++) {
-      final b = kEarthlyBranches[i];
-      final angle = double.parse(b['angle']!) * math.pi / 180;
-      final textR = radius * 0.38;
-
-      final tp = TextPainter(
-        text: TextSpan(
-          text: b['name']!,
-          style: TextStyle(
-            color: textColor.withAlpha(200),
-            fontSize: 10,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-        textAlign: TextAlign.center,
-      )..layout();
-      tp.paint(
-        canvas,
-        Offset(
-          center.dx + textR * math.sin(angle) - tp.width / 2,
-          center.dy - textR * math.cos(angle) - tp.height / 2,
-        ),
-      );
-    }
-
-    // 天干（内盘第三圈）
-    for (int i = 0; i < kHeavenlyStems.length; i++) {
-      final s = kHeavenlyStems[i];
-      final angle = double.parse(s['angle']!) * math.pi / 180;
-      final textR = radius * 0.44;
-
-      final tp = TextPainter(
-        text: TextSpan(
-          text: s['name']!,
-          style: TextStyle(
-            color: textColor.withAlpha(200),
-            fontSize: 10,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-        textAlign: TextAlign.center,
-      )..layout();
-      tp.paint(
-        canvas,
-        Offset(
-          center.dx + textR * math.sin(angle) - tp.width / 2,
-          center.dy - textR * math.cos(angle) - tp.height / 2,
-        ),
-      );
-    }
-
-    // 先天八卦（内盘第四圈）
+    // ========== 先天八卦符号（0.54R，金色） ==========
     for (int i = 0; i < kXianTianBagua.length; i++) {
       final b = kXianTianBagua[i];
       final angle = double.parse(b['angle']!) * math.pi / 180;
-      final textR = radius * 0.50;
-
+      final textR = radius * 0.54;
       final tp = TextPainter(
         text: TextSpan(
           text: b['symbol']!,
           style: TextStyle(
             color: gold,
-            fontSize: 18,
+            fontSize: 15,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -529,13 +503,71 @@ class CompassPainter extends CustomPainter {
       );
     }
 
-    // ========== 阴阳鱼 ==========
+    // ========== 地支（0.42R） ==========
+    for (int i = 0; i < kEarthlyBranches.length; i++) {
+      final b = kEarthlyBranches[i];
+      final angle = double.parse(b['angle']!) * math.pi / 180;
+      final textR = radius * 0.42;
+      final tp = TextPainter(
+        text: TextSpan(
+          text: b['name']!,
+          style: TextStyle(
+            color: textColor.withAlpha(215),
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        textAlign: TextAlign.center,
+      )..layout();
+      tp.paint(
+        canvas,
+        Offset(
+          center.dx + textR * math.sin(angle) - tp.width / 2,
+          center.dy - textR * math.cos(angle) - tp.height / 2,
+        ),
+      );
+    }
+
+    // ========== 天干（0.24R） ==========
+    for (int i = 0; i < kHeavenlyStems.length; i++) {
+      final s = kHeavenlyStems[i];
+      final angle = double.parse(s['angle']!) * math.pi / 180;
+      final textR = radius * 0.24;
+      final tp = TextPainter(
+        text: TextSpan(
+          text: s['name']!,
+          style: TextStyle(
+            color: textColor.withAlpha(200),
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        textAlign: TextAlign.center,
+      )..layout();
+      tp.paint(
+        canvas,
+        Offset(
+          center.dx + textR * math.sin(angle) - tp.width / 2,
+          center.dy - textR * math.cos(angle) - tp.height / 2,
+        ),
+      );
+    }
+
+    // ========== 中心太极（带金色外环） ==========
+    final poolRing = Paint()
+      ..color = gold.withAlpha(150)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    canvas.drawCircle(center, radius * 0.155, poolRing);
+
     // 白鱼（阳）
     final yangPaint = Paint()
-      ..color = Colors.white
+      ..color = isDark ? const Color(0xFFF5F0EB) : Colors.white
       ..style = PaintingStyle.fill;
     canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius * 0.12),
+      Rect.fromCircle(center: center, radius: radius * 0.14),
       math.pi,
       math.pi,
       true,
@@ -544,10 +576,10 @@ class CompassPainter extends CustomPainter {
 
     // 黑鱼（阴）
     final yinPaint = Paint()
-      ..color = Colors.black
+      ..color = isDark ? const Color(0xFF1A1714) : const Color(0xFF3A322C)
       ..style = PaintingStyle.fill;
     canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius * 0.12),
+      Rect.fromCircle(center: center, radius: radius * 0.14),
       0,
       math.pi,
       false,
@@ -558,11 +590,48 @@ class CompassPainter extends CustomPainter {
     final centerDotPaint = Paint()
       ..color = gold
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, radius * 0.04, centerDotPaint);
+    canvas.drawCircle(center, radius * 0.045, centerDotPaint);
   }
 
   @override
   bool shouldRepaint(covariant CompassPainter oldDelegate) {
     return oldDelegate.selectedIndex != selectedIndex || oldDelegate.isDark != isDark;
+  }
+}
+
+/// 罗盘固定指针（菱形），不随盘面旋转
+class _CompassPointerPainter extends CustomPainter {
+  final Color color, gold;
+  final bool isRear;
+
+  _CompassPointerPainter({required this.color, required this.gold, this.isRear = false});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final path = Path()
+      ..moveTo(w / 2, 0)
+      ..lineTo(w, h * 0.42)
+      ..lineTo(w / 2, h)
+      ..lineTo(0, h * 0.42)
+      ..close();
+    final fill = Paint()..color = color;
+    canvas.drawPath(path, fill);
+    final stroke = Paint()
+      ..color = gold
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    canvas.drawPath(path, stroke);
+    // 中轴线（提升精致感）
+    final line = Paint()
+      ..color = Colors.white.withAlpha(200)
+      ..strokeWidth = 1;
+    canvas.drawLine(Offset(w / 2, h * 0.18), Offset(w / 2, h * 0.82), line);
+  }
+
+  @override
+  bool shouldRepaint(covariant _CompassPointerPainter oldDelegate) {
+    return oldDelegate.color != color || oldDelegate.gold != gold;
   }
 }
