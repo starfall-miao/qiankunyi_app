@@ -1628,17 +1628,17 @@ class _AiChatSectionState extends State<_AiChatSection> {
       return;
     }
     final isBazi = widget.caseModel.caseType == CaseType.bazi;
-    // 精简中文系统提示：明确输出格式要求（>>>解卦<<< 标记 + 逐行换行），
-    // 并强制"思考极短、正式输出详细"——实测（2026-08-02）deepseek-v4-flash-free
-    // 若不禁制思考会输出超长 reasoning（甚至 20K+ 字符），把 max_tokens
-    // 配额耗尽导致 content 为空或流式永不完成；必须明确限定思考篇幅。
+    // 中文系统提示：明确输出格式要求（>>>解卦<<< 标记 + 逐行换行）。
+    // 不限制思考字数（用户反馈"限制50字导致思考被截断"）——思考完整输出，
+    // 由 maxTokens 配额（65536）保障；只要求要点式、不复述排盘数据。
     final systemPrompt = isBazi
         ? '你是八字命理专家，根据排盘信息直接分析命盘。'
-            '思考控制在50字以内（只列关键要点），不要复述排盘数据；'
+            '先简要思考分析（要点式，不要复述排盘数据）；'
             '正式结果要详细清晰有条理，用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
             '不同要点逐行输出，禁止挤在一行。'
-        : '你是六爻/梅花解卦专家。思考控制在50字以内（只列关键要点），'
-            '不要复述排盘数据；正式结果要详细清晰有条理，'
+        : '你是六爻/梅花解卦专家。'
+            '先简要思考分析（要点式，不要复述排盘数据）；'
+            '正式结果要详细清晰有条理，'
             '用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
             '各爻逐行输出（初爻：…／二爻：…）；不同要点换行，禁止挤在一行。';
     final prompt = _buildPromptForType();
@@ -1779,7 +1779,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
         sb.writeln('流年：${r.liuNian}');
       }
       sb.writeln('\n请分析此八字命盘，包括五行喜忌、十神、大运走势等。');
-      sb.writeln('【输出格式】思考控制在50字以内（只列关键要点），不要复述排盘数据；');
+      sb.writeln('【输出格式】先简要思考分析（要点式，不要复述排盘数据）；');
       sb.writeln('正式结果要详细清晰有条理，用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；');
       sb.writeln('不同要点逐行输出，禁止挤在一行。');
       return sb.toString();
@@ -1789,7 +1789,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
           '四柱：年柱${widget.caseModel.guaName} / 日柱${widget.caseModel.guaGong}\n'
           '排盘数据：${widget.caseModel.paipanData}\n\n'
           '请分析此八字命盘，包括五行喜忌、十神、大运走势等。\n'
-          '【输出格式】思考控制在50字以内（只列关键要点），不要复述排盘数据；'
+          '【输出格式】先简要思考分析（要点式，不要复述排盘数据）；'
           '正式结果要详细清晰有条理，用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
           '不同要点逐行输出，禁止挤在一行。';
     }
@@ -1804,16 +1804,15 @@ class _AiChatSectionState extends State<_AiChatSection> {
       return;
     }
     final isBazi = widget.caseModel.caseType == CaseType.bazi;
-    // 追问沿用解卦的输出格式要求（>>>解卦<<< 标记 + 逐行换行 + 思考极短），
-    // 便于软件按同一逻辑提取正文。思考限定 ≤50 字：实测不限制时
-    // 推理模型输出超长思考导致 content 为空/流式永不完成。
+    // 追问沿用解卦的输出格式要求（>>>解卦<<< 标记 + 逐行换行）。
+    // 不限制思考字数（用户反馈"限制50字导致思考被截断"），由 maxTokens 配额保障。
     final systemPrompt = isBazi
         ? '你是八字命理专家，下面是对同一命盘的连续讨论。'
-            '思考控制在50字以内（只列关键要点），不要复述排盘数据；'
+            '先简要思考分析（要点式，不要复述排盘数据）；'
             '回答详细清晰有条理，同样用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹正式内容；'
             '不同要点逐行输出，禁止挤在一行。'
         : '你是六爻/梅花解卦专家，下面是对同一卦象的连续讨论。'
-            '思考控制在50字以内（只列关键要点），不要复述排盘数据；'
+            '先简要思考分析（要点式，不要复述排盘数据）；'
             '回答详细清晰有条理，同样用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹正式内容；'
             '各爻逐行输出；不同要点换行，禁止挤在一行。';
     // 构建上下文：系统提示 + 历史消息 + 当前问题（错误消息不进入 AI 上下文）。
@@ -2568,7 +2567,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
   }
 
   @override
-  Widget build(BuildContext context) {
+﻿  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final p = theme.colorScheme.primary;
     final isDark = theme.brightness == Brightness.dark;
@@ -2581,293 +2580,281 @@ class _AiChatSectionState extends State<_AiChatSection> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 标题
-            Row(children: [
-              Icon(Icons.auto_awesome, size: 18, color: p),
-              const SizedBox(width: 6),
-              Text('🤖 AI 解卦', style: TextStyle(fontSize: 14,
-                  fontWeight: FontWeight.bold, color: t)),
-              if (_loading) ...[
-                const Spacer(),
-                const SizedBox(width: 18, height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2)),
-              ],
-            ]),
+            _buildHeader(p, t),
             const SizedBox(height: 8),
-
-            // ── 首次 AI 解卦按钮 ──
-            // 发现 A：流式进行中（_streaming）也隐藏按钮——首个 chunk 后
-            // _loading 已复位，若无 _streaming 判断按钮会误现并可能并发触发
-            if (!_hasAssistantReply && !_loading && !_streaming) ...[
-              Center(
-                child: TextButton.icon(
-                  onPressed: _requestJieGua,
-                  icon: const Icon(Icons.auto_awesome, size: 18),
-                  label: const Text('开始 AI 解卦', style: TextStyle(fontSize: 14)),
-                  style: TextButton.styleFrom(
-                    foregroundColor: p,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                    side: BorderSide(color: p.withAlpha(80)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-
+            // 首次解卦：无 AI 回复且非流式中 → 显示开始按钮
+            if (!_hasAssistantReply && !_loading && !_streaming)
+              _buildStartButton(p),
             // AI 对话历史
-            if (_messages.isNotEmpty) ...[
-              ..._messages.asMap().entries.map((entry) {
-                final i = entry.key;
-                final m = entry.value;
-                final isUser = m.role == 'user';
-                final isError = m.role == 'error';
-                final errColor = isDark
-                    ? const Color(0xFFE08A8A)
-                    : const Color(0xFFC0392B);
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: isError
-                        ? (isDark ? const Color(0xFF3A2020) : const Color(0xFFFBEAEA))
-                        : isUser
-                            ? (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF0EDE8))
-                            : (isDark ? const Color(0xFF252535) : const Color(0xFFFAF6F0)),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: isError
-                          ? errColor.withAlpha(80)
-                          : isUser
-                              ? t.withAlpha(20)
-                              : p.withAlpha(30),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        Icon(
-                          isError
-                              ? Icons.error_outline
-                              : (isUser ? Icons.person : Icons.auto_awesome),
-                          size: 14,
-                          color: isError ? errColor : (isUser ? t : p),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          isError ? '错误' : (isUser ? '你' : 'AI'),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isError ? errColor : (isUser ? t : p),
-                          ),
-                        ),
-                        const Spacer(),
-                        // 叉叉：删除这条消息（删除 AI 回复后 _hasAssistantReply 重算，
-                        // '开始 AI 解卦'按钮会重新出现；删除追问回复后可重新追问）。
-                        // 用 IconButton 提供可靠命中区域（原 GestureDetector+14px Icon
-                        // 目标太小，点击易落空），带 tooltip 便于识别用途。
-                        IconButton(
-                          onPressed: () => _deleteAiMessage(i),
-                          tooltip: '删除这条消息',
-                          icon: Icon(Icons.close, size: 16,
-                              color: t.withAlpha(120)),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                              minWidth: 30, minHeight: 30),
-                          visualDensity: VisualDensity.compact,
-                          splashRadius: 14,
-                        ),
-                      ]),
-                      const SizedBox(height: 4),
-                      if (isError)
-                        Text(m.content,
-                            style: TextStyle(fontSize: 13, color: errColor))
-                      else if (isUser)
-                        // '你'卡片展示完整 prompt（仅折叠空白，不截断）：
-                        // 用户反馈"提示词显示不全"，完整展示用户提交的内容
-                        Text(
-                          _displayUserContent(m.content),
-                          style: TextStyle(fontSize: 13, color: t),
-                        )
-                      else if (m.content.trim().isEmpty && identical(m, _streamingMsg))
-                        // 流式生成中：内容为空（通常是 DeepSeek 推理模型几十秒
-                        // 的思考阶段，只有 reasoning 增量）→ 显示'正在思考…'，
-                        // 并把思考过程实时显示为灰色小字（打字机效果），让用户
-                        // 明确感知流式输出在进行，而不是毫无动静/以为没流式。
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // 自动重试提示：网络瞬断时显示"连接中断，自动重试 n/3…"
-                            if (_retryNote.isNotEmpty) ...[
-                              Container(
-                                width: double.infinity,
-                                margin: const EdgeInsets.only(bottom: 4),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: p.withAlpha(14),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  _retryNote,
-                                  style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: p),
-                                ),
-                              ),
-                            ],
-                            Text('正在思考…',
-                                style: TextStyle(
-                                    fontSize: 13,
-                                    fontStyle: FontStyle.italic,
-                                    color: p.withAlpha(160))),
-                            if (_thinking.trim().isNotEmpty) ...[
-                              const SizedBox(height: 4),
-                              // 截断显示思考过程（前 400 字符 + …）：推理阶段
-                              // 增量高频 setState，思考可能长达数万字，全量渲染
-                              // 每帧布局会卡顿；截断既保留"流式进行中"的感知，
-                              // 又避免性能问题（完成后的最终消息只含正式答案）。
-                              // 整块可点击：弹窗查看完整实时思考（用户反馈
-                              // "思考内容输出不完整"——这里给全量入口）。
-                              GestureDetector(
-                                onTap: _showThinkingDialog,
-                                child: Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: t.withAlpha(8),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '思考过程（点击查看完整，${_thinking.length}字）',
-                                        style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                            color: p.withAlpha(170)),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        _thinking.length > 400
-                                            ? '${_thinking.substring(0, 400)}…'
-                                            : _thinking.trim(),
-                                        maxLines: 4,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                            fontSize: 11,
-                                            fontStyle: FontStyle.italic,
-                                            color: t.withAlpha(110)),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        )
-                      else if (m.content.trim().isEmpty)
-                        // 旧数据可能残留空 content 的 assistant 消息：显示友好占位，
-                        // 不再出现"无内容的 AI 卡片"
-                        Text('（空回复）',
-                            style: TextStyle(
-                                fontSize: 13,
-                                fontStyle: FontStyle.italic,
-                                color: t.withAlpha(120)))
-                      else if (identical(m, _streamingMsg))
-                        // 流式进行中：用纯文本快速渲染，不解析 Markdown——
-                        // 增量可达上千次，每次全量 Markdown 解析会卡到
-                        // "内容出不来"；流完成替换后自动切换为 Markdown 渲染。
-                        Text(
-                          m.content,
-                          style: TextStyle(
-                              fontSize: 13, height: 1.6, color: t),
-                        )
-                      else if (m.isPlainText)
-                        // 纯文本消息（"仅推理内容"兜底）：完整展示原文。
-                        // 思考过程含大量 Markdown 语法符号，按 Markdown 渲染
-                        // 会被吃掉部分内容导致"显示不全"。
-                        Text(
-                          m.content,
-                          style: TextStyle(fontSize: 13, height: 1.5, color: t),
-                        )
-                      else
-                        // 渲染前转义 >>> / <<<：流式期间的原始文本含
-                        // " >>>解卦<<< " 标记，而 Markdown 把 ">>>" 解析为
-                        // blockquote（引用块）语法，会破坏卡片布局导致
-                        // 追问输入框错位到左上角；转义为全角后只当普通文本。
-                        // 渲染包一层防御：flutter_markdown 对异常输入抛错时
-                        // 自动降级为纯文本（SelectableText），保证内容必显示。
-                        _AiMarkdownBody(
-                          raw: m.content,
-                          baseColor: t,
-                        ),
-                      // 思考过程折叠区（AI 消息）：完成后的思考不删除，
-                      // 默认收起，点击展开查看完整内容（用户反馈"思考内容
-                      // 输出不完整"——流式期间只显示截断小字，这里补全量）。
-                      if (!isUser && !isError && m.thinking != null &&
-                          m.thinking!.trim().isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        _ThinkingCollapseBox(thinking: m.thinking!),
-                      ],
-                    ],
-                  ),
-                );
-              }),
-            ],
-
-            // ── 有 AI 回复时显示追问输入 ──
-            // 发现 A：流式进行中（_streaming）隐藏追问区，防止并发请求——
-            // 首个 chunk 后 _loading=false 但 _streaming=true，仍需保持隐藏
-            if (_hasAssistantReply && !_loading && !_streaming) ...[
-              const SizedBox(height: 8),
-              // 追问输入区固定为自身行高（Row 内 Expanded + 固定 IconButton），
-              // 防止内容流式重建时被 Markdown/长文本挤偏到弹窗左上角。
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.zero,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _questionCtrl,
-                        decoration: InputDecoration(
-                          hintText: '输入追问…',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          isDense: true,
-                        ),
-                        maxLines: 2,
-                        minLines: 1,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => _askFollowUp(),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      onPressed: _askFollowUp,
-                      icon: Icon(Icons.send, color: p),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ..._messages.asMap().entries.map((e) =>
+                _buildMessageCard(e.key, e.value, p, isDark, t)),
+            // 有 AI 回复时显示追问输入（流式中隐藏防并发）
+            if (_hasAssistantReply && !_loading && !_streaming)
+              _buildFollowUpInput(p),
           ],
         ),
       ),
     );
   }
+
+  /// 标题行：AI 解卦 + 加载转圈（仅首个 chunk 到达前显示）。
+  Widget _buildHeader(Color p, Color t) {
+    return Row(children: [
+      Icon(Icons.auto_awesome, size: 18, color: p),
+      const SizedBox(width: 6),
+      Text('🤖 AI 解卦',
+          style: TextStyle(
+              fontSize: 14, fontWeight: FontWeight.bold, color: t)),
+      if (_loading) ...[
+        const Spacer(),
+        const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2)),
+      ],
+    ]);
+  }
+
+  /// 首次 AI 解卦按钮。
+  Widget _buildStartButton(Color p) {
+    return Center(
+      child: TextButton.icon(
+        onPressed: _requestJieGua,
+        icon: const Icon(Icons.auto_awesome, size: 18),
+        label: const Text('开始 AI 解卦', style: TextStyle(fontSize: 14)),
+        style: TextButton.styleFrom(
+          foregroundColor: p,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+          side: BorderSide(color: p.withAlpha(80)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 单条对话消息卡片：错误 / 用户 / AI 三种样式。
+  Widget _buildMessageCard(
+      int i, AiMessage m, Color p, bool isDark, Color t) {
+    final isUser = m.role == 'user';
+    final isError = m.role == 'error';
+    final errColor = isDark ? const Color(0xFFE08A8A) : const Color(0xFFC0392B);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isError
+            ? (isDark ? const Color(0xFF3A2020) : const Color(0xFFFBEAEA))
+            : isUser
+                ? (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF0EDE8))
+                : (isDark ? const Color(0xFF252535) : const Color(0xFFFAF6F0)),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isError
+              ? errColor.withAlpha(80)
+              : isUser
+                  ? t.withAlpha(20)
+                  : p.withAlpha(30),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(
+              isError
+                  ? Icons.error_outline
+                  : (isUser ? Icons.person : Icons.auto_awesome),
+              size: 14,
+              color: isError ? errColor : (isUser ? t : p),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              isError ? '错误' : (isUser ? '你' : 'AI'),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isError ? errColor : (isUser ? t : p),
+              ),
+            ),
+            const Spacer(),
+            // 叉叉：删除这条消息（删除 AI 回复后 _hasAssistantReply 重算，
+            // '开始 AI 解卦'按钮会重新出现；删除追问回复后可重新追问）。
+            // 用 IconButton 提供可靠命中区域，带 tooltip 便于识别用途。
+            IconButton(
+              onPressed: () => _deleteAiMessage(i),
+              tooltip: '删除这条消息',
+              icon: Icon(Icons.close, size: 16, color: t.withAlpha(120)),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+              visualDensity: VisualDensity.compact,
+              splashRadius: 14,
+            ),
+          ]),
+          const SizedBox(height: 4),
+          _buildMessageBody(m, p, t, errColor),
+          // 完成后的思考过程：默认折叠，点击展开查看全量（不删除）
+          if (!isUser && !isError && m.thinking != null &&
+              m.thinking!.trim().isNotEmpty) ...[
+            const SizedBox(height: 6),
+            _ThinkingCollapseBox(thinking: m.thinking!),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// 消息正文：错误 / 用户 / AI（思考中 / 流式中 / 已完成）分派。
+  Widget _buildMessageBody(AiMessage m, Color p, Color t, Color errColor) {
+    if (m.role == 'error') {
+      return Text(m.content, style: TextStyle(fontSize: 13, color: errColor));
+    }
+    if (m.role == 'user') {
+      // '你'卡片展示完整 prompt（仅折叠空白，不截断）
+      return Text(
+        _displayUserContent(m.content),
+        style: TextStyle(fontSize: 13, color: t),
+      );
+    }
+    // ── AI 消息 ──
+    if (identical(m, _streamingMsg)) {
+      if (m.content.trim().isEmpty) {
+        // 流式生成中且内容为空（DeepSeek 推理模型思考阶段）：
+        // 显示"正在思考…" + 实时思考小字（打字机效果），点击看全量弹窗
+        return _buildThinkingLive(p, t);
+      }
+      // 流式进行中：纯文本快速渲染（不解析 Markdown，
+      // 增量可达上千次，避免高频重建卡顿"内容出不来"）
+      return Text(m.content,
+          style: TextStyle(fontSize: 13, height: 1.6, color: t));
+    }
+    if (m.content.trim().isEmpty) {
+      // 旧数据可能残留空 content 的 assistant 消息：友好占位
+      return Text('（空回复）',
+          style: TextStyle(
+              fontSize: 13,
+              fontStyle: FontStyle.italic,
+              color: t.withAlpha(120)));
+    }
+    if (m.isPlainText) {
+      // 纯文本消息（"仅推理内容"兜底）：完整展示原文，
+      // 避免 Markdown 吃掉含大量语法符号的思考内容
+      return Text(m.content,
+          style: TextStyle(fontSize: 13, height: 1.5, color: t));
+    }
+    // 完成后的正式答案：Markdown 渲染（渲染前 >>> / <<< 已转义，
+    // 抛错时 _AiMarkdownBody 内部自动降级为纯文本，保证内容必显示）
+    return _AiMarkdownBody(raw: m.content, baseColor: t);
+  }
+
+  /// 流式思考阶段：重试提示 + 正在思考 + 思考小字（点击弹窗看全量）。
+  Widget _buildThinkingLive(Color p, Color t) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 自动重试提示：网络瞬断时显示"连接中断，自动重试 n/3…"
+        if (_retryNote.isNotEmpty) ...[
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: p.withAlpha(14),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              _retryNote,
+              style: TextStyle(
+                  fontSize: 11, fontWeight: FontWeight.w600, color: p),
+            ),
+          ),
+        ],
+        Text('正在思考…',
+            style: TextStyle(
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+                color: p.withAlpha(160))),
+        if (_thinking.trim().isNotEmpty) ...[
+          const SizedBox(height: 4),
+          // 截断显示思考（前 400 字符 + …）：推理阶段增量高频，
+          // 思考可能长达数万字，全量渲染会卡顿；点击弹窗看完整实时思考
+          GestureDetector(
+            onTap: _showThinkingDialog,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: t.withAlpha(8),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '思考过程（点击查看完整，${_thinking.length}字）',
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: p.withAlpha(170)),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _thinking.length > 400
+                        ? '${_thinking.substring(0, 400)}…'
+                        : _thinking.trim(),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic,
+                        color: t.withAlpha(110)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// 追问输入区：Row 固定行高（Expanded + 固定 IconButton），
+  /// 防止内容重建时被 Markdown/长文本挤偏到弹窗左上角。
+  Widget _buildFollowUpInput(Color p) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _questionCtrl,
+              decoration: InputDecoration(
+                hintText: '输入追问…',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 8),
+                isDense: true,
+              ),
+              maxLines: 2,
+              minLines: 1,
+              textInputAction: TextInputAction.send,
+              onSubmitted: (_) => _askFollowUp(),
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            onPressed: _askFollowUp,
+            icon: Icon(Icons.send, color: p),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-/// AI 回复内容（Markdown 渲染 + 防御降级）。
 /// 用户反馈"解卦成功但界面没有内容显示"：flutter_markdown 对个别异常输入
 /// （未闭合语法、特殊字符组合等）可能抛错导致卡片空白/布局塌陷。这里把
 /// Markdown 渲染包在 try-catch 里，一旦抛错立即降级为纯文本 SelectableText，
