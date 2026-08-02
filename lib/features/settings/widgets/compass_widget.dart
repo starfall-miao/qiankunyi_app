@@ -396,7 +396,8 @@ class CompassPainter extends CustomPainter {
         isDark
             ? const [Color(0xFF2A2622), Color(0xFF3B332C), Color(0xFF241F1A)]
             : const [Color(0xFFFEFCF8), Color(0xFFF6EFE2), Color(0xFFEDE1CC)],
-        colorStops: const [0.0, 0.55, 1.0],
+        // dart:ui Gradient.radial 的 colorStops 是位置参数（不是命名参数）
+        const [0.0, 0.55, 1.0],
       );
     canvas.drawCircle(center, radius, bgPaint);
 
