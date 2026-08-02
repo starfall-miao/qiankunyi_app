@@ -1606,14 +1606,16 @@ class _AiChatSectionState extends State<_AiChatSection> {
     }
     final isBazi = widget.caseModel.caseType == CaseType.bazi;
     // 精简中文系统提示：明确输出格式要求（>>>解卦<<< 标记 + 逐行换行），
-    // 与 buildJieGuaPrompt/_buildBaziPrompt 中的格式要求保持一致。
+    // 并强调"思考简短、正式输出详细"（避免推理模型把 token 花在思考阶段
+    // 导致 content 为空或被截断）。
     final systemPrompt = isBazi
         ? '你是八字命理专家，根据排盘信息直接分析命盘。'
-            '正式结果用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
-            '不同要点逐行输出，禁止挤在一行；不要复述排盘数据，直接给分析。'
-        : '你是六爻/梅花解卦专家。正式结果用 >>>解卦<<< 开头、'
-            '>>>解卦结束<<< 结尾包裹；各爻逐行输出（初爻：…／二爻：…）；'
-            '不要复述排盘数据，直接给分析。';
+            '思考过程尽量简短，不要复述排盘数据；正式结果要详细有条理，'
+            '用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
+            '不同要点逐行输出，禁止挤在一行。'
+        : '你是六爻/梅花解卦专家。思考过程尽量简短，不要复述排盘数据；'
+            '正式结果要详细有条理，用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
+            '各爻逐行输出（初爻：…／二爻：…）；不同要点换行，禁止挤在一行。';
     final prompt = _buildPromptForType();
     final messages = <Map<String, String>>[
       {'role': 'system', 'content': systemPrompt},
@@ -1632,11 +1634,72 @@ class _AiChatSectionState extends State<_AiChatSection> {
     if (widget.caseModel.caseType == CaseType.bazi) {
       return _buildBaziPrompt();
     }
-    return AiService().buildJieGuaPrompt(
-      '卦名：${widget.caseModel.guaName}（${widget.caseModel.guaGong}宫）\n'
-      '起卦方式：${widget.caseModel.method}\n'
-      '排盘数据：${widget.caseModel.paipanData}',
-    );
+    // 六爻/梅花：把排盘 JSON 解析为中文描述再发给 AI
+    // （不传英文键 JSON 原文，模型才能直接读懂排盘信息）
+    String cnInfo;
+    try {
+      final r = PaipanResult.fromJson(
+          jsonDecode(widget.caseModel.paipanData) as Map<String, dynamic>);
+      cnInfo = _buildPaipanTextCN(r);
+    } catch (_) {
+      // 旧数据解析失败时降级为标题信息
+      cnInfo = '卦名：${widget.caseModel.guaName}（${widget.caseModel.guaGong}宫）\n'
+          '起卦方式：${widget.caseModel.method}';
+    }
+    return AiService().buildJieGuaPrompt(cnInfo);
+  }
+
+  /// 把排盘结果格式化为中文文本（复用"复制结果"的格式化逻辑），
+  /// 供 AI 解卦提示词使用——避免把英文键的 JSON 原文发给模型。
+  String _buildPaipanTextCN(PaipanResult result) {
+    const wxCN = <WuXing, String>{
+      WuXing.jin: '金', WuXing.mu: '木', WuXing.shui: '水',
+      WuXing.huo: '火', WuXing.tu: '土',
+    };
+    const lqCN = <LiuQin, String>{
+      LiuQin.parent: '父母', LiuQin.brother: '兄弟', LiuQin.officer: '官鬼',
+      LiuQin.wife: '妻财', LiuQin.child: '子孙', LiuQin.none: '',
+    };
+    final bn = guaNameCN[result.benGua.name] ?? result.benGua.name.name;
+    final bg = guaGongCN[result.benGua.gong] ?? '';
+    final bw = wxCN[result.benGua.wuXing] ?? '';
+    final timeStr = '${result.paipanTime.year}年${result.paipanTime.month}月'
+        '${result.paipanTime.day}日 ${result.paipanTime.hour}:'
+        '${result.paipanTime.minute.toString().padLeft(2, '0')}';
+    final sb = StringBuffer();
+    sb.writeln('本卦：$bn（$bg宫，五行$bw）');
+    sb.writeln('起卦方式：${methodToCN(result.method)}');
+    sb.writeln('起卦时间：$timeStr');
+    sb.writeln('六爻排盘（自下而上）：');
+    for (final y in result.benGua.yaos.reversed) {
+      final line = y.yinYang == YaoYinYang.yang ? '———' : '— —';
+      final parts = <String>['${y.positionName}爻 $line'];
+      if (y.isMoving) parts.add('动');
+      if (y.liuQin != LiuQin.none) parts.add(lqCN[y.liuQin] ?? '');
+      if (y.liuShen != null) parts.add(liuShenCN[y.liuShen] ?? '');
+      if (y.wangShuai != null) parts.add(y.wangShuai!.label);
+      if (y.isShi) parts.add('世');
+      if (y.isYing) parts.add('应');
+      if (y.isKongWang) parts.add('旬空');
+      sb.writeln('  ${parts.join(' ')}');
+    }
+    if (result.bianGua != null) {
+      final bn2 = guaNameCN[result.bianGua!.name] ?? result.bianGua!.name.name;
+      sb.writeln('变卦：$bn2');
+    }
+    if (result.huGua != null) {
+      final bn3 = guaNameCN[result.huGua!.name] ?? result.huGua!.name.name;
+      sb.writeln('互卦：$bn3');
+    }
+    if (result.monthGanZhi != null) sb.writeln('月令（月建）：${result.monthGanZhi}');
+    if (result.dayGanZhi != null) sb.writeln('日辰：${result.dayGanZhi}');
+    if (result.kongWang != null && result.kongWang!.isNotEmpty) {
+      sb.writeln('旬空：${result.kongWang!.join('、')}');
+    }
+    if (result.shenSha.isNotEmpty) {
+      sb.writeln('神煞：${result.shenSha.join('、')}');
+    }
+    return sb.toString();
   }
 
   /// 构建八字提示词：从 paipanData 解析完整四柱/五行/十神/大运。
@@ -1691,8 +1754,9 @@ class _AiChatSectionState extends State<_AiChatSection> {
         sb.writeln('流年：${r.liuNian}');
       }
       sb.writeln('\n请分析此八字命盘，包括五行喜忌、十神、大运走势等。');
-      sb.writeln('【输出格式】正式结果用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；');
-      sb.writeln('不同要点逐行输出，禁止挤在一行；不要复述排盘数据，直接给分析。');
+      sb.writeln('【输出格式】思考过程尽量简短，不要复述排盘数据；');
+      sb.writeln('正式结果要详细有条理，用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；');
+      sb.writeln('不同要点逐行输出，禁止挤在一行。');
       return sb.toString();
     } catch (e) {
       // 旧数据解析失败时降级为简要信息（不再把年柱/日柱当卦名占位）
@@ -1700,7 +1764,8 @@ class _AiChatSectionState extends State<_AiChatSection> {
           '四柱：年柱${widget.caseModel.guaName} / 日柱${widget.caseModel.guaGong}\n'
           '排盘数据：${widget.caseModel.paipanData}\n\n'
           '请分析此八字命盘，包括五行喜忌、十神、大运走势等。\n'
-          '【输出格式】正式结果用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
+          '【输出格式】思考过程尽量简短，不要复述排盘数据；'
+          '正式结果要详细有条理，用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
           '不同要点逐行输出，禁止挤在一行。';
     }
   }
@@ -1714,15 +1779,17 @@ class _AiChatSectionState extends State<_AiChatSection> {
       return;
     }
     final isBazi = widget.caseModel.caseType == CaseType.bazi;
-    // 追问沿用解卦的输出格式要求（>>>解卦<<< 标记 + 逐行换行），
+    // 追问沿用解卦的输出格式要求（>>>解卦<<< 标记 + 逐行换行 + 思考简短），
     // 便于软件按同一逻辑提取正文。
     final systemPrompt = isBazi
         ? '你是八字命理专家，下面是对同一命盘的连续讨论。'
-            '回答同样用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹正式内容；'
-            '不同要点逐行输出，禁止挤在一行；直接回答，不要复述排盘数据。'
+            '思考过程尽量简短，不要复述排盘数据；回答详细有条理，'
+            '同样用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹正式内容；'
+            '不同要点逐行输出，禁止挤在一行。'
         : '你是六爻/梅花解卦专家，下面是对同一卦象的连续讨论。'
-            '回答同样用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹正式内容；'
-            '各爻逐行输出；直接回答，不要复述排盘数据。';
+            '思考过程尽量简短，不要复述排盘数据；回答详细有条理，'
+            '同样用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹正式内容；'
+            '各爻逐行输出；不同要点换行，禁止挤在一行。';
     // 构建上下文：系统提示 + 完整历史消息 + 当前问题（错误消息不进入 AI 上下文）
     final messages = <Map<String, String>>[
       {'role': 'system', 'content': systemPrompt},
@@ -1788,14 +1855,14 @@ class _AiChatSectionState extends State<_AiChatSection> {
             model: sp.effectiveAiModel,
             messages: messages,
           )
-          // 流式超时保护：两个增量事件间隔超过 90 秒（网关挂起/无数据）时，
-          // 在流上抛错 → 触发 onError → 自动回退非流式 chat()，避免用户
-          // 看到无限转圈只能反复重开弹窗（日志中多次"流式响应 200 但无
-          // 完成日志"即为挂起症状）。
+          // 流式超时保护：推理模型思考阶段可能长时间无增量（DeepSeek 思考
+          // 较久才输出），超时窗口放宽到 180 秒；两个增量事件间隔超过 180 秒
+          // （网关挂起/无数据）时才在流上抛错 → 触发 onError → 自动回退
+          // 非流式 chat()，避免用户看到无限转圈只能反复重开弹窗。
           .timeout(
-            const Duration(seconds: 90),
+            const Duration(seconds: 180),
             onTimeout: (sink) => sink.addError(
-              AiStreamException('流式超时（90 秒无数据）'),
+              AiStreamException('流式超时（180 秒无数据）'),
             ),
           );
       var receivedAny = false;

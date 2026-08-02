@@ -136,14 +136,23 @@ class _CompassWidgetState extends State<CompassWidget> {
     super.dispose();
   }
 
-  /// 订阅指南针传感器流；仅 Android/iOS 尝试订阅：
+  /// 订阅指南针传感器流；仅移动端尝试订阅：
   /// - 桌面/网页没有原生实现，FlutterCompass.events 虽返回非 null Stream，
   ///   但 listen 时 EventChannel 异步抛 MissingPluginException 且无法被
   ///   onError 捕获（会冒泡到全局 ErrorWidget → "渲染异常" ERROR 日志），
   ///   因此非移动端直接降级为手动点击模式。
+  /// - 移动端判定包含鸿蒙（HarmonyOS/OpenHarmony：Flutter 在鸿蒙 NEXT 上
+  ///   Platform.isAndroid=false，此前被误判为非移动端导致罗盘不转）
   /// - 移动端无磁力计/未授权时 heading 为 null/-1，同样自动降级。
+  bool _isMobilePlatform() {
+    if (kIsWeb) return false;
+    final os = Platform.operatingSystem.toLowerCase();
+    return os == 'android' || os == 'ios' || os == 'harmony' ||
+        os == 'ohos' || os == 'fuchsia';
+  }
+
   void _initCompass() {
-    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
+    if (!_isMobilePlatform()) {
       Logger.instance.info('罗盘指南针', '非移动端，降级为点击模式');
       return;
     }
