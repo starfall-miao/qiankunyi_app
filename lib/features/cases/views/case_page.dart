@@ -1579,6 +1579,18 @@ class _AiChatSectionState extends State<_AiChatSection> {
   /// 而不是滚到 AI 卡片顶部把刚发完的输入框滚出屏幕——用户反馈
   /// "追问框跑到左上角/找不到了"）。
   bool _followUpMode = false;
+  /// 流式开始时间（诊断：完成日志打印总耗时，用户可判断"等了多久"）。
+  DateTime? _streamStartTime;
+  /// 思考打字机节流：推理增量可能上千次/几十秒，全量 setState 每次重建
+  /// 整个 AI 区会卡顿（用户反馈"一直在看思考，她还没开始写就断了"——
+  /// 实测是 UI 卡到看起来像断了，实际流式仍在进行）。80ms 节流既保留
+  /// "流式进行中"的实时感，又避免每帧全量重建。
+  int _lastThinkingSetTs = 0;
+  /// content 增量节流缓冲：985 次增量若每次 setState 重建整个 Column
+  /// （含 Markdown 解析）手机卡到"内容出不来"。累积到 buffer，80ms 或
+  /// 600 字符提交一次；流结束时 _flushPending 确保最后一块不丢。
+  String _pendingPieces = '';
+  int _lastPieceSetTs = 0;
 
   List<AiMessage> get _messages => _localMessages;
 
@@ -1860,6 +1872,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
     // 防御：已有流式请求进行中时忽略并发触发（按钮/追问区已隐藏，双保险）
     if (_streaming || _streamSub != null) return;
     final sp = context.read<SettingsProvider>();
+    _streamStartTime = DateTime.now();
     setState(() {
       _loading = true;
       _streaming = true;
@@ -1868,6 +1881,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
       _streamRetry = 0;
       _retryNote = '';
       _followUpMode = followUp;
+      _pendingPieces = '';
     });
     try {
       // 关键步骤日志：开始请求（model、消息数；不打印 apiKey，避免明文泄漏）
@@ -1975,7 +1989,13 @@ class _AiChatSectionState extends State<_AiChatSection> {
             _finishStreamingWithThinking(cur, thinking, logTag);
             return;
           }
-          setState(() => _thinking = thinking);
+          // 思考打字机节流：推理增量可达数千次，全量 setState 每帧重建
+          // 整个 AI 区会卡到"看起来像断了"；80ms 内最多提交一次。
+          final now = DateTime.now().millisecondsSinceEpoch;
+          if (now - _lastThinkingSetTs >= 80) {
+            _lastThinkingSetTs = now;
+            setState(() => _thinking = thinking);
+          }
           return;
         }
         chunkCount++;
@@ -2023,6 +2043,8 @@ class _AiChatSectionState extends State<_AiChatSection> {
       onDone: () {
         if (!mounted) return;
         _streamSub = null;
+        // 提交节流缓冲中最后的增量（否则最后一块内容可能留在缓冲里不显示）
+        _flushPending();
         final cur = _streamingMsg;
         _streamingMsg = null;
         if (cur == null) {
@@ -2041,8 +2063,12 @@ class _AiChatSectionState extends State<_AiChatSection> {
           if (clean != cur.content || thinking.trim().isNotEmpty) {
             _replaceAssistantContent(cur, clean, thinking: thinking);
           }
+          final costSec = _streamStartTime == null
+              ? '?'
+              : '${DateTime.now().difference(_streamStartTime!).inSeconds}s';
           Logger.instance.info('$logTag流式完成',
               'content长度: ${clean.length} | content增量: $chunkCount | 推理增量: $reasoningCount | '
+              '耗时: $costSec | '
               '预览: ${clean.length > 40 ? clean.substring(0, 40) : clean}');
           _persistAiMessages(logTag);
           setState(() {
@@ -2082,6 +2108,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
   }) {
     if (!mounted) return;
     _thinking = '';
+    _pendingPieces = '';
     final idx = _localMessages.indexOf(msg);
     if (idx >= 0) {
       // 清空占位内容：断流时可能残留部分增量，重试从空开始
@@ -2164,14 +2191,6 @@ class _AiChatSectionState extends State<_AiChatSection> {
     if (!mounted) return;
     final msg = _streamingMsg;
     if (msg == null) return;
-    final idx = _localMessages.indexOf(msg);
-    if (idx < 0) return; // 占位已被删除
-    final updated = AiMessage(role: 'assistant', content: msg.content + piece);
-    setState(() {
-      _localMessages = [..._localMessages];
-      _localMessages[idx] = updated;
-    });
-    _streamingMsg = updated;
     if (!_autoScrolled) {
       // 首个答案增量到达：让用户看到回复开始（打字机效果）。
       // - 解卦：滚到 AI 区顶部（不再滚到最底部输入框——之前滚到底导致
@@ -2185,8 +2204,43 @@ class _AiChatSectionState extends State<_AiChatSection> {
         _scrollToAiSection();
       }
     }
+    // content 增量节流：985 次增量若每次 setState 全量重建（含 Markdown
+    // 解析）手机卡到"内容出不来"。累积 buffer，80ms 或 600 字符提交一次；
+    // 流结束时 onDone 先 _flushPending，保证最后一块不丢。
+    _pendingPieces += piece;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (now - _lastPieceSetTs >= 80 || _pendingPieces.length >= 600) {
+      _lastPieceSetTs = now;
+      final chunk = _pendingPieces;
+      _pendingPieces = '';
+      final idx = _localMessages.indexOf(msg);
+      if (idx < 0) return; // 占位已被删除
+      final updated = AiMessage(role: 'assistant', content: msg.content + chunk);
+      setState(() {
+        _localMessages = [..._localMessages];
+        _localMessages[idx] = updated;
+      });
+      _streamingMsg = updated;
+    }
     // 后续增量：不自动滚动（流式期间持续滚动会与用户手势对抗，
     // 表现为"一点都滑不动"；用户可自由上滑回看排盘/历史）。
+  }
+
+  /// 提交节流缓冲中剩余的 content 增量（流结束前调用，确保最后一块不丢）。
+  void _flushPending() {
+    if (_pendingPieces.isEmpty) return;
+    final msg = _streamingMsg;
+    if (msg == null) return;
+    final idx = _localMessages.indexOf(msg);
+    if (idx < 0) return;
+    final chunk = _pendingPieces;
+    _pendingPieces = '';
+    final updated = AiMessage(role: 'assistant', content: msg.content + chunk);
+    setState(() {
+      _localMessages = [..._localMessages];
+      _localMessages[idx] = updated;
+    });
+    _streamingMsg = updated;
   }
 
   /// 从 AI 原始输出中提取正式解卦结果。
@@ -2725,6 +2779,15 @@ class _AiChatSectionState extends State<_AiChatSection> {
                                 fontSize: 13,
                                 fontStyle: FontStyle.italic,
                                 color: t.withAlpha(120)))
+                      else if (identical(m, _streamingMsg))
+                        // 流式进行中：用纯文本快速渲染，不解析 Markdown——
+                        // 增量可达上千次，每次全量 Markdown 解析会卡到
+                        // "内容出不来"；流完成替换后自动切换为 Markdown 渲染。
+                        Text(
+                          m.content,
+                          style: TextStyle(
+                              fontSize: 13, height: 1.6, color: t),
+                        )
                       else if (m.isPlainText)
                         // 纯文本消息（"仅推理内容"兜底）：完整展示原文。
                         // 思考过程含大量 Markdown 语法符号，按 Markdown 渲染
