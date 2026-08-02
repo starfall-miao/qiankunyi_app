@@ -1786,6 +1786,10 @@ class _AiChatSectionState extends State<_AiChatSection> {
       // 推理过程累积（DeepSeek 推理模型思考阶段只有 reasoning_content 增量）。
       // 仅用于兜底展示与"流式有活性"判定，不拼入最终消息。
       var thinking = '';
+      // 增量统计：用于诊断"没有流式输出"类反馈——块数 > 1 说明增量确实实时
+      // 分块到达（UI 展示问题）；块数 = 1 说明一次性返回（网关缓冲或解析问题）。
+      var chunkCount = 0;
+      var reasoningCount = 0;
       _streamSub = stream.listen(
         (piece) {
           if (!mounted || _streamingMsg == null) return;
@@ -1797,6 +1801,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
             setState(() => _loading = false);
           }
           if (piece.isReasoning) {
+            reasoningCount++;
             // 推理过程增量：只累积，不拼入消息，避免"思考过程+答案"拼接
             // 污染展示（用户最终看到的消息只含正式答案）。同时把思考过程
             // 同步到 UI 小字（打字机），让用户看到"正在思考"的流式输出，
@@ -1805,6 +1810,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
             setState(() => _thinking = thinking);
             return;
           }
+          chunkCount++;
           _appendStreamPiece(piece.text);
         },
         onError: (Object e) {
@@ -1844,7 +1850,8 @@ class _AiChatSectionState extends State<_AiChatSection> {
           }
           if (receivedAny && msg.content.trim().isNotEmpty) {
             // 流式成功：完整答案已随 content 增量拼好，持久化最终文本
-            Logger.instance.info('$logTag流式完成', 'content长度: ${msg.content.length}');
+            Logger.instance.info('$logTag流式完成',
+                'content长度: ${msg.content.length} | content增量: $chunkCount | 推理增量: $reasoningCount');
             _persistAiMessages(logTag);
             setState(() {
               _loading = false;
@@ -1857,7 +1864,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
             // 网关只返回了推理过程（content 始终为空）：用推理内容兜底展示，
             // 避免"流式有增量但界面空白"（DeepSeek 推理模型/部分网关场景）。
             Logger.instance.info('$logTag流式完成(仅推理内容)',
-                '长度: ${thinking.trim().length}');
+                '长度: ${thinking.trim().length} | 推理增量: $reasoningCount');
             _replaceAssistantContent(msg, thinking.trim());
             _persistAiMessages(logTag);
             setState(() {
