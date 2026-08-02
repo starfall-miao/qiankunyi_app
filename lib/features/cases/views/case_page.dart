@@ -2108,12 +2108,6 @@ class _AiChatSectionState extends State<_AiChatSection> {
     return text;
   }
 
-  /// Markdown 渲染前转义输出标记：把 ">>>" / "<<<" 替换为全角，
-  /// 避免 " >>>解卦<<< " 被解析成 blockquote（引用块）语法破坏卡片布局。
-  String _sanitizeMarkdown(String s) => s
-      .replaceAll('>>>', '＞＞＞')
-      .replaceAll('<<<', '＜＜＜');
-
   /// 用完整内容替换占位 assistant 消息（回退非流式成功后）
   /// [thinking] 为思考过程：随消息持久化，UI 折叠展示（用户要求思考
   /// "折叠而不是完全删掉"）；null 表示无思考（非流式回退等场景）。
