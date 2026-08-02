@@ -69,12 +69,17 @@ class AiMessage {
   /// `#`/`*`/`|` 等 Markdown 语法符号，按 Markdown 渲染会被吃掉部分内容
   /// 导致"显示不全"；纯文本展示可完整保留原文。
   final bool isPlainText;
+  /// 思考过程（推理内容）。用户要求"结果出来后思考应该折叠而不是完全删掉"：
+  /// 流式完成后把思考过程存入消息，UI 用可展开的折叠区展示完整内容；
+  /// 旧数据为 null，不影响渲染。
+  final String? thinking;
 
   AiMessage({
     required this.role,
     required this.content,
     DateTime? timestamp,
     this.isPlainText = false,
+    this.thinking,
   }) : timestamp = timestamp ?? DateTime.now();
 
   Map<String, dynamic> toJson() => {
@@ -82,6 +87,7 @@ class AiMessage {
     'content': content,
     'timestamp': timestamp.toIso8601String(),
     'isPlainText': isPlainText,
+    if (thinking != null) 'thinking': thinking,
   };
 
   factory AiMessage.fromJson(Map<String, dynamic> json) => AiMessage(
@@ -89,6 +95,7 @@ class AiMessage {
     content: json['content'] as String,
     timestamp: DateTime.parse(json['timestamp'] as String),
     isPlainText: json['isPlainText'] as bool? ?? false,
+    thinking: json['thinking'] as String?,
   );
 }
 

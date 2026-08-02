@@ -1933,10 +1933,11 @@ class _AiChatSectionState extends State<_AiChatSection> {
           }
           if (receivedAny && msg.content.trim().isNotEmpty) {
             // 流式成功：完整答案已随 content 增量拼好，提取标记内正文后
-            // 持久化最终文本（模型未按格式输出时提取结果=原文，不重复 setState）
+            // 持久化最终文本（模型未按格式输出时提取结果=原文，不重复 setState）。
+            // 思考过程随消息保存（thinking 字段），UI 折叠展示而非删掉。
             final clean = _extractAiResult(msg.content);
-            if (clean != msg.content) {
-              _replaceAssistantContent(msg, clean);
+            if (clean != msg.content || thinking.trim().isNotEmpty) {
+              _replaceAssistantContent(msg, clean, thinking: thinking);
             }
             Logger.instance.info('$logTag流式完成',
                 'content长度: ${clean.length} | content增量: $chunkCount | 推理增量: $reasoningCount');
@@ -1951,11 +1952,14 @@ class _AiChatSectionState extends State<_AiChatSection> {
           } else if (receivedAny && thinking.trim().isNotEmpty) {
             // 网关只返回了推理过程（content 始终为空）：用推理内容兜底展示，
             // 避免"流式有增量但界面空白"（DeepSeek 推理模型/部分网关场景）。
+            // 注意：兜底直接用思考全文，不再做 _extractAiResult 提取——
+            // 思考过程里若出现" >>>解卦<<< "字样（模型模拟输出格式但未写完），
+            // 提取会只留下标记后的残句（用户反馈"只有'开头、'的输出"）。
             // 兜底内容按纯文本渲染：思考过程含大量 Markdown 语法符号，
             // 按 Markdown 渲染会被吃掉部分内容导致"显示不全"。
             Logger.instance.info('$logTag流式完成(仅推理内容)',
                 '长度: ${thinking.trim().length} | 推理增量: $reasoningCount');
-            _replaceAssistantContent(msg, _extractAiResult(thinking.trim()),
+            _replaceAssistantContent(msg, thinking.trim(),
                 plainText: true);
             _persistAiMessages(logTag);
             setState(() {
@@ -2048,9 +2052,17 @@ class _AiChatSectionState extends State<_AiChatSection> {
     return text;
   }
 
+  /// Markdown 渲染前转义输出标记：把 ">>>" / "<<<" 替换为全角，
+  /// 避免 " >>>解卦<<< " 被解析成 blockquote（引用块）语法破坏卡片布局。
+  String _sanitizeMarkdown(String s) => s
+      .replaceAll('>>>', '＞＞＞')
+      .replaceAll('<<<', '＜＜＜');
+
   /// 用完整内容替换占位 assistant 消息（回退非流式成功后）
+  /// [thinking] 为思考过程：随消息持久化，UI 折叠展示（用户要求思考
+  /// "折叠而不是完全删掉"）；null 表示无思考（非流式回退等场景）。
   void _replaceAssistantContent(AiMessage msg, String content,
-      {bool plainText = false}) {
+      {bool plainText = false, String? thinking}) {
     if (!mounted) return;
     final idx = _localMessages.indexOf(msg);
     if (idx < 0) return;
@@ -2060,6 +2072,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
         role: 'assistant',
         content: content,
         isPlainText: plainText,
+        thinking: thinking,
       );
     });
     _scrollToAiSection();
@@ -2456,8 +2469,12 @@ class _AiChatSectionState extends State<_AiChatSection> {
                           style: TextStyle(fontSize: 13, height: 1.5, color: t),
                         )
                       else
+                        // 渲染前转义 >>> / <<<：流式期间的原始文本含
+                        // " >>>解卦<<< " 标记，而 Markdown 把 ">>>" 解析为
+                        // blockquote（引用块）语法，会破坏卡片布局导致
+                        // 追问输入框错位到左上角；转义为全角后只当普通文本。
                         Markdown(
-                          data: m.content,
+                          data: _sanitizeMarkdown(m.content),
                           styleSheet: MarkdownStyleSheet(
                             p: TextStyle(fontSize: 13, color: t),
                             h1: TextStyle(fontSize: 16, color: t,
@@ -2469,6 +2486,14 @@ class _AiChatSectionState extends State<_AiChatSection> {
                             strong: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
+                      // 思考过程折叠区（AI 消息）：完成后的思考不删除，
+                      // 默认收起，点击展开查看完整内容（用户反馈"思考内容
+                      // 输出不完整"——流式期间只显示截断小字，这里补全量）。
+                      if (!isUser && !isError && m.thinking != null &&
+                          m.thinking!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        _ThinkingCollapseBox(thinking: m.thinking!),
+                      ],
                     ],
                   ),
                 );
@@ -2508,6 +2533,80 @@ class _AiChatSectionState extends State<_AiChatSection> {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 思考过程折叠区：默认收起，点击展开查看完整思考内容。
+/// 用户反馈"思考内容输出不完整""结果出来后应该折叠而不是完全删掉"——
+/// 流式期间只显示截断小字，完成后的完整思考在这里可展开查看。
+class _ThinkingCollapseBox extends StatefulWidget {
+  final String thinking;
+  const _ThinkingCollapseBox({required this.thinking});
+
+  @override
+  State<_ThinkingCollapseBox> createState() => _ThinkingCollapseBoxState();
+}
+
+class _ThinkingCollapseBoxState extends State<_ThinkingCollapseBox> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final t = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E28) : const Color(0xFFF3EDE4),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: t.withAlpha(30)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            borderRadius: BorderRadius.circular(4),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(children: [
+                Icon(
+                  _expanded ? Icons.unfold_less : Icons.unfold_more,
+                  size: 14,
+                  color: t.withAlpha(140),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _expanded ? '思考过程（点击收起）' : '思考过程（点击展开）',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: t.withAlpha(160)),
+                ),
+                const Spacer(),
+                Text(
+                  '${widget.thinking.length}字',
+                  style: TextStyle(
+                      fontSize: 11, color: t.withAlpha(100)),
+                ),
+              ]),
+            ),
+          ),
+          if (_expanded) ...[
+            const SizedBox(height: 4),
+            // 完整思考过程：SelectableText 可长按复制（用户反馈"日志不能复制"；
+            // 思考内容含大量符号，纯文本展示避免 Markdown 吃掉内容）。
+            SelectableText(
+              widget.thinking.trim(),
+              style: TextStyle(
+                  fontSize: 12, height: 1.5, color: t.withAlpha(150)),
+            ),
+          ],
+        ],
       ),
     );
   }

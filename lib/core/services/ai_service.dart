@@ -60,7 +60,9 @@ class AiService {
     required String apiKey,
     required String model,
     required List<Map<String, String>> messages,
-    int maxTokens = 8192,
+    // 用户要求"删除限制"：默认 null 时不发送 max_tokens 字段，
+    // 由服务端使用模型自身默认值（避免 8192 上限把正式解卦结果截断）。
+    int? maxTokens,
     double temperature = 0.7,
   }) async {
     try {
@@ -71,10 +73,17 @@ class AiService {
         url = '$url/chat/completions';
       }
 
+      final body = <String, dynamic>{
+        'model': model,
+        'messages': messages,
+        'temperature': temperature,
+      };
+      if (maxTokens != null) body['max_tokens'] = maxTokens;
+
       // 全链路日志：请求（endpoint、model、messages 数量、maxTokens；apiKey 打码不泄漏明文）
       Logger.instance.info('AI解卦请求',
           'endpoint: $url | model: $model | messages: ${messages.length} | '
-          'maxTokens: $maxTokens | apiKey: ${_maskApiKey(apiKey)}');
+          'maxTokens: ${maxTokens ?? '无限制'} | apiKey: ${_maskApiKey(apiKey)}');
 
       final response = await http.post(
         Uri.parse(url),
@@ -82,12 +91,7 @@ class AiService {
           'Authorization': 'Bearer $apiKey',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'model': model,
-          'messages': messages,
-          'max_tokens': maxTokens,
-          'temperature': temperature,
-        }),
+        body: jsonEncode(body),
       );
 
       // 全链路日志：响应（statusCode + body 前 300 字符摘要）
@@ -145,7 +149,9 @@ class AiService {
     required String apiKey,
     required String model,
     required List<Map<String, String>> messages,
-    int maxTokens = 8192,
+    // 用户要求"删除限制"：默认 null 时不发送 max_tokens 字段，
+    // 由服务端使用模型自身默认值（避免 8192 上限把正式解卦结果截断）。
+    int? maxTokens,
     double temperature = 0.7,
   }) async* {
     // 构建 URL（与 chat() 保持一致）
@@ -155,10 +161,18 @@ class AiService {
       url = '$url/chat/completions';
     }
 
+    final body = <String, dynamic>{
+      'model': model,
+      'messages': messages,
+      'temperature': temperature,
+      'stream': true,
+    };
+    if (maxTokens != null) body['max_tokens'] = maxTokens;
+
     // 全链路日志：请求（apiKey 打码，不泄漏明文）
     Logger.instance.info('AI解卦流式请求',
         'endpoint: $url | model: $model | messages: ${messages.length} | '
-        'maxTokens: $maxTokens | apiKey: ${_maskApiKey(apiKey)}');
+        'maxTokens: ${maxTokens ?? '无限制'} | apiKey: ${_maskApiKey(apiKey)}');
 
     final client = http.Client();
     try {
@@ -166,13 +180,7 @@ class AiService {
       req.headers['Authorization'] = 'Bearer $apiKey';
       req.headers['Content-Type'] = 'application/json';
       req.headers['Accept'] = 'text/event-stream';
-      req.body = jsonEncode({
-        'model': model,
-        'messages': messages,
-        'max_tokens': maxTokens,
-        'temperature': temperature,
-        'stream': true,
-      });
+      req.body = jsonEncode(body);
 
       final res = await client.send(req);
       Logger.instance.info('AI解卦流式响应',
