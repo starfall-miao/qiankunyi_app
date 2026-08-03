@@ -140,41 +140,22 @@ final _palaceMap = <int, Map<int, (GuaGong, int, int)>>{
 /// 八卦三爻掩码表 [乾→坤]（0=乾111→7, 1=兑110→6, ... 7=坤000→0）
 const _trigramMasks = [7, 6, 5, 4, 3, 2, 1, 0];
 
-/// 纳甲规则：{宫: [(天干, 地支) × 6爻]}
-final _naJiaRules = <GuaGong, List<(String, String)>>{
-  GuaGong.qian: [
-    ('甲', '子'), ('甲', '寅'), ('甲', '辰'),
-    ('壬', '午'), ('壬', '申'), ('壬', '戌'),
-  ],
-  GuaGong.kun: [
-    ('乙', '未'), ('乙', '巳'), ('乙', '卯'),
-    ('癸', '丑'), ('癸', '亥'), ('癸', '酉'),
-  ],
-  GuaGong.zhen: [
-    ('庚', '子'), ('庚', '寅'), ('庚', '辰'),
-    ('庚', '午'), ('庚', '申'), ('庚', '戌'),
-  ],
-  GuaGong.xun: [
-    ('辛', '丑'), ('辛', '亥'), ('辛', '酉'),
-    ('辛', '未'), ('辛', '巳'), ('辛', '卯'),
-  ],
-  GuaGong.kan: [
-    ('戊', '寅'), ('戊', '辰'), ('戊', '午'),
-    ('戊', '申'), ('戊', '戌'), ('戊', '子'),
-  ],
-  GuaGong.li: [
-    ('己', '卯'), ('己', '丑'), ('己', '亥'),
-    ('己', '酉'), ('己', '未'), ('己', '巳'),
-  ],
-  GuaGong.gen: [
-    ('丙', '辰'), ('丙', '午'), ('丙', '申'),
-    ('丙', '戌'), ('丙', '子'), ('丙', '寅'),
-  ],
-  GuaGong.dui: [
-    ('丁', '巳'), ('丁', '卯'), ('丁', '丑'),
-    ('丁', '亥'), ('丁', '酉'), ('丁', '未'),
-  ],
-};
+/// 八卦纳甲（京房装卦）：索引顺序 0乾 1兑 2离 3震 4巽 5坎 6艮 7坤（与
+/// [_trigramMasks] / triPatterns 一致）。每卦记录 (内卦干, 内卦3支,
+/// 外卦干, 外卦3支)。
+/// 注意：纳甲装卦必须按**所在卦的实际上下卦**分别取各自的内/外卦纳甲，
+/// 不能用"八纯卦"按宫套序列——非纯卦（如上清下坎等）时上下卦不同，
+/// 宫固定序列会推错干支，进而连累六亲、世应、旺衰、空亡、刑冲等整卦结果。
+const _trigramNaJia = <(String, List<String>, String, List<String>)>[
+  ('甲', ['子', '寅', '辰'], '壬', ['午', '申', '戌']), // 乾
+  ('丁', ['巳', '卯', '丑'], '丁', ['亥', '酉', '未']), // 兑
+  ('己', ['卯', '丑', '亥'], '己', ['酉', '未', '巳']), // 离
+  ('庚', ['子', '寅', '辰'], '庚', ['午', '申', '戌']), // 震
+  ('辛', ['丑', '亥', '酉'], '辛', ['未', '巳', '卯']), // 巽
+  ('戊', ['寅', '辰', '午'], '戊', ['申', '戌', '子']), // 坎
+  ('丙', ['辰', '午', '申'], '丙', ['戌', '子', '寅']), // 艮
+  ('乙', ['未', '巳', '卯'], '癸', ['丑', '亥', '酉']), // 坤
+];
 
 /// 天干 → TianGan 映射
 final _tianGanMap = <String, TianGan>{
@@ -345,12 +326,19 @@ class LiuYaoEngine {
     var gong = GuaGong.qian;
     var shiIdx = 5;
     var yingIdx = 2;
+    // 本卦实际构成的上/下卦（八卦索引）。注意：upperMask/lowerMask 变量名
+    // 与卦名相反（upperMask 实为初二三爻=下卦/内卦），此处仅取其索引。
+    // 用于按实际上下卦执行纳甲装卦。
+    var innerTriIdx = 0;
+    var outerTriIdx = 0;
 
     // 通过掩码查找对应的卦名
     for (int u = 0; u < _trigramMasks.length; u++) {
       if (_trigramMasks[u] != upperMask) continue;
       for (int l = 0; l < _trigramMasks.length; l++) {
         if (_trigramMasks[l] != lowerMask) continue;
+        innerTriIdx = u; // 下卦/内卦（初二三爻所在卦）
+        outerTriIdx = l; // 上卦/外卦（四五六爻所在卦）
         if (u < _hexagramMap.length && l < (_palaceMap[u]?.length ?? 0)) {
           guaName = _hexagramMap[u]![l];
           final palace = _palaceMap[u]![l]!;
@@ -367,11 +355,17 @@ class LiuYaoEngine {
     if (shiIdx >= 0 && shiIdx < yaos.length) yaos[shiIdx].isShi = true;
     if (yingIdx >= 0 && yingIdx < yaos.length) yaos[yingIdx].isYing = true;
 
-    // 纳甲装卦
-    final naJia = _naJiaRules[gong]!;
-    for (int i = 0; i < 6; i++) {
-      yaos[i].tianGan = _tianGanMap[naJia[i].$1];
-      yaos[i].diZhi = _diZhiMap[naJia[i].$2];
+    // 纳甲装卦：内三爻(初二三)用内卦(下卦)的内卦纳甲，外三爻(四五六)用
+    // 外卦(上卦)的外卦纳甲。修复旧按"宫"套纯卦序列导致非纯卦干支推错的问题。
+    final inner = _trigramNaJia[innerTriIdx];
+    final outer = _trigramNaJia[outerTriIdx];
+    for (int i = 0; i < 3; i++) {
+      yaos[i].tianGan = _tianGanMap[inner.$1];
+      yaos[i].diZhi = _diZhiMap[inner.$2[i]];
+    }
+    for (int i = 0; i < 3; i++) {
+      yaos[i + 3].tianGan = _tianGanMap[outer.$3];
+      yaos[i + 3].diZhi = _diZhiMap[outer.$4[i]];
     }
 
     // 六亲排布
