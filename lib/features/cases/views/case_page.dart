@@ -2245,21 +2245,33 @@ class _AiChatSectionState extends State<_AiChatSection> {
   /// 从 AI 原始输出中提取正式解卦结果。
   /// 用户要求：模型用标识符标记真正输出，方便软件快速获取真正结果
   /// （AI 输出冗余 → 只需展示/保存标记内的正文）。
-  /// 优先提取 >>>解卦<<< ... >>>解卦结束<<< 之间的正文；
-  /// 模型未按格式输出时回退为原文（不丢弃任何内容）。
+  /// 模型是推理模型，常"预演"多次标识符（思考里出现 >>>解卦<<< 字样，
+  /// 或正文里连续多个标记对）。因此扫描**所有** >>>解卦<<< ... >>>解卦结束<<<
+  /// 段落，取**最长**的一段作为正文（正式解卦正文通常最长，避免取到
+  /// "预演/占位"垃圾段）；一个标记也没有时回退为原文（不丢弃内容）。
   String _extractAiResult(String raw) {
     var text = raw.trim();
     const start = '>>>解卦<<<';
     const end = '>>>解卦结束<<<';
-    final si = text.indexOf(start);
-    if (si >= 0) {
+    String best = '';
+    int from = 0;
+    while (true) {
+      final si = text.indexOf(start, from);
+      if (si < 0) break;
       final ei = text.indexOf(end, si + start.length);
+      String seg;
       if (ei > si) {
-        return text.substring(si + start.length, ei).trim();
+        seg = text.substring(si + start.length, ei).trim();
+        from = ei + end.length; // 继续找下一对
+      } else {
+        // 只有开头无结尾：取开头之后内容
+        seg = text.substring(si + start.length).trim();
+        from = text.length; // 已是最后，跳出
       }
-      // 只有开头标记没有结尾标记：取开头标记之后的内容
-      return text.substring(si + start.length).trim();
+      if (seg.length > best.length) best = seg;
+      if (from >= text.length) break;
     }
+    if (best.isNotEmpty) return best;
     return text;
   }
 
@@ -2653,15 +2665,20 @@ class _AiChatSectionState extends State<_AiChatSection> {
             const Spacer(),
             // 叉叉：删除这条消息（删除 AI 回复后 _hasAssistantReply 重算，
             // '开始 AI 解卦'按钮会重新出现；删除追问回复后可重新追问）。
-            // 用 IconButton 提供可靠命中区域，带 tooltip 便于识别用途。
-            IconButton(
-              onPressed: () => _deleteAiMessage(i),
-              tooltip: '删除这条消息',
-              icon: Icon(Icons.close, size: 16, color: t.withAlpha(120)),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-              visualDensity: VisualDensity.compact,
-              splashRadius: 14,
+            // 用 Material+InkWell 替代 IconButton，提供更大、更可靠的独立
+            // 命中区（用户反馈"点了没反应"，此前 IconButton 命中区偏小）。
+            Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                onTap: () => _deleteAiMessage(i),
+                borderRadius: BorderRadius.circular(6),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  child: Icon(Icons.close,
+                      size: 18, color: t.withAlpha(140)),
+                ),
+              ),
             ),
           ]),
           const SizedBox(height: 4),
