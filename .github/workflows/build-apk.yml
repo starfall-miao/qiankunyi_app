@@ -202,7 +202,10 @@ jobs:
           name: android-release-apk
           path: release/
 
+      # Debug APK 为容忍构建（continue-on-error，JetifyTransform 可能失败），
+      # 未上传 artifact 时无缝跳过，避免 release 因此中断
       - uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: android-debug-apk
           path: release/
