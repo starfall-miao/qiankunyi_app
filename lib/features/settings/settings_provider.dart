@@ -64,12 +64,15 @@ class AiProviderPreset {
   final String endpoint;
   final String apiKey;
   final String model;
+  /// 是否为"免费无需配置"预设（内置密钥，无需用户编辑地址/密钥/模型）
+  final bool free;
 
   const AiProviderPreset({
     required this.name,
     required this.endpoint,
     required this.apiKey,
     required this.model,
+    this.free = false,
   });
 }
 
@@ -85,18 +88,28 @@ class SettingsProvider extends ChangeNotifier {
 
   // ===== AI 解卦配置 =====
   /// 预设提供商列表
+  /// 智谱 GLM-4.7-flash 为优选免费模型（官方接口），置于首位
   static const List<AiProviderPreset> aiPresets = [
+    AiProviderPreset(
+      name: '智谱 GLM-4.7-flash（免费）',
+      endpoint: 'https://open.bigmodel.cn/api/paas/v4',
+      apiKey: 'ef579420dcdd49ae968b5358debf106a.qJjYax55VQNmF9cb',
+      model: 'glm-4.7-flash',
+      free: true,
+    ),
     AiProviderPreset(
       name: 'opencode (deepseek-v4-flash)',
       endpoint: 'https://opencode.ai/zen/v1',
       apiKey: 'sk-ztLkRc1oZQ1KMEUoUVFyO0dcYF3tk4qea7saKXFPvKyhAwcVfa4NNKlNzPujPD2j',
       model: 'deepseek-v4-flash-free',
+      free: true,
     ),
     AiProviderPreset(
       name: '阿里云通义千问',
       endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
       apiKey: '',
       model: 'qwen-turbo',
+      free: false,
     ),
   ];
 
@@ -130,11 +143,12 @@ class SettingsProvider extends ChangeNotifier {
     return '自定义';
   }
 
-  /// 是否选中的是 opencode 预设（免费无需配置）
-  bool get isOpenCodePreset =>
-      _aiPresetIndex == 0 &&
-      _aiEndpoint == aiPresets[0].endpoint &&
-      _aiApiKey == aiPresets[0].apiKey;
+  /// 当前选中的是否为"免费无需配置"预设（智谱 GLM / opencode，内置密钥，
+  /// 地址/密钥/模型编辑锁定）
+  bool get isFreeProvider =>
+      _aiPresetIndex >= 0 &&
+      _aiPresetIndex < aiPresets.length &&
+      aiPresets[_aiPresetIndex].free;
 
   /// 实际使用的模型名：自定义优先
   String get effectiveAiModel => _aiCustomModel.isNotEmpty ? _aiCustomModel : _aiModel;
@@ -152,6 +166,24 @@ class SettingsProvider extends ChangeNotifier {
     _aiModel = _prefs!.getString('ai_model') ?? aiPresets[0].model;
     _aiCustomModel = _prefs!.getString('ai_custom_model') ?? '';
     _aiPresetIndex = _prefs!.getInt('ai_preset_index') ?? 0;
+    // 迁移：旧版首选的 opencode（endpoint 含 opencode.ai）→ 新首选智谱 GLM。
+    // 仅当用户确实停留在旧默认（之前未自定义）时才切换，只执行一次。
+    if (!(_prefs!.getBool('ai_migrated_glm') ?? false)) {
+      final oldEndpoint = _prefs!.getString('ai_endpoint') ?? '';
+      if (oldEndpoint.contains('opencode.ai')) {
+        _aiPresetIndex = 0;
+        _aiEndpoint = aiPresets[0].endpoint;
+        _aiApiKey = aiPresets[0].apiKey;
+        _aiModel = aiPresets[0].model;
+        _aiCustomModel = '';
+        _prefs!.setInt('ai_preset_index', 0);
+        _prefs!.setString('ai_endpoint', _aiEndpoint);
+        _prefs!.setString('ai_apiKey', _aiApiKey);
+        _prefs!.setString('ai_model', _aiModel);
+        _prefs!.setString('ai_custom_model', '');
+      }
+      _prefs!.setBool('ai_migrated_glm', true);
+    }
     _aiEnabled = _prefs!.getBool('ai_enabled') ?? false;
     final ds = _prefs!.getString('paipan_display');
     if (ds != null) {

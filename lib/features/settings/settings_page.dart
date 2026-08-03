@@ -591,7 +591,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(preset.name),
-                          if (i == 0) ...[
+                          if (preset.free) ...[
                             const SizedBox(width: 6),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
@@ -676,7 +676,7 @@ class _SettingsPageState extends State<SettingsPage> {
           // API 地址
           Consumer<SettingsProvider>(
             builder: (ctx, sp, _) {
-              final isOpen = sp.isOpenCodePreset;
+              final isOpen = sp.isFreeProvider;
               return _buildSettingsRow(
                 icon: Icons.link,
                 title: 'API 地址',
@@ -689,7 +689,7 @@ class _SettingsPageState extends State<SettingsPage> {
           // API 密钥
           Consumer<SettingsProvider>(
             builder: (ctx, sp, _) {
-              final isOpen = sp.isOpenCodePreset;
+              final isOpen = sp.isFreeProvider;
               return _buildSettingsRow(
                 icon: Icons.key,
                 title: 'API 密钥',
@@ -704,7 +704,7 @@ class _SettingsPageState extends State<SettingsPage> {
           // 模型
           Consumer<SettingsProvider>(
             builder: (ctx, sp, _) {
-              final isOpen = sp.isOpenCodePreset;
+              final isOpen = sp.isFreeProvider;
               return _buildSettingsRow(
                 icon: Icons.model_training,
                 title: '模型',

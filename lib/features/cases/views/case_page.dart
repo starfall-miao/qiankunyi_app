@@ -1635,12 +1635,11 @@ class _AiChatSectionState extends State<_AiChatSection> {
     final systemPrompt = isBazi
         ? '你是八字命理专家，根据排盘信息直接分析命盘。'
             '直接分析命盘即可，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式。'
-            '正式结果要详细清晰有条理，用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
+            '正式结果要详细清晰有条理，直接输出全文，不要附加任何包裹标记；'
             '不同要点逐行输出，禁止挤在一行。'
         : '你是六爻/梅花解卦专家。'
             '直接分析卦象即可，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式。'
-            '正式结果要详细清晰有条理，'
-            '用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
+            '正式结果要详细清晰有条理，直接输出全文，不要附加任何包裹标记；'
             '各爻逐行输出（初爻：…／二爻：…）；不同要点换行，禁止挤在一行。';
     final prompt = _buildPromptForType();
     final messages = <Map<String, String>>[
@@ -1781,7 +1780,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
       }
       sb.writeln('\n请直接分析此八字（包括五行喜忌、十神、大运走势等），'
           '不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式。');
-      sb.writeln('【输出格式】用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹正式结果；');
+      sb.writeln('【输出格式】直接输出正式结果全文，不要附加任何包裹标记；');
       sb.writeln('不同要点逐行输出，禁止挤在一行。');
       return sb.toString();
     } catch (e) {
@@ -1790,7 +1789,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
           '四柱：年柱${widget.caseModel.guaName} / 日柱${widget.caseModel.guaGong}\n'
           '排盘数据：${widget.caseModel.paipanData}\n\n'
           '请直接分析此八字，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式；'
-          '将正式结果（详细清晰有条理）用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
+          '将正式结果（详细清晰有条理）直接输出全文，不要附加任何包裹标记；'
           '不同要点逐行输出，禁止挤在一行。';
     }
   }
@@ -1804,16 +1803,16 @@ class _AiChatSectionState extends State<_AiChatSection> {
       return;
     }
     final isBazi = widget.caseModel.caseType == CaseType.bazi;
-    // 追问沿用解卦的输出格式（>>>解卦<<< 标记 + 逐行换行）。
+    // 追问沿用解卦的输出格式（直接输出全文 + 逐行换行）。
     // 与解卦一致：不要冗长思考/复述/讨论输出方式，直接回答。
     final systemPrompt = isBazi
         ? '你是八字命理专家，下面是对同一命盘的连续讨论。'
             '直接回答问题，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式；'
-            '回答详细清晰有条理，同样用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹正式内容；'
+            '回答详细清晰有条理，直接输出全文，不要附加任何包裹标记；'
             '不同要点逐行输出，禁止挤在一行。'
         : '你是六爻/梅花解卦专家，下面是对同一卦象的连续讨论。'
             '直接回答问题，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式；'
-            '回答详细清晰有条理，同样用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹正式内容；'
+            '回答详细清晰有条理，直接输出全文，不要附加任何包裹标记；'
             '各爻逐行输出；不同要点换行，禁止挤在一行。';
     // 构建上下文：系统提示 + 历史消息 + 当前问题（错误消息不进入 AI 上下文）。
     // 上下文容量保护：按约 131k tokens（≈85k 中文字符）上限，超出时丢弃
@@ -2242,37 +2241,18 @@ class _AiChatSectionState extends State<_AiChatSection> {
     _streamingMsg = updated;
   }
 
-  /// 从 AI 原始输出中提取正式解卦结果。
-  /// 用户要求：模型用标识符标记真正输出，方便软件快速获取真正结果
-  /// （AI 输出冗余 → 只需展示/保存标记内的正文）。
-  /// 模型是推理模型，常"预演"多次标识符（思考里出现 >>>解卦<<< 字样，
-  /// 或正文里连续多个标记对）。因此扫描**所有** >>>解卦<<< ... >>>解卦结束<<<
-  /// 段落，取**最长**的一段作为正文（正式解卦正文通常最长，避免取到
-  /// "预演/占位"垃圾段）；一个标记也没有时回退为原文（不丢弃内容）。
+  /// 从 AI 原始输出中获取最终解卦结果。
+  /// 旧方案用 >>>解卦<<< 标记提取正文，但该标记破坏 Markdown 渲染且推理
+  /// 模型会在思考里"预演"标记导致提取到垃圾段。现直接采用模型 output 的
+  /// content 全文作为结果（流式已把思考与正文分离，content 即正式答案），
+  /// 仅防御性剥离可能残留的旧标记行，其余原样保留（不丢弃任何内容）。
   String _extractAiResult(String raw) {
-    var text = raw.trim();
-    const start = '>>>解卦<<<';
-    const end = '>>>解卦结束<<<';
-    String best = '';
-    int from = 0;
-    while (true) {
-      final si = text.indexOf(start, from);
-      if (si < 0) break;
-      final ei = text.indexOf(end, si + start.length);
-      String seg;
-      if (ei > si) {
-        seg = text.substring(si + start.length, ei).trim();
-        from = ei + end.length; // 继续找下一对
-      } else {
-        // 只有开头无结尾：取开头之后内容
-        seg = text.substring(si + start.length).trim();
-        from = text.length; // 已是最后，跳出
-      }
-      if (seg.length > best.length) best = seg;
-      if (from >= text.length) break;
-    }
-    if (best.isNotEmpty) return best;
-    return text;
+    return raw
+        .replaceAll('>>>解卦结束<<<', '')
+        .replaceAll('>>>解卦<<<', '')
+        .replaceAll('>>>', '')
+        .replaceAll('<<<', '')
+        .trim();
   }
 
   /// 用完整内容替换占位 assistant 消息（回退非流式成功后）
