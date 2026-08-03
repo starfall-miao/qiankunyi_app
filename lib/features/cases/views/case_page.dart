@@ -1628,16 +1628,17 @@ class _AiChatSectionState extends State<_AiChatSection> {
       return;
     }
     final isBazi = widget.caseModel.caseType == CaseType.bazi;
-    // 中文系统提示：明确输出格式要求（>>>解卦<<< 标记 + 逐行换行）。
-    // 不限制思考字数（用户反馈"限制50字导致思考被截断"）——思考完整输出，
-    // 由 maxTokens 配额（65536）保障；只要求要点式、不复述排盘数据。
+    // 中文系统提示：输出格式（>>解卦<< 标记 + 逐行换行）。
+    // 思考约束：实测（2026-08-02）若提示词出现"简要/要点式"等措辞，模型会陷入
+    // 反复思考"我要简洁输出"的元对话，思考长达 115s+/4 千增量。故明确：
+    // 「勿冗长思考、勿复述排盘数据、不要讨论自己的输出格式」，直接给出正文。
     final systemPrompt = isBazi
         ? '你是八字命理专家，根据排盘信息直接分析命盘。'
-            '先简要思考分析（要点式，不要复述排盘数据）；'
+            '直接分析命盘即可，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式。'
             '正式结果要详细清晰有条理，用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
             '不同要点逐行输出，禁止挤在一行。'
         : '你是六爻/梅花解卦专家。'
-            '先简要思考分析（要点式，不要复述排盘数据）；'
+            '直接分析卦象即可，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式。'
             '正式结果要详细清晰有条理，'
             '用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
             '各爻逐行输出（初爻：…／二爻：…）；不同要点换行，禁止挤在一行。';
@@ -1778,9 +1779,9 @@ class _AiChatSectionState extends State<_AiChatSection> {
       if (r.liuNian != null && r.liuNian!.isNotEmpty) {
         sb.writeln('流年：${r.liuNian}');
       }
-      sb.writeln('\n请分析此八字命盘，包括五行喜忌、十神、大运走势等。');
-      sb.writeln('【输出格式】先简要思考分析（要点式，不要复述排盘数据）；');
-      sb.writeln('正式结果要详细清晰有条理，用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；');
+      sb.writeln('\n请直接分析此八字（包括五行喜忌、十神、大运走势等），'
+          '不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式。');
+      sb.writeln('【输出格式】用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹正式结果；');
       sb.writeln('不同要点逐行输出，禁止挤在一行。');
       return sb.toString();
     } catch (e) {
@@ -1788,9 +1789,8 @@ class _AiChatSectionState extends State<_AiChatSection> {
       return '【八字排盘信息】\n'
           '四柱：年柱${widget.caseModel.guaName} / 日柱${widget.caseModel.guaGong}\n'
           '排盘数据：${widget.caseModel.paipanData}\n\n'
-          '请分析此八字命盘，包括五行喜忌、十神、大运走势等。\n'
-          '【输出格式】先简要思考分析（要点式，不要复述排盘数据）；'
-          '正式结果要详细清晰有条理，用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
+          '请直接分析此八字，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式；'
+          '将正式结果（详细清晰有条理）用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹；'
           '不同要点逐行输出，禁止挤在一行。';
     }
   }
@@ -1804,15 +1804,15 @@ class _AiChatSectionState extends State<_AiChatSection> {
       return;
     }
     final isBazi = widget.caseModel.caseType == CaseType.bazi;
-    // 追问沿用解卦的输出格式要求（>>>解卦<<< 标记 + 逐行换行）。
-    // 不限制思考字数（用户反馈"限制50字导致思考被截断"），由 maxTokens 配额保障。
+    // 追问沿用解卦的输出格式（>>>解卦<<< 标记 + 逐行换行）。
+    // 与解卦一致：不要冗长思考/复述/讨论输出方式，直接回答。
     final systemPrompt = isBazi
         ? '你是八字命理专家，下面是对同一命盘的连续讨论。'
-            '先简要思考分析（要点式，不要复述排盘数据）；'
+            '直接回答问题，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式；'
             '回答详细清晰有条理，同样用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹正式内容；'
             '不同要点逐行输出，禁止挤在一行。'
         : '你是六爻/梅花解卦专家，下面是对同一卦象的连续讨论。'
-            '先简要思考分析（要点式，不要复述排盘数据）；'
+            '直接回答问题，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式；'
             '回答详细清晰有条理，同样用 >>>解卦<<< 开头、>>>解卦结束<<< 结尾包裹正式内容；'
             '各爻逐行输出；不同要点换行，禁止挤在一行。';
     // 构建上下文：系统提示 + 历史消息 + 当前问题（错误消息不进入 AI 上下文）。
@@ -2077,7 +2077,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
             _retryNote = '';
           });
           // 完成后若用户仍在底部附近（未上滑回看），滚到 AI 区顶部展示结果
-          _scrollToAiSectionIfNear();
+          _scrollToBottomIfNear();
         } else if (receivedAny && thinking.trim().isNotEmpty) {
           _finishStreamingWithThinking(cur, thinking, logTag);
         } else {
@@ -2158,7 +2158,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
       _thinking = '';
       _retryNote = '';
     });
-    _scrollToAiSectionIfNear();
+    _scrollToBottomIfNear();
   }
 
   /// 弹窗查看完整实时思考过程（流式推理阶段点击"思考过程"区域触发）。
@@ -2200,7 +2200,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
       if (_followUpMode) {
         _scrollToBottom();
       } else {
-        _scrollToAiSection();
+        _scrollToBottom();
       }
     }
     // content 增量节流：985 次增量若每次 setState 全量重建（含 Markdown
@@ -2287,7 +2287,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
     });
     // 回退/完成替换后仅在用户接近底部时才滚动（否则会打断正在回看排盘/
     // 正在使用追问输入框的用户——用户反馈"追问框跑到左上角/找不到了"）。
-    _scrollToAiSectionIfNear();
+    _scrollToBottomIfNear();
   }
 
   /// 流式失败处理：移除空占位 assistant 消息，追加错误气泡（不持久化 error）
@@ -2442,7 +2442,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
     setState(() {
       _localMessages = [..._localMessages, AiMessage(role: 'error', content: content)];
     });
-    _scrollToAiSection();
+    _scrollToBottom();
   }
 
   Future<void> _deleteAiMessage(int index) async {
@@ -2503,34 +2503,6 @@ class _AiChatSectionState extends State<_AiChatSection> {
   /// 把详情弹窗滚动到 AI 解卦卡片顶部（留 12px 顶部空隙），让用户看到 AI
   /// 回复与上方上下文。**不滚到最底部**——底部是输入框，钉死在底部会让用户
   /// 产生"内容全空只剩输入框"的体感。
-  void _scrollToAiSection() {
-    final sc = widget.parentScrollController;
-    if (sc == null || !sc.hasClients) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !sc.hasClients) return;
-      final ctx = _cardKey.currentContext;
-      if (ctx == null) return;
-      final box = ctx.findRenderObject();
-      if (box is! RenderBox) return;
-      // AI 卡片顶部相对屏幕的 y；视口顶部相对屏幕的 y 之差即卡片距视口顶部距离
-      // （ScrollContext.storageContext 为非空 BuildContext，无需 null 判断）
-      final cardTop = box.localToGlobal(Offset.zero).dy;
-      final viewportCtx = sc.position.context.storageContext;
-      double viewportTop = 0;
-      final vbox = viewportCtx.findRenderObject();
-      if (vbox is RenderBox) {
-        viewportTop = vbox.localToGlobal(Offset.zero).dy;
-      }
-      final target = (sc.position.pixels + (cardTop - viewportTop) - 12)
-          .clamp(0.0, sc.position.maxScrollExtent)
-          .toDouble();
-      sc.animateTo(
-        target,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-      );
-    });
-  }
 
   /// 滚到详情弹窗底部（最新 AI 消息 + 追问输入框可见）。
   /// 追问首个 chunk 时使用：用户刚发送追问，输入框保持在视野内。
@@ -2549,12 +2521,12 @@ class _AiChatSectionState extends State<_AiChatSection> {
 
   /// 仅当用户接近底部（未上滑回看排盘/历史）时才滚动到 AI 区：
   /// 完成/兜底提示时避免打断用户主动回看的阅读位置。
-  void _scrollToAiSectionIfNear() {
+  void _scrollToBottomIfNear() {
     final sc = widget.parentScrollController;
     if (sc == null || !sc.hasClients) return;
     if (sc.position.maxScrollExtent - sc.position.pixels <
         sc.position.viewportDimension * 0.5) {
-      _scrollToAiSection();
+      _scrollToBottom();
     }
   }
 
