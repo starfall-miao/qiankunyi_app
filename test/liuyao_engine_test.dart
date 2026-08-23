@@ -7,7 +7,6 @@ library;
 import 'package:test/test.dart';
 import 'package:qiankunyi_app/features/paipan/engines/liuyao_engine.dart';
 import 'package:qiankunyi_app/features/paipan/models/gua_model.dart';
-import 'package:qiankunyi_app/features/paipan/models/paipan_result.dart';
 import 'package:qiankunyi_app/features/paipan/models/yao_model.dart';
 
 void main() {

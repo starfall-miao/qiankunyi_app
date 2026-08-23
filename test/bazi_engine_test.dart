@@ -3,7 +3,6 @@ library;
 
 import 'package:test/test.dart';
 import 'package:qiankunyi_app/features/paipan/engines/bazi_engine.dart';
-import 'package:qiankunyi_app/features/paipan/models/bazi_models.dart';
 
 void main() {
   group('八字引擎 - 四柱', () {
