@@ -1,4 +1,6 @@
 // 落·乾坤 - 设置持久化与状态管理
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/utils/logger.dart';
@@ -58,22 +60,44 @@ enum RiPoAnDongRule {
   const RiPoAnDongRule(this.label);
 }
 
-/// AI 提供商预设
+/// AI 提供商（内置预设与用户自定义共用同一模型）
 class AiProviderPreset {
   final String name;
   final String endpoint;
-  final String apiKey;
+  String apiKey;
   final String model;
-  /// 是否为"免费无需配置"预设（内置密钥，无需用户编辑地址/密钥/模型）
+  /// 该提供商推荐/可选的模型列表（模型选择弹窗展示）
+  final List<String> models;
+  /// 是否为"免费无需配置"预设（内置密钥已清空，仅标记免费）
   final bool free;
+  /// 是否内置预设（内置不可删除）
+  final bool builtin;
 
-  const AiProviderPreset({
+  AiProviderPreset({
     required this.name,
     required this.endpoint,
     required this.apiKey,
     required this.model,
+    List<String>? models,
     this.free = false,
-  });
+    this.builtin = false,
+  }) : models = models ?? [model];
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'endpoint': endpoint,
+    'apiKey': apiKey,
+    'model': model,
+    'models': models,
+  };
+
+  factory AiProviderPreset.fromJson(Map<String, dynamic> j) => AiProviderPreset(
+    name: j['name'] as String? ?? '',
+    endpoint: j['endpoint'] as String? ?? '',
+    apiKey: j['apiKey'] as String? ?? '',
+    model: j['model'] as String? ?? '',
+    models: (j['models'] as List?)?.cast<String>() ?? [],
+  );
 }
 
 /// 全局设置 Provider — 持久化存储
@@ -87,29 +111,25 @@ class SettingsProvider extends ChangeNotifier {
   SharedPreferences? _prefs;
 
   // ===== AI 解卦配置 =====
-  /// 预设提供商列表
-  /// 智谱 GLM-4.7-flash 为优选免费模型（官方接口），置于首位
+  /// 内置提供商预设（密钥均清空，用户需自行填入；可自由增删模型，内置不可删除）
   static const List<AiProviderPreset> aiPresets = [
     AiProviderPreset(
-      name: '智谱 GLM-4.7-flash（免费）',
+      name: '智谱 GLM',
       endpoint: 'https://open.bigmodel.cn/api/paas/v4',
       apiKey: '',
       model: 'glm-4.7-flash',
+      models: ['glm-4.7-flash', 'glm-4.7', 'glm-5'],
       free: true,
+      builtin: true,
     ),
     AiProviderPreset(
-      name: 'opencode (deepseek-v4-flash)',
+      name: 'opencode zen（免费）',
       endpoint: 'https://opencode.ai/zen/v1',
       apiKey: '',
-      model: 'deepseek-v4-flash-free',
+      model: 'mimo-v2.5-free',
+      models: ['mimo-v2.5-free', 'north-mini-code-free', 'nemotron-3-ultra-free', 'big-pickle'],
       free: true,
-    ),
-    AiProviderPreset(
-      name: '阿里云通义千问',
-      endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-      apiKey: '',
-      model: 'qwen-turbo',
-      free: false,
+      builtin: true,
     ),
   ];
 
@@ -118,7 +138,7 @@ class SettingsProvider extends ChangeNotifier {
   String _aiModel = aiPresets[0].model;
   String _aiCustomModel = '';
   bool _aiEnabled = false;
-  int _aiPresetIndex = 0; // 当前选中的预设索引，-1 表示自定义
+  int _aiPresetIndex = 0; // 当前选中的提供商在 aiProviders 中的索引，-1 表示自定义
 
   // Getters
   double get fontSize => _fontSize;
@@ -135,20 +155,31 @@ class SettingsProvider extends ChangeNotifier {
   String get aiCustomModel => _aiCustomModel;
   int get aiPresetIndex => _aiPresetIndex;
 
+  /// 自定义提供商列表（持久化，用户可增删）
+  final List<AiProviderPreset> _customProviders = [];
+  List<AiProviderPreset> get customProviders =>
+      List.unmodifiable(_customProviders);
+
+  /// 全部可选提供商 = 内置预设 + 自定义
+  List<AiProviderPreset> get aiProviders => [...aiPresets, ..._customProviders];
+
   /// 当前使用的提供商名称
   String get aiProviderName {
-    if (_aiPresetIndex >= 0 && _aiPresetIndex < aiPresets.length) {
-      return aiPresets[_aiPresetIndex].name;
-    }
-    return '自定义';
+    final p = currentProvider;
+    return p != null ? p.name : '自定义';
   }
 
-  /// 当前选中的是否为"免费无需配置"预设（智谱 GLM / opencode，内置密钥，
-  /// 地址/密钥/模型编辑锁定）
-  bool get isFreeProvider =>
-      _aiPresetIndex >= 0 &&
-      _aiPresetIndex < aiPresets.length &&
-      aiPresets[_aiPresetIndex].free;
+  /// 当前选中的提供商（无则 null → 自定义直接改字段）
+  AiProviderPreset? get currentProvider {
+    final list = aiProviders;
+    if (_aiPresetIndex >= 0 && _aiPresetIndex < list.length) {
+      return list[_aiPresetIndex];
+    }
+    return null;
+  }
+
+  /// 是否选中免费标记提供商（仅用于 UI 展示"免费"标签，不再锁编辑）
+  bool get isFreeProvider => currentProvider?.free ?? false;
 
   /// 实际使用的模型名：自定义优先
   String get effectiveAiModel => _aiCustomModel.isNotEmpty ? _aiCustomModel : _aiModel;
@@ -161,28 +192,37 @@ class SettingsProvider extends ChangeNotifier {
     _riPoRule = RiPoAnDongRule.values[_prefs!.getInt('paipan_riPoRule') ?? 1];
     _wanZiShi = _prefs!.getBool('paipan_wanZiShi') ?? false;
     _chenMuTuYao = _prefs!.getBool('paipan_chenMuTuYao') ?? false;
-    _aiEndpoint = _prefs!.getString('ai_endpoint') ?? aiPresets[0].endpoint;
-    _aiApiKey = _prefs!.getString('ai_apiKey') ?? aiPresets[0].apiKey;
-    _aiModel = _prefs!.getString('ai_model') ?? aiPresets[0].model;
+    // 加载自定义提供商
+    final rawProviders = _prefs!.getString('ai_custom_providers');
+    if (rawProviders != null && rawProviders.isNotEmpty) {
+      try {
+        final list = (jsonDecode(rawProviders) as List)
+            .map((e) => AiProviderPreset.fromJson(e as Map<String, dynamic>))
+            .toList();
+        _customProviders
+          ..clear()
+          ..addAll(list);
+      } catch (_) {
+        // 损坏的 JSON 忽略，不阻塞启动
+      }
+    }
+    _aiEndpoint = _prefs!.getString('ai_endpoint') ?? aiProviders.first.endpoint;
+    _aiApiKey = _prefs!.getString('ai_apiKey') ?? aiProviders.first.apiKey;
+    _aiModel = _prefs!.getString('ai_model') ?? aiProviders.first.model;
     _aiCustomModel = _prefs!.getString('ai_custom_model') ?? '';
     _aiPresetIndex = _prefs!.getInt('ai_preset_index') ?? 0;
-    // 迁移：旧版首选的 opencode（endpoint 含 opencode.ai）→ 新首选智谱 GLM。
-    // 仅当用户确实停留在旧默认（之前未自定义）时才切换，只执行一次。
-    if (!(_prefs!.getBool('ai_migrated_glm') ?? false)) {
-      final oldEndpoint = _prefs!.getString('ai_endpoint') ?? '';
-      if (oldEndpoint.contains('opencode.ai')) {
-        _aiPresetIndex = 0;
-        _aiEndpoint = aiPresets[0].endpoint;
-        _aiApiKey = aiPresets[0].apiKey;
-        _aiModel = aiPresets[0].model;
-        _aiCustomModel = '';
-        _prefs!.setInt('ai_preset_index', 0);
-        _prefs!.setString('ai_endpoint', _aiEndpoint);
-        _prefs!.setString('ai_apiKey', _aiApiKey);
-        _prefs!.setString('ai_model', _aiModel);
-        _prefs!.setString('ai_custom_model', '');
-      }
-      _prefs!.setBool('ai_migrated_glm', true);
+    // 迁移：旧的 opencode 预设名 → 新 zen（deepseek-v4-flash-free 已失效）
+    if (_aiModel == 'deepseek-v4-flash-free') {
+      _aiPresetIndex = 0;
+      _aiEndpoint = aiPresets[0].endpoint;
+      _aiApiKey = aiPresets[0].apiKey;
+      _aiModel = aiPresets[0].model;
+      _aiCustomModel = '';
+      _prefs!.setInt('ai_preset_index', 0);
+      _prefs!.setString('ai_endpoint', _aiEndpoint);
+      _prefs!.setString('ai_apiKey', _aiApiKey);
+      _prefs!.setString('ai_model', _aiModel);
+      _prefs!.setString('ai_custom_model', '');
     }
     _aiEnabled = _prefs!.getBool('ai_enabled') ?? false;
     final ds = _prefs!.getString('paipan_display');
@@ -248,13 +288,14 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   // ===== AI 解卦设置 =====
-  /// 切换预设提供商
+  /// 切换提供商（内置 + 自定义统一索引）
   void selectAiPreset(int index) {
-    if (index < 0 || index >= aiPresets.length) return;
+    final list = aiProviders;
+    if (index < 0 || index >= list.length) return;
     _aiPresetIndex = index;
-    _aiEndpoint = aiPresets[index].endpoint;
-    _aiApiKey = aiPresets[index].apiKey;
-    _aiModel = aiPresets[index].model;
+    _aiEndpoint = list[index].endpoint;
+    _aiApiKey = list[index].apiKey;
+    _aiModel = list[index].model;
     _aiCustomModel = '';
     _prefs?.setInt('ai_preset_index', index);
     _prefs?.setString('ai_endpoint', _aiEndpoint);
@@ -262,7 +303,55 @@ class SettingsProvider extends ChangeNotifier {
     _prefs?.setString('ai_model', _aiModel);
     _prefs?.setString('ai_custom_model', '');
     notifyListeners();
-    Logger.instance.info('AI提供商预设', aiPresets[index].name);
+    Logger.instance.info('AI提供商', list[index].name);
+  }
+
+  /// 添加自定义提供商（可含模型列表）
+  void addCustomProvider(AiProviderPreset provider) {
+    _customProviders.add(provider);
+    _persistCustomProviders();
+    selectAiPreset(aiPresets.length + _customProviders.length - 1);
+    Logger.instance.info('AI提供商已添加', provider.name);
+  }
+
+  /// 更新自定义提供商（下标为 aiProviders 中的索引）
+  void updateCustomProvider(int index, AiProviderPreset updated) {
+    final customIndex = index - aiPresets.length;
+    if (customIndex < 0 || customIndex >= _customProviders.length) return;
+    _customProviders[customIndex] = updated;
+    _persistCustomProviders();
+    // 若是当前选中的提供商，同步当前字段
+    if (_aiPresetIndex == index) {
+      _aiEndpoint = updated.endpoint;
+      _aiApiKey = updated.apiKey;
+      _aiModel = updated.model;
+    }
+    notifyListeners();
+    Logger.instance.info('AI提供商已更新', updated.name);
+  }
+
+  /// 删除自定义提供商（内置不可删）
+  void removeCustomProvider(int index) {
+    final customIndex = index - aiPresets.length;
+    if (customIndex < 0 || customIndex >= _customProviders.length) return;
+    _customProviders.removeAt(customIndex);
+    _persistCustomProviders();
+    if (_aiPresetIndex == index) {
+      // 删除的是当前项 → 切回内置第一个
+      selectAiPreset(0);
+    } else if (_aiPresetIndex > index) {
+      _aiPresetIndex--;
+      _prefs?.setInt('ai_preset_index', _aiPresetIndex);
+    }
+    notifyListeners();
+    Logger.instance.info('AI提供商已删除');
+  }
+
+  void _persistCustomProviders() {
+    try {
+      _prefs?.setString('ai_custom_providers',
+          jsonEncode(_customProviders.map((p) => p.toJson()).toList()));
+    } catch (_) {}
   }
   set aiEndpoint(String v) {
     _aiEndpoint = v;

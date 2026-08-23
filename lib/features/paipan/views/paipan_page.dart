@@ -277,7 +277,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
             icon: _isLoading
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : const Icon(Icons.auto_awesome, size: 18),
-            label: Text(_isLoading ? '起卦中…' : '起卦', style: const TextStyle(fontSize: 16)),
+            label: Text(_isLoading ? '排盘中…' : '排盘', style: const TextStyle(fontSize: 16)),
             style: ElevatedButton.styleFrom(
               backgroundColor: p, foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -689,7 +689,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
             icon: _isLoading
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : const Icon(Icons.auto_awesome, size: 18),
-            label: Text(_isLoading ? '起卦中…' : '起卦', style: const TextStyle(fontSize: 16)),
+            label: Text(_isLoading ? '排盘中…' : '排盘', style: const TextStyle(fontSize: 16)),
             style: ElevatedButton.styleFrom(
               backgroundColor: p, foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -816,10 +816,17 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     }
   }
 
-  /// 构建时间选择器（用于时间起卦/日期起卦）
+  /// 构建时间选择器（用于时间起卦/日期起卦，与八字界面一致）
+  /// 日期选择 + 用当前时间按钮 + 12 时辰快捷选择 + 时辰对照说明
   Widget _buildTimePicker(Color p, Color t, Color b, bool dark) {
-    const hours = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-    final hourIdx = _selectedTime.hour == 0 ? 0 : (_selectedTime.hour + 1) ~/ 2 % 12;
+    const hours = [
+      '子', '丑', '寅', '卯', '辰', '巳',
+      '午', '未', '申', '酉', '戌', '亥',
+    ];
+    // 当前小时 → 时辰索引（23点/0点=子(0)，1-2=丑(1)…21-22=亥(11)）
+    final hourIdx = (_selectedTime.hour == 23 || _selectedTime.hour == 0)
+        ? 0
+        : ((_selectedTime.hour + 1) ~/ 2) % 12;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -858,38 +865,76 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
             ),
+            const SizedBox(width: 4),
+            // 用当前时间排盘
+            TextButton.icon(
+              onPressed: () {
+                setState(() => _selectedTime = DateTime.now());
+                _log.info('时间起卦', '使用当前时间 ${_selectedTime}');
+              },
+              icon: Icon(Icons.my_location, size: 14, color: p),
+              label: Text('当前时间', style: TextStyle(fontSize: 12, color: p)),
+              style: TextButton.styleFrom(
+                foregroundColor: p,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
           ],
         ),
-        // 时辰选择：点击切换（23点=子时起点；hour+1)/2 → 0-11 索引）
+        // 时辰选择（地支 + 时间区间）
         Wrap(
           spacing: 4,
+          runSpacing: 4,
           children: List.generate(12, (i) {
             final sel = hourIdx == i;
-            return InkWell(
-              onTap: () => setState(() {
-                // 时辰→小时：子=23点（晚子时），丑=1点，寅=3点…亥=21点
+            const timeRange = [
+              '23-01', '01-03', '03-05', '05-07', '07-09', '09-11',
+              '11-13', '13-15', '15-17', '17-19', '19-21', '21-23',
+            ];
+            return ChoiceChip(
+              label: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(hours[i], style: TextStyle(fontSize: 12, color: sel ? p : t)),
+                  Text(timeRange[i],
+                      style: TextStyle(fontSize: 8, color: sel ? p.withAlpha(180) : t.withAlpha(120))),
+                ],
+              ),
+              selected: sel,
+              onSelected: (_) => setState(() {
+                // 时辰→小时起点：子=23（晚子时），丑=1，寅=3…亥=21
                 _selectedTime = DateTime(
                   _selectedTime.year, _selectedTime.month, _selectedTime.day,
                   i == 0 ? 23 : (i - 1) * 2 + 1, 0,
                 );
               }),
-              borderRadius: BorderRadius.circular(4),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                decoration: BoxDecoration(
-                  color: sel ? p.withAlpha(30) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                      color: sel ? p.withAlpha(120) : b.withAlpha(50), width: 1),
-                ),
-                child: Text(hours[i],
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: sel ? p : t.withAlpha(180),
-                        fontWeight: sel ? FontWeight.w600 : FontWeight.normal)),
-              ),
+              selectedColor: p.withAlpha(40),
+              backgroundColor: dark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
+              side: BorderSide(color: sel ? p : b.withAlpha(80), width: sel ? 1.5 : 1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             );
           }),
+        ),
+        // 天干时辰对照表
+        const SizedBox(height: 6),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: p.withAlpha(10),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: p.withAlpha(40)),
+          ),
+          child: Text(
+            '时辰干支：子→壬/癸 丑→癸/己 寅→甲/丙 卯→乙 辰→戊/乙/癸 '
+            '巳→丙/庚/戊 午→丁/己 未→己/丁/乙 申→庚/壬/戊 酉→辛 '
+            '戌→戊/辛/丁 亥→壬/甲（本气在前，随日干五鼠遁取时柱天干）',
+            style: TextStyle(fontSize: 10, color: t.withAlpha(170), height: 1.4),
+          ),
         ),
       ],
     );
@@ -1027,7 +1072,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
       child: Column(children: [
         Icon(Icons.auto_awesome, size: 48, color: p.withAlpha(60)),
         const SizedBox(height: 12),
-        Text('选择排盘方式后点「起卦」', style: TextStyle(fontSize: 14, color: t.withAlpha(180))),
+        Text('选择排盘方式后点「排盘」', style: TextStyle(fontSize: 14, color: t.withAlpha(180))),
       ]),
     );
   }

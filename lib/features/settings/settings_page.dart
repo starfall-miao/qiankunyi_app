@@ -563,24 +563,25 @@ class _SettingsPageState extends State<SettingsPage> {
   // ──────────────── AI 解卦配置 ────────────────
 
   Widget _buildAISettings(ThemeData theme) {
-    // 提供商选择弹窗
+    // 提供商选择弹窗（内置 + 自定义，可增删）
     void selectProviderDialog(BuildContext ctx, SettingsProvider sp) {
       showDialog(
         context: ctx,
         builder: (dialogCtx) {
           final t = Theme.of(dialogCtx);
+          final providers = sp.aiProviders;
           return AlertDialog(
             title: const Text('选择 AI 提供商'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView(
+                shrinkWrap: true,
                 children: [
-                  // 预设提供商
-                  ...SettingsProvider.aiPresets.asMap().entries.map((entry) {
+                  ...providers.asMap().entries.map((entry) {
                     final i = entry.key;
                     final preset = entry.value;
                     final isSelected = sp.aiPresetIndex == i;
+                    final isBuiltin = i < SettingsProvider.aiPresets.length;
                     return ListTile(
                       leading: Icon(
                         isSelected
@@ -600,15 +601,23 @@ class _SettingsPageState extends State<SettingsPage> {
                                 color: Colors.green.withAlpha(30),
                                 borderRadius: BorderRadius.circular(4),
                               ),
-                              child: Text('免费 无需配置',
+                              child: Text('免费',
                                   style: TextStyle(fontSize: 10, color: Colors.green.shade700)),
                             ),
                           ],
                         ],
                       ),
-                      subtitle: Text(preset.endpoint,
-                          style: const TextStyle(fontSize: 12)),
+                      subtitle: Text(preset.endpoint, style: const TextStyle(fontSize: 12)),
                       dense: true,
+                      trailing: isBuiltin
+                          ? null
+                          : IconButton(
+                              icon: Icon(Icons.delete_outline, size: 18, color: Colors.red.shade300),
+                              onPressed: () {
+                                sp.removeCustomProvider(i);
+                                Navigator.pop(dialogCtx);
+                              },
+                            ),
                       onTap: () {
                         sp.selectAiPreset(i);
                         Navigator.pop(dialogCtx);
@@ -616,23 +625,14 @@ class _SettingsPageState extends State<SettingsPage> {
                     );
                   }),
                   const Divider(),
-                  // 自定义
-                  ListTile(
-                    leading: Icon(
-                      sp.aiPresetIndex == -1
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_unchecked,
-                      color: sp.aiPresetIndex == -1
-                          ? t.colorScheme.primary
-                          : null,
-                    ),
-                    title: const Text('自定义'),
-                    subtitle: const Text('手动输入 API 地址和密钥'),
-                    dense: true,
-                    onTap: () {
-                      sp.aiEndpoint = sp.aiEndpoint;
+                  // 添加自定义提供商
+                  TextButton.icon(
+                    onPressed: () {
                       Navigator.pop(dialogCtx);
+                      _addProviderDialog(context, sp);
                     },
+                    icon: const Icon(Icons.add),
+                    label: const Text('添加自定义提供商'),
                   ),
                 ],
               ),
@@ -640,7 +640,7 @@ class _SettingsPageState extends State<SettingsPage> {
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(dialogCtx),
-                  child: const Text('取消')),
+                  child: const Text('关闭')),
             ],
           );
         },
@@ -664,7 +664,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
           const Divider(height: 1),
-          // 提供商
+          // 提供商选择
           Consumer<SettingsProvider>(
             builder: (ctx, sp, _) => _buildSettingsRow(
               icon: Icons.cloud,
@@ -674,45 +674,80 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
           const Divider(height: 1),
-          // API 地址
+          // API 地址（所有提供商均可编辑）
           Consumer<SettingsProvider>(
-            builder: (ctx, sp, _) {
-              final isOpen = sp.isFreeProvider;
-              return _buildSettingsRow(
-                icon: Icons.link,
-                title: 'API 地址',
-                subtitle: isOpen ? '（免费无需配置）' : sp.aiEndpoint,
-                onTap: isOpen ? null : () => _editText(context, 'API 地址', sp.aiEndpoint, (v) => sp.aiEndpoint = v),
-              );
-            },
+            builder: (ctx, sp, _) => _buildSettingsRow(
+              icon: Icons.link,
+              title: 'API 地址',
+              subtitle: sp.aiEndpoint.isEmpty ? '未设置' : sp.aiEndpoint,
+              onTap: () => _editText(context, 'API 地址', sp.aiEndpoint, (v) => sp.aiEndpoint = v),
+            ),
           ),
           const Divider(height: 1),
           // API 密钥
           Consumer<SettingsProvider>(
-            builder: (ctx, sp, _) {
-              final isOpen = sp.isFreeProvider;
-              return _buildSettingsRow(
-                icon: Icons.key,
-                title: 'API 密钥',
-                subtitle: isOpen ? '（免费无需配置）' : (sp.aiApiKey.isEmpty ? '未设置' : '${sp.aiApiKey.substring(0, 8)}...'),
-                onTap: isOpen ? null : () => _editText(context, 'API 密钥', sp.aiApiKey,
-                    (v) => sp.aiApiKey = v,
-                    obscure: true),
-              );
-            },
+            builder: (ctx, sp, _) => _buildSettingsRow(
+              icon: Icons.key,
+              title: 'API 密钥',
+              subtitle: sp.aiApiKey.isEmpty ? '未设置' : '${sp.aiApiKey.substring(0, 8)}...',
+              onTap: () => _editText(context, 'API 密钥', sp.aiApiKey,
+                  (v) => sp.aiApiKey = v,
+                  obscure: true),
+            ),
           ),
           const Divider(height: 1),
           // 模型
           Consumer<SettingsProvider>(
-            builder: (ctx, sp, _) {
-              final isOpen = sp.isFreeProvider;
-              return _buildSettingsRow(
-                icon: Icons.model_training,
-                title: '模型',
-                subtitle: isOpen ? '（免费无需配置）' : sp.effectiveAiModel,
-                onTap: isOpen ? null : () => _selectModel(context, sp),
-              );
+            builder: (ctx, sp, _) => _buildSettingsRow(
+              icon: Icons.model_training,
+              title: '模型',
+              subtitle: sp.effectiveAiModel.isEmpty ? '未设置' : sp.effectiveAiModel,
+              onTap: () => _selectModelDialog(context, sp),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 添加自定义提供商弹窗
+  void _addProviderDialog(BuildContext context, SettingsProvider sp) {
+    final nameCtrl = TextEditingController();
+    final endpointCtrl = TextEditingController();
+    final keyCtrl = TextEditingController();
+    final modelCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('添加 AI 提供商'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: '名称', hintText: '如：我的提供商')),
+              const SizedBox(height: 8),
+              TextField(controller: endpointCtrl, decoration: const InputDecoration(labelText: 'API 地址', hintText: 'https://api.example.com/v1')),
+              const SizedBox(height: 8),
+              TextField(controller: keyCtrl, decoration: const InputDecoration(labelText: 'API 密钥', hintText: 'sk-...'), obscureText: true),
+              const SizedBox(height: 8),
+              TextField(controller: modelCtrl, decoration: const InputDecoration(labelText: '默认模型', hintText: 'gpt-4')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(
+            onPressed: () {
+              if (nameCtrl.text.trim().isEmpty || endpointCtrl.text.trim().isEmpty) return;
+              sp.addCustomProvider(AiProviderPreset(
+                name: nameCtrl.text.trim(),
+                endpoint: endpointCtrl.text.trim(),
+                apiKey: keyCtrl.text.trim(),
+                model: modelCtrl.text.trim().isNotEmpty ? modelCtrl.text.trim() : 'gpt-4',
+              ));
+              Navigator.pop(ctx);
             },
+            child: const Text('添加'),
           ),
         ],
       ),
@@ -739,8 +774,15 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  void _selectModel(BuildContext context, SettingsProvider sp) {
-    final models = ['deepseek-v4-flash-free', 'qwen-turbo', 'qwen-plus', 'qwen-max', 'deepseek-v3', 'deepseek-r1'];
+  /// 模型选择弹窗（使用当前提供商的推荐模型列表 + 自定义）
+  void _selectModelDialog(BuildContext context, SettingsProvider sp) {
+    final currentProvider = sp.currentProvider;
+    final models = currentProvider != null
+        ? List<String>.from(currentProvider.models)
+        : <String>[];
+    if (models.isEmpty) {
+      models.addAll(['glm-4.7-flash', 'mimo-v2.5-free', 'north-mini-code-free', 'nemotron-3-ultra-free']);
+    }
     final customCtrl = TextEditingController(text: sp.aiCustomModel);
     showDialog(
       context: context,
@@ -753,7 +795,9 @@ class _SettingsPageState extends State<SettingsPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 预设模型 choice chip
+                // 当前提供商的推荐模型
+                Text('推荐模型', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -800,8 +844,7 @@ class _SettingsPageState extends State<SettingsPage> {
       },
     );
   }
-
-  Widget _buildSettingsRow({
+Widget _buildSettingsRow({
     required IconData icon,
     required String title,
     required String subtitle,
