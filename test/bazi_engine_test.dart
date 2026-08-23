@@ -111,8 +111,8 @@ void main() {
         isMale: false,
         hourIndex: 6,
       );
-      // 大运可能不同（顺逆排差异）
-      expect(male.daYun[0].ganZhi, isNot(equals(female.daYun[0].ganZhi)));
+      // 大运方向不同（顺逆排差异）：第1柱=月柱本身，从第2柱起方向反转
+      expect(male.daYun[1].ganZhi, isNot(equals(female.daYun[1].ganZhi)));
     });
   });
 }

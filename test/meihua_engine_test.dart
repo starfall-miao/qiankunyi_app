@@ -17,13 +17,13 @@ void main() {
       expect(r.benGua.name, equals(GuaName.kun));
     });
 
-    test('地天泰：1,8,1', () {
-      final r = MeihuaEngine.fromNumbers(1, 8, 1);
+    test('地天泰：8,1,1（上坤下乾）', () {
+      final r = MeihuaEngine.fromNumbers(8, 1, 1);
       expect(r.benGua.name, equals(GuaName.tai));
     });
 
-    test('天地否：8,1,1', () {
-      final r = MeihuaEngine.fromNumbers(8, 1, 1);
+    test('天地否：1,8,1（上乾下坤）', () {
+      final r = MeihuaEngine.fromNumbers(1, 8, 1);
       expect(r.benGua.name, equals(GuaName.pi));
     });
 
