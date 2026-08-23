@@ -755,7 +755,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     }
   }
 
-  void _saveCurrentResult(BuildContext context, PaipanProvider pr, PaipanResult result) {
+  void _saveCurrentResult(BuildContext context, PaipanProvider pr, PaipanResult result, {CaseType? caseType}) {
     final guaCN = <GuaName, String>{
       GuaName.qian: '乾为天', GuaName.kun: '坤为地', GuaName.zhun: '水雷屯',
       GuaName.meng: '山水蒙', GuaName.xu: '水天需', GuaName.song: '天水讼',
@@ -815,6 +815,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                   result: result,
                   title: titleCtrl.text.trim(),
                   notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
+                  caseType: caseType,
                 );
                 context.read<CaseProvider>().addCase(cm);
                 _log.info('保存卦例: ${cm.title}');
@@ -1017,7 +1018,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
             Row(
               children: [
                 Expanded(child: TextButton.icon(
-                  onPressed: () => _saveCurrentResult(context, pr, result),
+                  onPressed: () => _saveCurrentResult(context, pr, result, caseType: CaseType.meihua),
                   icon: const Icon(Icons.bookmark_add_outlined, size: 16),
                   label: const Text('保存卦例'),
                   style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),

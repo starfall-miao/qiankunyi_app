@@ -208,11 +208,12 @@ class CaseModel {
     String? notes,
     String? duanYu,
     List<String>? tags,
+    CaseType? caseType,  // 传 'meihua' 覆盖默认值（引擎method无法区分）
   }) {
     final now = DateTime.now();
     final methodMap = <String, String>{'manual': '机器摇卦', 'time': '时间起卦', 'number': '数字起卦'};
     return CaseModel(
-      id: now.millisecondsSinceEpoch ~/ 1000,
+      id: now.millisecondsSinceEpoch,
       title: title,
       guaName: guaNameToCN(result.benGua.name),
       guaGong: guaGongCN[result.benGua.gong] ?? '',
@@ -221,7 +222,7 @@ class CaseModel {
       notes: notes,
       duanYu: duanYu,
       tags: tags ?? [],
-      caseType: result.method == 'meihua' ? CaseType.meihua : CaseType.liuyao,
+      caseType: caseType ?? CaseType.liuyao,
       createdAt: now,
       updatedAt: now,
     );
@@ -237,7 +238,7 @@ class CaseModel {
   }) {
     final now = DateTime.now();
     return CaseModel(
-      id: now.millisecondsSinceEpoch ~/ 1000,
+      id: now.millisecondsSinceEpoch,
       title: title,
       guaName: '${result.yearZhu.ganZhi}年',
       guaGong: result.dayZhu.ganZhi,

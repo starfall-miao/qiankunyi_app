@@ -77,10 +77,28 @@ class CaseProvider extends ChangeNotifier {
   }
 
   /// 更新卦例（找不到 id 时记录错误日志，不再静默失败）
+  /// 注意：调用方可能持有打开编辑弹窗时的旧快照（不含 AI 对话历史），
+  /// 此处基于最新 [_cases] 中的对象合并，防止旧快照覆盖 AI 对话历史。
   Future<void> updateCase(CaseModel updated) async {
     final index = _cases.indexWhere((c) => c.id == updated.id);
     if (index >= 0) {
-      _cases[index] = updated;
+      final latest = _cases[index];
+      _cases[index] = latest.copyWith(
+        title: updated.title,
+        guaName: updated.guaName,
+        guaGong: updated.guaGong,
+        method: updated.method,
+        paipanData: updated.paipanData,
+        notes: updated.notes,
+        duanYu: updated.duanYu,
+        tags: updated.tags,
+        caseType: updated.caseType,
+        // 保留最新 AI 对话历史（调用方旧快照可能不含消息）
+        aiMessages: updated.aiMessages.isNotEmpty
+            ? updated.aiMessages
+            : latest.aiMessages,
+        updatedAt: DateTime.now(),
+      );
       await _persist();
       notifyListeners();
     } else {
