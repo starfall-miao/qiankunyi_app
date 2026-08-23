@@ -272,7 +272,7 @@ class BaiZiEngine {
     final dayWuXing = _tianGanWuXing[dayGan] ?? '';
 
     // 纳音计算辅助
-    String? _naYin(String gan, String zhi) {
+    String? naYin(String gan, String zhi) {
       final ganIdx = _tianGanCN.indexOf(gan);
       final zhiIdx = _diZhiCN.indexOf(zhi);
       if (ganIdx < 0 || zhiIdx < 0) return null;
@@ -288,7 +288,7 @@ class BaiZiEngine {
       diZhiCN: yearZhi,
       wuXing: _tianGanWuXing[yearGan] ?? '',
       cangGan: cangGanYear,
-      naYin: _naYin(yearGan, yearZhi),
+      naYin: naYin(yearGan, yearZhi),
     );
     final monthZhu = SiZhu(
       ganZhi: monthGZ,

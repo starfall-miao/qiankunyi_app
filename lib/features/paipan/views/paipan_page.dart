@@ -870,7 +870,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
             TextButton.icon(
               onPressed: () {
                 setState(() => _selectedTime = DateTime.now());
-                _log.info('时间起卦', '使用当前时间 ${_selectedTime}');
+                _log.info('时间起卦', '使用当前时间 $_selectedTime');
               },
               icon: Icon(Icons.my_location, size: 14, color: p),
               label: Text('当前时间', style: TextStyle(fontSize: 12, color: p)),
