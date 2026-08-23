@@ -298,7 +298,7 @@ class BaiZiEngine {
       diZhiCN: monthZhi,
       wuXing: _tianGanWuXing[monthGan] ?? '',
       cangGan: cangGanMonth,
-      naYin: _naYin(monthGan, monthZhi),
+      naYin: naYin(monthGan, monthZhi),
     );
     final dayZhu = SiZhu(
       ganZhi: dayGZ,
@@ -308,7 +308,7 @@ class BaiZiEngine {
       diZhiCN: dayZhi,
       wuXing: dayWuXing,
       cangGan: cangGanDay,
-      naYin: _naYin(dayGan, dayZhi),
+      naYin: naYin(dayGan, dayZhi),
     );
     final hourZhu = SiZhu(
       ganZhi: hourGZ,
@@ -318,7 +318,7 @@ class BaiZiEngine {
       diZhiCN: hourZhi,
       wuXing: _tianGanWuXing[hourGan] ?? '',
       cangGan: cangGanHour,
-      naYin: _naYin(hourGan, hourZhi),
+      naYin: naYin(hourGan, hourZhi),
     );
 
     // 大运（传入出生日期以计算真实起运年龄）
