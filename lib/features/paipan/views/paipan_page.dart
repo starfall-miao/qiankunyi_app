@@ -818,37 +818,78 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
 
   /// 构建时间选择器（用于时间起卦/日期起卦）
   Widget _buildTimePicker(Color p, Color t, Color b, bool dark) {
-    return Row(
+    const hours = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+    final hourIdx = _selectedTime.hour == 0 ? 0 : (_selectedTime.hour + 1) ~/ 2 % 12;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.calendar_month, size: 14, color: p.withAlpha(180)),
-        const SizedBox(width: 4),
-        Text('选择时间: ', style: TextStyle(fontSize: 12, color: t.withAlpha(200))),
-        TextButton.icon(
-          onPressed: () async {
-            final picked = await showDialog<DateTime>(
-              context: context,
-              builder: (_) => const CalendarPickerDialog(),
-            );
-            if (picked != null && mounted) {
-              setState(() => _selectedTime = picked);
-            }
-          },
-          icon: Icon(Icons.edit_calendar, size: 16, color: p),
-          label: Text(
-            '${_selectedTime.year}-${_selectedTime.month.toString().padLeft(2, '0')}-${_selectedTime.day.toString().padLeft(2, '0')}',
-            style: TextStyle(fontSize: 13, color: p),
-          ),
-          style: TextButton.styleFrom(
-            foregroundColor: p,
-            backgroundColor: p.withAlpha(15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
-              side: BorderSide(color: p.withAlpha(60)),
+        Row(
+          children: [
+            Icon(Icons.calendar_month, size: 14, color: p.withAlpha(180)),
+            const SizedBox(width: 4),
+            Text('选择时间: ', style: TextStyle(fontSize: 12, color: t.withAlpha(200))),
+            TextButton.icon(
+              onPressed: () async {
+                final picked = await showDialog<DateTime>(
+                  context: context,
+                  builder: (_) => const CalendarPickerDialog(),
+                );
+                if (picked != null && mounted) {
+                  setState(() => _selectedTime = DateTime(
+                    picked.year, picked.month, picked.day,
+                    _selectedTime.hour, _selectedTime.minute,
+                  ));
+                }
+              },
+              icon: Icon(Icons.edit_calendar, size: 16, color: p),
+              label: Text(
+                '${_selectedTime.year}-${_selectedTime.month.toString().padLeft(2, '0')}-${_selectedTime.day.toString().padLeft(2, '0')}',
+                style: TextStyle(fontSize: 13, color: p),
+              ),
+              style: TextButton.styleFrom(
+                foregroundColor: p,
+                backgroundColor: p.withAlpha(15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                  side: BorderSide(color: p.withAlpha(60)),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
+          ],
+        ),
+        // 时辰选择：点击切换（23点=子时起点；hour+1)/2 → 0-11 索引）
+        Wrap(
+          spacing: 4,
+          children: List.generate(12, (i) {
+            final sel = hourIdx == i;
+            return InkWell(
+              onTap: () => setState(() {
+                // 时辰→小时：子=23点（晚子时），丑=1点，寅=3点…亥=21点
+                _selectedTime = DateTime(
+                  _selectedTime.year, _selectedTime.month, _selectedTime.day,
+                  i == 0 ? 23 : (i - 1) * 2 + 1, 0,
+                );
+              }),
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  color: sel ? p.withAlpha(30) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                      color: sel ? p.withAlpha(120) : b.withAlpha(50), width: 1),
+                ),
+                child: Text(hours[i],
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: sel ? p : t.withAlpha(180),
+                        fontWeight: sel ? FontWeight.w600 : FontWeight.normal)),
+              ),
+            );
+          }),
         ),
       ],
     );
