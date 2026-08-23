@@ -8,7 +8,7 @@ import 'package:qiankunyi_app/features/paipan/models/bazi_models.dart';
 void main() {
   group('八字引擎 - 四柱', () {
     test('2024-01-01 午时 男性', () {
-      final r = BaziEngine.calc(
+      final r = BaiZiEngine.calc(
         birth: DateTime(2024, 1, 1, 12, 0),
         isMale: true,
         hourIndex: 6, // 午时
@@ -27,7 +27,7 @@ void main() {
 
   group('八字引擎 - 十神', () {
     test('十神映射不为空', () {
-      final r = BaziEngine.calc(
+      final r = BaiZiEngine.calc(
         birth: DateTime(2024, 1, 1, 12, 0),
         isMale: true,
         hourIndex: 6,
@@ -40,7 +40,7 @@ void main() {
 
   group('八字引擎 - 大运', () {
     test('大运列表长度', () {
-      final r = BaziEngine.calc(
+      final r = BaiZiEngine.calc(
         birth: DateTime(2024, 1, 1, 12, 0),
         isMale: true,
         hourIndex: 6,
@@ -49,7 +49,7 @@ void main() {
     });
 
     test('大运起运年龄为正', () {
-      final r = BaziEngine.calc(
+      final r = BaiZiEngine.calc(
         birth: DateTime(2024, 1, 1, 12, 0),
         isMale: true,
         hourIndex: 6,
@@ -63,7 +63,7 @@ void main() {
 
   group('八字引擎 - 旺衰/五行统计', () {
     test('五行旺衰不为空', () {
-      final r = BaziEngine.calc(
+      final r = BaiZiEngine.calc(
         birth: DateTime(2024, 1, 1, 12, 0),
         isMale: true,
         hourIndex: 6,
@@ -75,7 +75,7 @@ void main() {
 
   group('八字引擎 - 空亡', () {
     test('空亡计算', () {
-      final r = BaziEngine.calc(
+      final r = BaiZiEngine.calc(
         birth: DateTime(2024, 1, 1, 12, 0),
         isMale: true,
         hourIndex: 6,
@@ -88,7 +88,7 @@ void main() {
 
   group('八字引擎 - 纳音', () {
     test('四柱纳音不为空', () {
-      final r = BaziEngine.calc(
+      final r = BaiZiEngine.calc(
         birth: DateTime(2024, 1, 1, 12, 0),
         isMale: true,
         hourIndex: 6,
@@ -102,12 +102,12 @@ void main() {
 
   group('八字引擎 - 性别差异', () {
     test('男女大运不同（阳年男顺排，女逆排）', () {
-      final male = BaziEngine.calc(
+      final male = BaiZiEngine.calc(
         birth: DateTime(2024, 1, 1, 12, 0),
         isMale: true,
         hourIndex: 6,
       );
-      final female = BaziEngine.calc(
+      final female = BaiZiEngine.calc(
         birth: DateTime(2024, 1, 1, 12, 0),
         isMale: false,
         hourIndex: 6,
