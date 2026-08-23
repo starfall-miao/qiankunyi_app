@@ -8,132 +8,143 @@ import '../models/gua_model.dart';
 import '../models/paipan_result.dart';
 import 'liuyao_date_helper.dart';
 
-/// 64 卦映射表 [上卦索引][下卦索引] → GuaName
+/// 64 卦映射表 [下卦索引][上卦索引] → GuaName
+/// 注意：引擎中 u 为下卦/内卦索引，l 为上卦/外卦索引（见 _restoreGua 注释）。
+/// 本表行=下卦，列=上卦。数据由京房八宫生成规则核验确认。
 const _hexagramMap = <int, List<GuaName>>{
-  // 乾(0)为上卦
+  // 乾(0)为下卦 — 上卦：乾/兑/离/震/巽/坎/艮/坤
   0: [
     GuaName.qian, GuaName.guai, GuaName.daYou, GuaName.daZhuang,
     GuaName.xiaoXu, GuaName.xu, GuaName.daXu, GuaName.tai,
   ],
-  // 兑(1)为上卦
+  // 兑(1)为下卦 — 上卦：乾/兑/离/震/巽/坎/艮/坤
   1: [
-    GuaName.lv2, GuaName.dui, GuaName.kui, GuaName.guiMei,
+    GuaName.lv, GuaName.dui, GuaName.kui, GuaName.guiMei,
     GuaName.zhongFu, GuaName.jie2, GuaName.sun, GuaName.lin,
   ],
-  // 离(2)为上卦
+  // 离(2)为下卦 — 上卦：乾/兑/离/震/巽/坎/艮/坤
   2: [
     GuaName.tongRen, GuaName.ge, GuaName.li, GuaName.feng,
     GuaName.jiaRen, GuaName.jiJi, GuaName.bi2, GuaName.mingYi,
   ],
-  // 震(3)为上卦
+  // 震(3)为下卦 — 上卦：乾/兑/离/震/巽/坎/艮/坤
   3: [
     GuaName.wuWang, GuaName.sui, GuaName.shiHe, GuaName.zhen,
-    GuaName.yi, GuaName.zhun, GuaName.fu, GuaName.yu,
+    GuaName.yi2, GuaName.zhun, GuaName.yi, GuaName.fu,
   ],
-  // 巽(4)为上卦
+  // 巽(4)为下卦 — 上卦：乾/兑/离/震/巽/坎/艮/坤
   4: [
     GuaName.gou, GuaName.daGuo, GuaName.ding, GuaName.heng,
-    GuaName.xun, GuaName.jing, GuaName.sheng, GuaName.gu,
+    GuaName.xun, GuaName.jing, GuaName.gu, GuaName.sheng,
   ],
-  // 坎(5)为上卦
+  // 坎(5)为下卦 — 上卦：乾/兑/离/震/巽/坎/艮/坤
   5: [
     GuaName.song, GuaName.kun2, GuaName.weiJi, GuaName.jie,
     GuaName.huan, GuaName.kan, GuaName.meng, GuaName.shi,
   ],
-  // 艮(6)为上卦
+  // 艮(6)为下卦 — 上卦：乾/兑/离/震/巽/坎/艮/坤
   6: [
-    GuaName.dun, GuaName.xian, GuaName.lv, GuaName.jian,
-    GuaName.jian2, GuaName.jiJi, GuaName.gen, GuaName.bi,
+    GuaName.dun, GuaName.xian, GuaName.lv2, GuaName.xiaoGuo,
+    GuaName.jian2, GuaName.jian, GuaName.gen, GuaName.qian2,
   ],
-  // 坤(7)为上卦
+  // 坤(7)为下卦 — 上卦：乾/兑/离/震/巽/坎/艮/坤
   7: [
     GuaName.pi, GuaName.cui, GuaName.jin, GuaName.yu,
-    GuaName.guan, GuaName.bo, GuaName.qian2, GuaName.kun,
+    GuaName.guan, GuaName.bi, GuaName.bo, GuaName.kun,
   ],
 };
 
-/// 八宫归属及世应位置 {(上卦,下卦) → (宫,世位,应位)}
+/// 八宫归属及世应位置 [下卦索引][上卦索引] → (宫, 世位, 应位)
+/// 注意：引擎中 u 为下卦/内卦索引，l 为上卦/外卦索引（见 _restoreGua 注释）。
+/// 本表行=下卦，列=上卦。数据由京房八宫生成规则（一世→二世→…→游魂→归魂）程序化生成并核验。
 final _palaceMap = <int, Map<int, (GuaGong, int, int)>>{
-  // 数据格式: 上卦索引 → {下卦索引 → (所属宫, 世爻位置, 应爻位置)}
+  // 乾(0)为下卦
   0: {
-    0: (GuaGong.qian, 5, 2),    // 乾为天 - 八纯 - 世在上爻(5) 应在三爻(2)
-    1: (GuaGong.qian, 0, 3),    //  一世卦 - 世在初爻  应在四爻
-    4: (GuaGong.qian, 1, 4),    //  二世卦
-    7: (GuaGong.qian, 2, 5),    //  三世卦
-    3: (GuaGong.qian, 3, 0),    //  四世卦
-    6: (GuaGong.qian, 4, 1),    //  五世卦
-    2: (GuaGong.qian, 3, 0),    //  游魂 - 世在四爻
-    5: (GuaGong.qian, 2, 5),    //  归魂 - 世在三爻
+    0: (GuaGong.qian, 5, 2), // 乾 上乾下乾
+    1: (GuaGong.kun, 4, 1), // 夬 上兑下乾
+    2: (GuaGong.qian, 2, 5), // 大有 上离下乾
+    3: (GuaGong.kun, 3, 0), // 大壮 上震下乾
+    4: (GuaGong.xun, 0, 3), // 小畜 上巽下乾
+    5: (GuaGong.kun, 3, 0), // 需 上坎下乾
+    6: (GuaGong.gen, 1, 4), // 大畜 上艮下乾
+    7: (GuaGong.kun, 2, 5), // 泰 上坤下乾
   },
-  7: {
-    7: (GuaGong.kun, 5, 2),     // 坤为地
-    3: (GuaGong.kun, 0, 3),
-    2: (GuaGong.kun, 1, 4),
-    0: (GuaGong.kun, 2, 5),
-    4: (GuaGong.kun, 3, 0),
-    5: (GuaGong.kun, 4, 1),
-    6: (GuaGong.kun, 3, 0),
-    1: (GuaGong.kun, 2, 5),
-  },
-  3: {
-    3: (GuaGong.zhen, 5, 2),
-    7: (GuaGong.zhen, 0, 3),
-    5: (GuaGong.zhen, 1, 4),
-    4: (GuaGong.zhen, 2, 5),
-    0: (GuaGong.zhen, 3, 0),
-    6: (GuaGong.zhen, 4, 1),
-    2: (GuaGong.zhen, 3, 0),
-    1: (GuaGong.zhen, 2, 5),
-  },
-  4: {
-    4: (GuaGong.xun, 5, 2),
-    0: (GuaGong.xun, 0, 3),
-    2: (GuaGong.xun, 1, 4),
-    3: (GuaGong.xun, 2, 5),
-    7: (GuaGong.xun, 3, 0),
-    5: (GuaGong.xun, 4, 1),
-    6: (GuaGong.xun, 3, 0),
-    1: (GuaGong.xun, 2, 5),
-  },
-  5: {
-    5: (GuaGong.kan, 5, 2),
-    1: (GuaGong.kan, 0, 3),
-    3: (GuaGong.kan, 1, 4),
-    4: (GuaGong.kan, 2, 5),
-    2: (GuaGong.kan, 3, 0),
-    6: (GuaGong.kan, 4, 1),
-    7: (GuaGong.kan, 3, 0),
-    0: (GuaGong.kan, 2, 5),
-  },
-  2: {
-    2: (GuaGong.li, 5, 2),
-    0: (GuaGong.li, 0, 3),
-    1: (GuaGong.li, 1, 4),
-    3: (GuaGong.li, 2, 5),
-    4: (GuaGong.li, 3, 0),
-    5: (GuaGong.li, 4, 1),
-    7: (GuaGong.li, 3, 0),
-    6: (GuaGong.li, 2, 5),
-  },
-  6: {
-    6: (GuaGong.gen, 5, 2),
-    2: (GuaGong.gen, 0, 3),
-    0: (GuaGong.gen, 1, 4),
-    1: (GuaGong.gen, 2, 5),
-    4: (GuaGong.gen, 3, 0),
-    3: (GuaGong.gen, 4, 1),
-    5: (GuaGong.gen, 3, 0),
-    7: (GuaGong.gen, 2, 5),
-  },
+  // 兑(1)为下卦
   1: {
-    1: (GuaGong.dui, 5, 2),
-    5: (GuaGong.dui, 0, 3),
-    7: (GuaGong.dui, 1, 4),
-    3: (GuaGong.dui, 2, 5),
-    4: (GuaGong.dui, 3, 0),
-    6: (GuaGong.dui, 4, 1),
-    0: (GuaGong.dui, 3, 0),
-    2: (GuaGong.dui, 2, 5),
+    0: (GuaGong.gen, 4, 1), // 履 上乾下兑
+    1: (GuaGong.dui, 5, 2), // 兑 上兑下兑
+    2: (GuaGong.gen, 3, 0), // 睽 上离下兑
+    3: (GuaGong.dui, 2, 5), // 归妹 上震下兑
+    4: (GuaGong.gen, 3, 0), // 中孚 上巽下兑
+    5: (GuaGong.kan, 0, 3), // 节 上坎下兑
+    6: (GuaGong.gen, 2, 5), // 损 上艮下兑
+    7: (GuaGong.kun, 1, 4), // 临 上坤下兑
+  },
+  // 离(2)为下卦
+  2: {
+    0: (GuaGong.li, 2, 5), // 同人 上乾下离
+    1: (GuaGong.kan, 3, 0), // 革 上兑下离
+    2: (GuaGong.li, 5, 2), // 离 上离下离
+    3: (GuaGong.kan, 4, 1), // 丰 上震下离
+    4: (GuaGong.xun, 1, 4), // 家人 上巽下离
+    5: (GuaGong.kan, 2, 5), // 既济 上坎下离
+    6: (GuaGong.gen, 0, 3), // 贲 上艮下离
+    7: (GuaGong.kan, 3, 0), // 明夷 上坤下离
+  },
+  // 震(3)为下卦
+  3: {
+    0: (GuaGong.xun, 3, 0), // 无妄 上乾下震
+    1: (GuaGong.zhen, 2, 5), // 随 上兑下震
+    2: (GuaGong.xun, 4, 1), // 噬嗑 上离下震
+    3: (GuaGong.zhen, 5, 2), // 震 上震下震
+    4: (GuaGong.xun, 2, 5), // 益 上巽下震
+    5: (GuaGong.kan, 1, 4), // 屯 上坎下震
+    6: (GuaGong.xun, 3, 0), // 颐 上艮下震
+    7: (GuaGong.kun, 0, 3), // 复 上坤下震
+  },
+  // 巽(4)为下卦
+  4: {
+    0: (GuaGong.qian, 0, 3), // 姤 上乾下巽
+    1: (GuaGong.zhen, 3, 0), // 大过 上兑下巽
+    2: (GuaGong.li, 1, 4), // 鼎 上离下巽
+    3: (GuaGong.zhen, 2, 5), // 恒 上震下巽
+    4: (GuaGong.xun, 5, 2), // 巽 上巽下巽
+    5: (GuaGong.zhen, 4, 1), // 井 上坎下巽
+    6: (GuaGong.xun, 2, 5), // 蛊 上艮下巽
+    7: (GuaGong.zhen, 3, 0), // 升 上坤下巽
+  },
+  // 坎(5)为下卦
+  5: {
+    0: (GuaGong.li, 3, 0), // 讼 上乾下坎
+    1: (GuaGong.dui, 0, 3), // 困 上兑下坎
+    2: (GuaGong.li, 2, 5), // 未济 上离下坎
+    3: (GuaGong.zhen, 1, 4), // 解 上震下坎
+    4: (GuaGong.li, 4, 1), // 涣 上巽下坎
+    5: (GuaGong.kan, 5, 2), // 坎 上坎下坎
+    6: (GuaGong.li, 3, 0), // 蒙 上艮下坎
+    7: (GuaGong.kan, 2, 5), // 师 上坤下坎
+  },
+  // 艮(6)为下卦
+  6: {
+    0: (GuaGong.qian, 1, 4), // 遁 上乾下艮
+    1: (GuaGong.dui, 2, 5), // 咸 上兑下艮
+    2: (GuaGong.li, 0, 3), // 旅 上离下艮
+    3: (GuaGong.dui, 3, 0), // 小过 上震下艮
+    4: (GuaGong.gen, 2, 5), // 渐 上巽下艮
+    5: (GuaGong.dui, 3, 0), // 蹇 上坎下艮
+    6: (GuaGong.gen, 5, 2), // 艮 上艮下艮
+    7: (GuaGong.dui, 4, 1), // 谦 上坤下艮
+  },
+  // 坤(7)为下卦
+  7: {
+    0: (GuaGong.qian, 2, 5), // 否 上乾下坤
+    1: (GuaGong.dui, 1, 4), // 萃 上兑下坤
+    2: (GuaGong.qian, 3, 0), // 晋 上离下坤
+    3: (GuaGong.zhen, 0, 3), // 豫 上震下坤
+    4: (GuaGong.qian, 3, 0), // 观 上巽下坤
+    5: (GuaGong.kun, 2, 5), // 比 上坎下坤
+    6: (GuaGong.qian, 4, 1), // 剥 上艮下坤
+    7: (GuaGong.kun, 5, 2), // 坤 上坤下坤
   },
 };
 
