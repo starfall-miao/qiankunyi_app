@@ -1,6 +1,7 @@
 // 落·乾坤 - 应用入口
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'core/theme/app_theme.dart';
@@ -55,7 +56,7 @@ class _FontScaled extends StatelessWidget {
   }
 }
 
-/// 主框架（底部导航栏）
+/// 主框架（响应式布局：移动端底部导航栏 / 桌面端左侧导航栏）
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -74,27 +75,108 @@ class _MainShellState extends State<MainShell> {
     SettingsPage(),
   ];
 
+  // 导航栏配置
+  static const _navDestinations = [
+    NavigationDestination(icon: Icon(Icons.change_circle_outlined), label: '排盘'),
+    NavigationDestination(icon: Icon(Icons.bookmark_border), label: '卦例'),
+    NavigationDestination(icon: Icon(Icons.calendar_month_outlined), label: '日历'),
+    NavigationDestination(icon: Icon(Icons.menu_book_outlined), label: '参考'),
+    NavigationDestination(icon: Icon(Icons.settings_outlined), label: '设置'),
+  ];
+
+  static const _navRailDestinations = [
+    NavigationRailDestination(
+      icon: Icon(Icons.change_circle_outlined),
+      label: Text('排盘'),
+    ),
+    NavigationRailDestination(
+      icon: Icon(Icons.bookmark_border),
+      label: Text('卦例'),
+    ),
+    NavigationRailDestination(
+      icon: Icon(Icons.calendar_month_outlined),
+      label: Text('日历'),
+    ),
+    NavigationRailDestination(
+      icon: Icon(Icons.menu_book_outlined),
+      label: Text('参考'),
+    ),
+    NavigationRailDestination(
+      icon: Icon(Icons.settings_outlined),
+      label: Text('设置'),
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final tp = context.watch<ThemeProvider>();
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
+    final width = MediaQuery.of(context).size.width;
+    final isDesktop = width > 900;
+
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.digit1) {
+          setState(() => _currentIndex = 0);
+          return KeyEventResult.handled;
+        }
+        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.digit2) {
+          setState(() => _currentIndex = 1);
+          return KeyEventResult.handled;
+        }
+        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.digit3) {
+          setState(() => _currentIndex = 2);
+          return KeyEventResult.handled;
+        }
+        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.digit4) {
+          setState(() => _currentIndex = 3);
+          return KeyEventResult.handled;
+        }
+        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.digit5) {
+          setState(() => _currentIndex = 4);
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+        child: Scaffold(
+          body: Row(
+            children: [
+              // 桌面端：左侧导航栏（NavigationRail）
+              if (isDesktop && !tp.immersiveMode)
+                NavigationRail(
+                  selectedIndex: _currentIndex,
+                  onDestinationSelected: (i) => setState(() => _currentIndex = i),
+                  labelType: NavigationRailLabelType.all,
+                  leading: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Column(
+                      children: [
+                        Icon(Icons.change_circle, size: 32, color: tp.colorSchemeType.primary),
+                        const SizedBox(height: 2),
+                        Text('落·乾坤', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tp.colorSchemeType.primary)),
+                      ],
+                    ),
+                  ),
+                  destinations: _navRailDestinations,
+                ),
+              // 内容区
+              Expanded(
+                child: IndexedStack(
+                  index: _currentIndex,
+                  children: _pages,
+                ),
+              ),
+            ],
+          ),
+          bottomNavigationBar: (!isDesktop && !tp.immersiveMode)
+              ? NavigationBar(
+                  selectedIndex: _currentIndex,
+                  onDestinationSelected: (i) => setState(() => _currentIndex = i),
+                  destinations: _navDestinations,
+                )
+              : null,
+        ),
       ),
-      bottomNavigationBar: tp.immersiveMode
-          ? null
-          : NavigationBar(
-              selectedIndex: _currentIndex,
-              onDestinationSelected: (i) => setState(() => _currentIndex = i),
-              destinations: const [
-                NavigationDestination(icon: Icon(Icons.change_circle_outlined), label: '排盘'),
-                NavigationDestination(icon: Icon(Icons.bookmark_border), label: '卦例'),
-                NavigationDestination(icon: Icon(Icons.calendar_month_outlined), label: '日历'),
-                NavigationDestination(icon: Icon(Icons.menu_book_outlined), label: '参考'),
-                NavigationDestination(icon: Icon(Icons.settings_outlined), label: '设置'),
-              ],
-            ),
     );
   }
 }
