@@ -4,8 +4,10 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -239,6 +241,7 @@ class _CasePageState extends State<CasePage> {
   }
 
   /// 导出卦例（全部 → JSON → 剪贴板）
+  /// 导出卦例：文件导出 + 剪贴板
   void _exportCases(BuildContext context) {
     final provider = context.read<CaseProvider>();
     final all = provider.allCases;
@@ -249,15 +252,167 @@ class _CasePageState extends State<CasePage> {
       return;
     }
     final jsonStr = const JsonEncoder.withIndent('  ').convert(all.map((c) => c.toMap()).toList());
-    Clipboard.setData(ClipboardData(text: jsonStr));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('已导出 ${all.length} 条卦例到剪贴板'), duration: const Duration(seconds: 2)),
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.file_download_outlined),
+              title: const Text('导出到文件（.json）'),
+              subtitle: const Text('可在桌面端选择保存位置'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _exportToFile(context, jsonStr, all.length);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.content_copy),
+              title: const Text('复制到剪贴板'),
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: jsonStr));
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('已复制 ${all.length} 条卦例到剪贴板'), duration: const Duration(seconds: 2)),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: const Text('取消'),
+              onTap: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
+      ),
     );
     Logger.instance.info('卦例导出', '共 $all.length 条');
   }
 
-  /// 导入卦例（从剪贴板 JSON 合并）
+  /// 导出卦例到文件（file_picker 选择保存位置）
+  Future<void> _exportToFile(
+      BuildContext context, String jsonStr, int count) async {
+    try {
+      final now = DateTime.now();
+      final defaultName =
+          '乾坤易卦例_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.json';
+      final path = await FilePicker.platform.saveFile(
+        dialogTitle: '保存卦例',
+        fileName: defaultName,
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+      );
+      if (path == null) return; // 用户取消
+      final file = File(path);
+      await file.writeAsString(jsonStr);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已导出 $count 条卦例到 $path'), duration: const Duration(seconds: 3)),
+        );
+      }
+      Logger.instance.info('卦例文件导出', '$path (${count} 条)');
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('导出文件失败: $e'), backgroundColor: Colors.red.shade300),
+        );
+      }
+      Logger.instance.error('卦例文件导出失败', '$e');
+    }
+  }
+
+  /// 导入卦例（从文件或剪贴板 JSON 合并）
   void _importCases(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.folder_open_outlined),
+              title: const Text('从文件导入（.json）'),
+              subtitle: const Text('选择此前导出的卦例文件'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _importFromFile(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.content_paste),
+              title: const Text('从剪贴板导入'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _importFromText(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: const Text('取消'),
+              onTap: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 从文件导入卦例
+  Future<void> _importFromFile(BuildContext context) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        dialogTitle: '选择卦例文件',
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+      );
+      if (result == null || result.files.isEmpty) return;
+      final path = result.files.single.path;
+      if (path == null) return;
+      final text = await File(path).readAsString();
+      await _parseAndAddCases(context, text);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('导入文件失败: $e'), backgroundColor: Colors.red.shade300),
+        );
+      }
+      Logger.instance.error('卦例文件导入失败', '$e');
+    }
+  }
+
+  /// 解析 JSON 并合并导入
+  Future<void> _parseAndAddCases(BuildContext context, String text) async {
+    try {
+      final parsed = jsonDecode(text);
+      final list = (parsed as List).map((e) =>
+          CaseModel.fromMap(e as Map<String, dynamic>)).toList();
+      final provider = context.read<CaseProvider>();
+      var added = 0;
+      for (final c in list) {
+        // 避免重复（按 id 去重）
+        final exists = provider.allCases.any((e) => e.id == c.id);
+        if (!exists) {
+          provider.addCase(c);
+          added++;
+        }
+      }
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('成功导入 $added 条卦例（跳过 ${list.length - added} 条重复）')),
+        );
+      }
+      Logger.instance.info('卦例导入', '导入 ${list.length} 条（新增 $added）');
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('导入失败: $e'), backgroundColor: Colors.red.shade300),
+        );
+      }
+    }
+  }
+
+  void _importFromText(BuildContext context) {
     final ctrl = TextEditingController();
     showDialog(
       context: context,
@@ -288,28 +443,8 @@ class _CasePageState extends State<CasePage> {
           FilledButton(onPressed: () async {
             final text = ctrl.text.trim();
             if (text.isEmpty) return;
-            try {
-              final parsed = jsonDecode(text);
-              final list = (parsed as List).map((e) =>
-                  CaseModel.fromMap(e as Map<String, dynamic>)).toList();
-              final provider = context.read<CaseProvider>();
-              for (final c in list) {
-                // 避免重复（按 id 去重）
-                final exists = provider.allCases.any((e) => e.id == c.id);
-                if (!exists) {
-                  provider.addCase(c);
-                }
-              }
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('成功导入 ${list.length} 条卦例')),
-              );
-              Logger.instance.info('卦例导入', '导入 ${list.length} 条');
-            } catch (e) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('导入失败: $e'), backgroundColor: Colors.red.shade300),
-              );
-            }
+            Navigator.pop(ctx);
+            await _parseAndAddCases(context, text);
           }, child: const Text('导入')),
         ],
       ),

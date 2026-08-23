@@ -38,53 +38,68 @@ class _SettingsPageState extends State<SettingsPage> {
       appBar: AppBar(title: const Text('设置')),
       body: Container(
         color: bgColor,
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          children: [
-            _buildSectionHeader(theme, '🎨 主题与配色'),
-            const SizedBox(height: 8),
-            _buildThemeModeCard(theme, isDark),
-            const SizedBox(height: 8),
-            _buildColorSchemeSelector(theme, isDark),
-            const SizedBox(height: 8),
-            _buildAcrylicToggle(theme),
-            const SizedBox(height: 16),
+        child: LayoutBuilder(
+          builder: (ctx, constraints) {
+            final width = constraints.maxWidth;
+            final list = ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              children: [
+                _buildSectionHeader(theme, '🎨 主题与配色'),
+                const SizedBox(height: 8),
+                _buildThemeModeCard(theme, isDark),
+                const SizedBox(height: 8),
+                _buildColorSchemeSelector(theme, isDark),
+                const SizedBox(height: 8),
+                _buildAcrylicToggle(theme),
+                const SizedBox(height: 16),
 
-            _buildSectionHeader(theme, '🔤 字体与显示'),
-            const SizedBox(height: 8),
-            _buildFontSettings(theme),
-            const SizedBox(height: 16),
+                _buildSectionHeader(theme, '🔤 字体与显示'),
+                const SizedBox(height: 8),
+                _buildFontSettings(theme),
+                const SizedBox(height: 16),
 
-            _buildSectionHeader(theme, '⚙️ 排盘规则'),
-            const SizedBox(height: 8),
-            _buildRuleSettings(theme),
-            const SizedBox(height: 16),
+                _buildSectionHeader(theme, '⚙️ 排盘规则'),
+                const SizedBox(height: 8),
+                _buildRuleSettings(theme),
+                const SizedBox(height: 16),
 
-            _buildSectionHeader(theme, '👁️ 显示要素'),
-            const SizedBox(height: 8),
-            _buildDisplaySettings(theme),
-            const SizedBox(height: 16),
+                _buildSectionHeader(theme, '👁️ 显示要素'),
+                const SizedBox(height: 8),
+                _buildDisplaySettings(theme),
+                const SizedBox(height: 16),
 
-            _buildSectionHeader(theme, '🔧 调试与日志'),
-            const SizedBox(height: 8),
-            _buildDebugSettings(theme),
-            const SizedBox(height: 16),
+                _buildSectionHeader(theme, '🔧 调试与日志'),
+                const SizedBox(height: 8),
+                _buildDebugSettings(theme),
+                const SizedBox(height: 16),
 
-            _buildSectionHeader(theme, '🧭 小工具'),
-            const SizedBox(height: 8),
-            _buildCompassEntry(theme),
-            const SizedBox(height: 16),
+                _buildSectionHeader(theme, '🧭 小工具'),
+                const SizedBox(height: 8),
+                _buildCompassEntry(theme),
+                const SizedBox(height: 16),
 
-            _buildSectionHeader(theme, '🤖 AI 解卦配置'),
-            const SizedBox(height: 8),
-            _buildAISettings(theme),
-            const SizedBox(height: 16),
+                _buildSectionHeader(theme, '🤖 AI 解卦配置'),
+                const SizedBox(height: 8),
+                _buildAISettings(theme),
+                const SizedBox(height: 16),
 
-            _buildSectionHeader(theme, '📖 信息'),
-            const SizedBox(height: 8),
-            _buildAboutButton(theme),
-            const SizedBox(height: 32),
-          ],
+                _buildSectionHeader(theme, '📖 信息'),
+                const SizedBox(height: 8),
+                _buildAboutButton(theme),
+                const SizedBox(height: 32),
+              ],
+            );
+            // 桌面宽屏：限宽居中，避免设置项拉得过宽
+            if (width > 1100) {
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 900),
+                  child: list,
+                ),
+              );
+            }
+            return list;
+          },
         ),
       ),
     );
