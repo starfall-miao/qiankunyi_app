@@ -34,7 +34,7 @@ class CasePage extends StatefulWidget {
 }
 
 class _CasePageState extends State<CasePage> {
-  // 大运横向滚动控制器（供 Scrollbar 显示/拖拽滚动条，与排盘页 bazi_page.dart 一致）
+  // 大运横向滚动控制器（供 Scrollbar 显示/拖拽滚动条，与排盘页 paipan_page.dart 一致）
   final _daYunScrollCtrl = ScrollController();
 
   @override
@@ -960,7 +960,7 @@ class _CasePageState extends State<CasePage> {
           // ── 大运 ──
           if (r.daYun.isNotEmpty) ...[
             sectionHeader('大运'),
-            // 与排盘页 bazi_page.dart 大运一致：ScrollConfiguration 允许鼠标/触控板拖拽横向滚动，
+            // 与排盘页 paipan_page.dart 大运一致：ScrollConfiguration 允许鼠标/触控板拖拽横向滚动，
             // Scrollbar 提供可见滚动条（可拖拽拇指），避免外层纵向滚动吞掉横向手势导致"看起来不能滑动"。
             ScrollConfiguration(
               behavior: ScrollConfiguration.of(ctx).copyWith(
