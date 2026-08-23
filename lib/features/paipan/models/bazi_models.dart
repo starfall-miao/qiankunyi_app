@@ -72,6 +72,8 @@ class BaziResult {
   final Map<String, String> wuXingWangShuai;
   /// 十神映射 {年干: 正财, 月干: 正官, 时干: 伤官, 年支藏干: ..., ...}
   final Map<String, String> shiShenMap;
+  /// 旬空（空亡地支列表，如 ["戌", "亥"]）
+  final List<String> kongWang;
 
   const BaziResult({
     required this.birth,
@@ -85,6 +87,7 @@ class BaziResult {
     this.wuXingCounts = const {},
     this.wuXingWangShuai = const {},
     this.shiShenMap = const {},
+    this.kongWang = const [],
   });
 
   /// 序列化为 JSON
@@ -99,7 +102,8 @@ class BaziResult {
     'liuNian': liuNian,
     'wuXingCounts': wuXingCounts,
     'wuXingWangShuai': wuXingWangShuai,
-    'shiShenMap': shiShenMap,
+    'shishenMap': shiShenMap,
+    'kongWang': kongWang,
   };
 
   /// 从 JSON 反序列化（保留柱的简略信息）
@@ -140,6 +144,7 @@ class BaziResult {
     wuXingCounts: (j['wuXingCounts'] as Map<String, dynamic>?)?.map((k, v) => MapEntry(k, (v as num).toInt())) ?? {},
     wuXingWangShuai: (j['wuXingWangShuai'] as Map<String, dynamic>?)?.cast<String, String>() ?? {},
     shiShenMap: (j['shiShenMap'] as Map<String, dynamic>?)?.cast<String, String>() ?? {},
+    kongWang: (j['kongWang'] as List?)?.cast<String>() ?? [],
   );
 
   /// 从干支字符串解析 SiZhu（兼容旧数据）

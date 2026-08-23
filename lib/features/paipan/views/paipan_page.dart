@@ -1733,6 +1733,27 @@ class _BaziPageState extends State<BaziPage> {
           ),
           const SizedBox(height: 12),
 
+          // ── 旬空（空亡） ──
+          if (r.kongWang.isNotEmpty) ...[
+            _sectionHeader(p, '旬空'),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+              decoration: BoxDecoration(
+                color: dark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: b.withAlpha(60)),
+              ),
+              child: Row(children: [
+                const Icon(Icons.block, size: 16, color: Colors.grey),
+                const SizedBox(width: 8),
+                Text('空亡：', style: TextStyle(fontSize: 13, color: t)),
+                Text(r.kongWang.join(' '),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey)),
+              ]),
+            ),
+            const SizedBox(height: 12),
+          ],
+
           // ── 藏干 ──
           _sectionHeader(p, '藏干'),
           Card(

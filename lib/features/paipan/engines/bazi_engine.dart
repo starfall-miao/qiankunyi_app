@@ -355,6 +355,20 @@ class BaiZiEngine {
       }
     }
 
+    // 旬空（空亡）：日干支索引 → 旬首 → 空亡地支
+    final dayGzIdx = scd.getSixtyCycle().getIndex();
+    final xunShou = dayGzIdx - (dayGzIdx % 10);
+    // 旬首 0→甲子, 10→甲戌, 20→甲申, 30→甲午, 40→甲辰, 50→甲寅
+    const xunKong = {
+      0: ['戌', '亥'],
+      10: ['申', '酉'],
+      20: ['午', '未'],
+      30: ['辰', '巳'],
+      40: ['寅', '卯'],
+      50: ['子', '丑'],
+    };
+    final kongWang = xunKong[xunShou] ?? <String>[];
+
     return BaziResult(
       birth: birth,
       isMale: isMale,
@@ -367,6 +381,7 @@ class BaiZiEngine {
       wuXingCounts: wuXingCounts,
       wuXingWangShuai: wuXingWangShuai,
       shiShenMap: shiShenMap,
+      kongWang: kongWang,
     );
   }
 

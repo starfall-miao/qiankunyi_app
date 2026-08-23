@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 网络权限（AI 解卦、HTTP 请求） -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- 指南针传感器（flutter_device_compass）需要位置权限：
          磁力计数据在部分 Android 版本/设备上要求位置授权，
          未授权时 heading 无效自动降级为点击模式 -->
