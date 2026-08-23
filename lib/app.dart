@@ -1,7 +1,6 @@
 // 落·乾坤 - 应用入口
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'core/theme/app_theme.dart';
@@ -113,70 +112,43 @@ class _MainShellState extends State<MainShell> {
     final width = MediaQuery.of(context).size.width;
     final isDesktop = width > 900;
 
-    return Focus(
-      autofocus: true,
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.digit1) {
-          setState(() => _currentIndex = 0);
-          return KeyEventResult.handled;
-        }
-        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.digit2) {
-          setState(() => _currentIndex = 1);
-          return KeyEventResult.handled;
-        }
-        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.digit3) {
-          setState(() => _currentIndex = 2);
-          return KeyEventResult.handled;
-        }
-        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.digit4) {
-          setState(() => _currentIndex = 3);
-          return KeyEventResult.handled;
-        }
-        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.digit5) {
-          setState(() => _currentIndex = 4);
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-        child: Scaffold(
-          body: Row(
-            children: [
-              // 桌面端：左侧导航栏（NavigationRail）
-              if (isDesktop && !tp.immersiveMode)
-                NavigationRail(
-                  selectedIndex: _currentIndex,
-                  onDestinationSelected: (i) => setState(() => _currentIndex = i),
-                  labelType: NavigationRailLabelType.all,
-                  leading: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Column(
-                      children: [
-                        Icon(Icons.change_circle, size: 32, color: tp.colorSchemeType.primary),
-                        const SizedBox(height: 2),
-                        Text('落·乾坤', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tp.colorSchemeType.primary)),
-                      ],
-                    ),
-                  ),
-                  destinations: _navRailDestinations,
-                ),
-              // 内容区
-              Expanded(
-                child: IndexedStack(
-                  index: _currentIndex,
-                  children: _pages,
+    return Scaffold(
+      body: Row(
+        children: [
+          // 桌面端：左侧导航栏（NavigationRail）
+          if (isDesktop && !tp.immersiveMode)
+            NavigationRail(
+              selectedIndex: _currentIndex,
+              onDestinationSelected: (i) => setState(() => _currentIndex = i),
+              labelType: NavigationRailLabelType.all,
+              leading: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  children: [
+                    Icon(Icons.change_circle, size: 32, color: tp.colorSchemeType.primary),
+                    const SizedBox(height: 2),
+                    Text('落·乾坤', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tp.colorSchemeType.primary)),
+                  ],
                 ),
               ),
-            ],
+              destinations: _navRailDestinations,
+            ),
+          // 内容区
+          Expanded(
+            child: IndexedStack(
+              index: _currentIndex,
+              children: _pages,
+            ),
           ),
-          bottomNavigationBar: (!isDesktop && !tp.immersiveMode)
-              ? NavigationBar(
-                  selectedIndex: _currentIndex,
-                  onDestinationSelected: (i) => setState(() => _currentIndex = i),
-                  destinations: _navDestinations,
-                )
-              : null,
-        ),
+        ],
       ),
+      bottomNavigationBar: (!isDesktop && !tp.immersiveMode)
+          ? NavigationBar(
+              selectedIndex: _currentIndex,
+              onDestinationSelected: (i) => setState(() => _currentIndex = i),
+              destinations: _navDestinations,
+            )
+          : null,
     );
   }
 }

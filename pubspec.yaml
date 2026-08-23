@@ -76,6 +76,9 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  # 单元测试（纯 Dart 测试框架）
+  test: ^1.25.0
+
   # Code generation for drift
   drift_dev: ^2.23.1
   build_runner: ^2.4.14
