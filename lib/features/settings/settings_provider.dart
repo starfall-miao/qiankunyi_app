@@ -64,7 +64,7 @@ enum RiPoAnDongRule {
 class AiProviderPreset {
   final String name;
   final String endpoint;
-  String apiKey;
+  final String apiKey;
   final String model;
   /// 该提供商推荐/可选的模型列表（模型选择弹窗展示）
   final List<String> models;
@@ -73,15 +73,15 @@ class AiProviderPreset {
   /// 是否内置预设（内置不可删除）
   final bool builtin;
 
-  AiProviderPreset({
+  const AiProviderPreset({
     required this.name,
     required this.endpoint,
     required this.apiKey,
     required this.model,
-    List<String>? models,
+    this.models = const [],
     this.free = false,
     this.builtin = false,
-  }) : models = models ?? [model];
+  });
 
   Map<String, dynamic> toJson() => {
     'name': name,

@@ -744,6 +744,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 endpoint: endpointCtrl.text.trim(),
                 apiKey: keyCtrl.text.trim(),
                 model: modelCtrl.text.trim().isNotEmpty ? modelCtrl.text.trim() : 'gpt-4',
+                models: [modelCtrl.text.trim().isNotEmpty ? modelCtrl.text.trim() : 'gpt-4'],
               ));
               Navigator.pop(ctx);
             },
