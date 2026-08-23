@@ -98,11 +98,26 @@ class _CasePageState extends State<CasePage> {
             children: [
               _buildStatsCard(provider.allCases, theme),
               Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-                  itemCount: cases.length,
-                  separatorBuilder: (_, __) => const Divider(height: 4),
-                  itemBuilder: (ctx, i) => _buildCaseCard(ctx, cases[i], theme),
+                child: LayoutBuilder(
+                  builder: (ctx, constraints) {
+                    final width = constraints.maxWidth;
+                    final list = ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                      itemCount: cases.length,
+                      separatorBuilder: (_, __) => const Divider(height: 4),
+                      itemBuilder: (ctx, i) => _buildCaseCard(ctx, cases[i], theme),
+                    );
+                    // 桌面宽屏：列表限宽居中，避免卡片拉得过宽
+                    if (width > 1100) {
+                      return Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 900),
+                          child: list,
+                        ),
+                      );
+                    }
+                    return list;
+                  },
                 ),
               ),
             ],

@@ -128,7 +128,8 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         ],
         body: LayoutBuilder(
           builder: (ctx, constraints) {
-            final horizontalPadding = constraints.maxWidth >= 600 ? 32.0 : 12.0;
+            final width = constraints.maxWidth;
+            final horizontalPadding = width >= 600 ? 32.0 : 12.0;
             final content = _tabIndex == 0
                 ? _liuyaoContent(context, pr, p, t, b, c, isDark)
                 : _tabIndex == 1
@@ -136,7 +137,15 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                     : const BaziPage();
             return SingleChildScrollView(
               padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 12),
-              child: content,
+              child: Center(
+                // 桌面宽屏时限制最大宽度，避免文字行过长影响阅读
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: width >= 1400 ? 1200.0 : double.infinity,
+                  ),
+                  child: content,
+                ),
+              ),
             );
           },
         ),
