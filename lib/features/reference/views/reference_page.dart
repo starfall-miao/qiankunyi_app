@@ -14,6 +14,51 @@ import '../data/liuyao_reference_data.dart';
 import '../data/bazi_reference_data.dart';
 import '../../paipan/models/gua_model.dart';
 
+// ─── 六爻阴阳模式 ───
+// 正确推导：每卦6条爻的阴阳由上下卦的三爻模式决定。
+// 八卦模式（从初爻到三爻，1=阳 0=阴）：
+const _trigramPatterns = [
+  [1, 1, 1], // 0 乾
+  [1, 1, 0], // 1 兑
+  [1, 0, 1], // 2 离
+  [1, 0, 0], // 3 震
+  [0, 1, 1], // 4 巽
+  [0, 1, 0], // 5 坎
+  [0, 0, 1], // 6 艮
+  [0, 0, 0], // 7 坤
+];
+
+// 正确六十四卦表 [下卦索引][上卦索引] → GuaName
+const _guaNameTable = <int, List<GuaName>>{
+  0: [GuaName.qian, GuaName.guai, GuaName.daYou, GuaName.daZhuang, GuaName.xiaoXu, GuaName.xu, GuaName.daXu, GuaName.tai],
+  1: [GuaName.lv, GuaName.dui, GuaName.kui, GuaName.guiMei, GuaName.zhongFu, GuaName.jie2, GuaName.sun, GuaName.lin],
+  2: [GuaName.tongRen, GuaName.ge, GuaName.li, GuaName.feng, GuaName.jiaRen, GuaName.jiJi, GuaName.bi2, GuaName.mingYi],
+  3: [GuaName.wuWang, GuaName.sui, GuaName.shiHe, GuaName.zhen, GuaName.yi2, GuaName.zhun, GuaName.yi, GuaName.fu],
+  4: [GuaName.gou, GuaName.daGuo, GuaName.ding, GuaName.heng, GuaName.xun, GuaName.jing, GuaName.gu, GuaName.sheng],
+  5: [GuaName.song, GuaName.kun2, GuaName.weiJi, GuaName.jie, GuaName.huan, GuaName.kan, GuaName.meng, GuaName.shi],
+  6: [GuaName.dun, GuaName.xian, GuaName.lv2, GuaName.xiaoGuo, GuaName.jian2, GuaName.jian, GuaName.gen, GuaName.qian2],
+  7: [GuaName.pi, GuaName.cui, GuaName.jin, GuaName.yu, GuaName.guan, GuaName.bi, GuaName.bo, GuaName.kun],
+};
+
+/// 卦名 → 6条爻的阴阳序列（true=阳/九，false=阴/六）
+final Map<GuaName, List<bool>> _guaYaoPatterns = () {
+  final map = <GuaName, List<bool>>{};
+  for (int lo = 0; lo < 8; lo++) {
+    final lowerPat = _trigramPatterns[lo];
+    for (int up = 0; up < 8; up++) {
+      final upperPat = _trigramPatterns[up];
+      final name = _guaNameTable[lo]![up];
+      // 六爻：初爻(下卦初)→三爻(下卦上) + 四爻(上卦初)→上爻(上卦上)
+      final lines = [
+        lowerPat[0] == 1, lowerPat[1] == 1, lowerPat[2] == 1,
+        upperPat[0] == 1, upperPat[1] == 1, upperPat[2] == 1,
+      ];
+      map[name] = lines;
+    }
+  }
+  return map;
+}();
+
 class ReferencePage extends StatelessWidget {
   const ReferencePage({super.key});
 
@@ -261,8 +306,7 @@ class _GuaCiTabState extends State<_GuaCiTab> {
   List<Widget> _buildYaoCiSection(ThemeData theme, GuaName name) {
     final yaos = yaoCiMap[name];
     if (yaos == null || yaos.isEmpty) return [];
-    // 初爻阴阳：按卦序奇偶粗略判断（初九/初六）
-    // 精确判断需要查六爻卦象表，此处简化处理
+    final patterns = _guaYaoPatterns[name] ?? [true, true, true, true, true, true];
     return [
       const SizedBox(height: 8),
       const Divider(height: 1),
@@ -274,7 +318,7 @@ class _GuaCiTabState extends State<_GuaCiTab> {
       )),
       const SizedBox(height: 4),
       for (int i = 0; i < yaos.length; i++) ...[
-        _buildYaoLine(theme, yaos[i], i, name.index % 2 == 0),
+        _buildYaoLine(theme, yaos[i], i, patterns[i]),
         if (i < yaos.length - 1) const SizedBox(height: 2),
       ],
     ];
