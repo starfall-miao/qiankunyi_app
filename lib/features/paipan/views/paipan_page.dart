@@ -217,8 +217,8 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         // 方法选择
         Wrap(
           spacing: 8,
-          children: List.generate(3, (i) {
-            final cLabels = ['手工摇卦', '机器摇卦', '时间起卦'];
+          children: List.generate(4, (i) {
+            final cLabels = ['手工摇卦', '机器摇卦', '时间起卦', '数字起卦'];
             final sel = _liuyaoMethod == i;
             return ChoiceChip(
               label: Text(cLabels[i], style: TextStyle(fontSize: 12, color: sel ? p : t)),
@@ -236,6 +236,22 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         if (_liuyaoMethod == 2) ...[
           const SizedBox(height: 6),
           _buildTimePicker(p, t, b, dark),
+        ],
+        // 数字起卦输入（六爻）：两数定上下卦 + 动爻
+        if (_liuyaoMethod == 3) ...[
+          const SizedBox(height: 8),
+          Row(children: [
+            _numField('A', _numACtrl, '上卦数'),
+            const SizedBox(width: 8),
+            _numField('B', _numBCtrl, '下卦数'),
+            const SizedBox(width: 8),
+            _numField('C', _numCCtrl, '动爻 1-6'),
+          ]),
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text('动爻必填（1-6，余0按6取上爻）',
+                style: TextStyle(fontSize: 10, color: t.withAlpha(140))),
+          ),
         ],
         const SizedBox(height: 8),
 
@@ -485,6 +501,20 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         r = LiuYaoEngine.fromYaos(ys, time: _selectedTime, school: _liuyaoSchool);
       } else if (_liuyaoMethod == 1) {
         r = LiuYaoEngine.manual(school: _liuyaoSchool);
+      } else if (_liuyaoMethod == 3) {
+        // 数字起卦：两数定上下卦 + 动爻（1-6）
+        final a = int.tryParse(_numACtrl.text.trim());
+        final b = int.tryParse(_numBCtrl.text.trim());
+        final cText = _numCCtrl.text.trim();
+        if (a == null || b == null || cText.isEmpty) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('请输入三个有效数字（动爻 1-6）'), duration: Duration(seconds: 2)),
+          );
+          return;
+        }
+        final c = int.parse(cText);
+        r = LiuYaoEngine.byNumbers(a, b, c, school: _liuyaoSchool);
       } else {
         r = LiuYaoEngine.byTime(_selectedTime, school: _liuyaoSchool);
       }
@@ -494,7 +524,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         pr.setLiuyaoResult(r);
         _animCtrl.forward();
         setState(() => _isLoading = false);
-        final names = ['手工摇卦', '机器摇卦', '时间起卦'];
+        final names = ['手工摇卦', '机器摇卦', '时间起卦', '数字起卦'];
         _log.info('六爻起卦: ${names[_liuyaoMethod]}', '${r.benGua.name}');
       });
     } catch (e, st) {
@@ -618,8 +648,8 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
       children: [
         Wrap(
           spacing: 8,
-          children: List.generate(2, (i) {
-            final labels = ['三数起卦', '日期起卦'];
+          children: List.generate(3, (i) {
+            final labels = ['三数起卦', '日期起卦', '物象起卦'];
             final sel = _meihuaMethod == i;
             return ChoiceChip(
               label: Text(labels[i], style: TextStyle(fontSize: 12, color: sel ? p : t)),
@@ -642,6 +672,22 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         if (_meihuaMethod == 1) ...[
           _buildTimePicker(p, t, b, dark),
           const SizedBox(height: 8),
+        ],
+
+        // 梅花物象起卦输入：上下卦（1-8）+ 动爻
+        if (_meihuaMethod == 2) ...[
+          Row(children: [
+            _numField('A', _numACtrl, '上卦 1-8'),
+            const SizedBox(width: 8),
+            _numField('B', _numBCtrl, '下卦 1-8'),
+            const SizedBox(width: 8),
+            _numField('C', _numCCtrl, '动爻 1-6'),
+          ]),
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text('1乾 2兑 3离 4震 5巽 6坎 7艮 8坤（动爻可省略，缺省取上卦数）',
+                style: TextStyle(fontSize: 10, color: t.withAlpha(140))),
+          ),
         ],
 
         if (_meihuaMethod == 0) ...[
@@ -712,6 +758,31 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
           _animCtrl.forward();
           setState(() => _isLoading = false);
           _log.info('梅花起卦: 三数($a,$b,$c)');
+        });
+      } else if (_meihuaMethod == 2) {
+        // 物象起卦：上下卦（1-8）+ 动爻（1-6，可省略→缺省取上卦数）
+        final aText = _numACtrl.text.trim();
+        final bText = _numBCtrl.text.trim();
+        if (aText.isEmpty || bText.isEmpty) {
+          setState(() {
+            _isLoading = false;
+            _emptyInputWarn = true;
+          });
+          return;
+        }
+        setState(() => _emptyInputWarn = false);
+        final upper = (int.tryParse(aText) ?? 8).clamp(1, 8) - 1; // 1乾~8坤 → 0-7
+        final lower = (int.tryParse(bText) ?? 8).clamp(1, 8) - 1;
+        final cText = _numCCtrl.text.trim();
+        final rawC = cText.isEmpty
+            ? (int.tryParse(aText) ?? 1)
+            : (int.tryParse(cText) ?? 1);
+        final moving = (rawC % 6) == 0 ? 5 : (rawC % 6) - 1; // 余0→上爻
+        Future.delayed(const Duration(milliseconds: 300), () {
+          pr.setMeihuaResult(MeihuaEngine.fromTrigrams(upper, lower, moving));
+          _animCtrl.forward();
+          setState(() => _isLoading = false);
+          _log.info('梅花起卦: 物象(上${upper + 1},下${lower + 1}) 动爻$rawC');
         });
       } else {
         Future.delayed(const Duration(milliseconds: 300), () {
