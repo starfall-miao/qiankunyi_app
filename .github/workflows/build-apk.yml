@@ -27,6 +27,8 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter analyze
+      # 排盘引擎单元测试（六爻/梅花/八字）
+      - run: flutter test
 
   ###########################################################################
   # 2️⃣ Android APK（Debug + 已签名 Release）
