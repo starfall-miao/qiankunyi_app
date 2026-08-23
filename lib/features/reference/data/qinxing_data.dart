@@ -90,5 +90,5 @@ final List<QinXingInfo> qinXingList = [
   QinXingInfo(name: '翼', animal: '蛇', group: '南', element: '水', index: 26,
     chong: '轸', he: '觜', ai: ['星', '张'], wei: ['危', '室']),
   QinXingInfo(name: '轸', animal: '蚓', group: '南', element: '水', index: 27,
-    chong: '翼', he: '参', ai: ['翼', '轸'], wei: ['室', '壁']),
+    chong: '翼', he: '参', ai: ['翼'], wei: ['室', '壁']),
 ];

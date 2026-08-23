@@ -136,8 +136,12 @@ class AiService {
         return AiResult.error(msg, statusCode: response.statusCode);
       }
     } catch (e) {
-      Logger.instance.error('AI网络错误', '请求异常: $e');
-      return AiResult.error('网络错误: $e');
+      final msg = e.toString();
+      Logger.instance.error('AI网络错误', '请求异常: $msg');
+      if (msg.contains('SocketException') || msg.contains('Failed host lookup')) {
+        return AiResult.error('无法连接 AI 服务器，请检查网络连接和 AI 配置中的 API 地址是否正确');
+      }
+      return AiResult.error('网络错误: $msg');
     }
   }
 
