@@ -93,14 +93,14 @@ class SettingsProvider extends ChangeNotifier {
     AiProviderPreset(
       name: '智谱 GLM-4.7-flash（免费）',
       endpoint: 'https://open.bigmodel.cn/api/paas/v4',
-      apiKey: 'ef579420dcdd49ae968b5358debf106a.qJjYax55VQNmF9cb',
+      apiKey: '',
       model: 'glm-4.7-flash',
       free: true,
     ),
     AiProviderPreset(
       name: 'opencode (deepseek-v4-flash)',
       endpoint: 'https://opencode.ai/zen/v1',
-      apiKey: 'sk-ztLkRc1oZQ1KMEUoUVFyO0dcYF3tk4qea7saKXFPvKyhAwcVfa4NNKlNzPujPD2j',
+      apiKey: '',
       model: 'deepseek-v4-flash-free',
       free: true,
     ),

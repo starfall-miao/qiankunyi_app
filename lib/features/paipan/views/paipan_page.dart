@@ -10,6 +10,7 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../core/utils/logger.dart';
 import '../../../shared/widgets/gua_screenshot_template.dart';
 import '../../../shared/widgets/save_image_dialog.dart';
+import '../../calendar/views/calendar_picker_dialog.dart';
 import '../../reference/data/reference_data.dart';
 import '../providers/paipan_provider.dart';
 import '../../cases/providers/case_provider.dart';
@@ -66,7 +67,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
   final _numACtrl = TextEditingController();
   final _numBCtrl = TextEditingController();
   final _numCCtrl = TextEditingController();
-  final DateTime _selectedTime = DateTime.now();
+  DateTime _selectedTime = DateTime.now();
   final _liuyaoScreenshotKey = GlobalKey();
   final _meihuaScreenshotKey = GlobalKey();
   bool _emptyInputWarn = false;
@@ -229,6 +230,11 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
             );
           }),
         ),
+        // 时间起卦选择器（六爻）
+        if (_liuyaoMethod == 2) ...[
+          const SizedBox(height: 6),
+          _buildTimePicker(p, t, b, dark),
+        ],
         const SizedBox(height: 8),
 
         // 流派选择
@@ -630,6 +636,12 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         ),
         const SizedBox(height: 8),
 
+        // 梅花时间起卦选择器
+        if (_meihuaMethod == 1) ...[
+          _buildTimePicker(p, t, b, dark),
+          const SizedBox(height: 8),
+        ],
+
         if (_meihuaMethod == 0) ...[
           Row(children: [
             _numField('A', _numACtrl, '数字1'),
@@ -753,6 +765,44 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         );
       }
     }
+  }
+
+  /// 构建时间选择器（用于时间起卦/日期起卦）
+  Widget _buildTimePicker(Color p, Color t, Color b, bool dark) {
+    return Row(
+      children: [
+        Icon(Icons.calendar_month, size: 14, color: p.withAlpha(180)),
+        const SizedBox(width: 4),
+        Text('选择时间: ', style: TextStyle(fontSize: 12, color: t.withAlpha(200))),
+        TextButton.icon(
+          onPressed: () async {
+            final picked = await showDialog<DateTime>(
+              context: context,
+              builder: (_) => const CalendarPickerDialog(),
+            );
+            if (picked != null && mounted) {
+              setState(() => _selectedTime = picked);
+            }
+          },
+          icon: Icon(Icons.edit_calendar, size: 16, color: p),
+          label: Text(
+            '${_selectedTime.year}-${_selectedTime.month.toString().padLeft(2, '0')}-${_selectedTime.day.toString().padLeft(2, '0')}',
+            style: TextStyle(fontSize: 13, color: p),
+          ),
+          style: TextButton.styleFrom(
+            foregroundColor: p,
+            backgroundColor: p.withAlpha(15),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6),
+              side: BorderSide(color: p.withAlpha(60)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+      ],
+    );
   }
 
   void _saveCurrentResult(BuildContext context, PaipanProvider pr, PaipanResult result, {CaseType? caseType}) {
