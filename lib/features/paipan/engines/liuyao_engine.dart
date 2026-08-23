@@ -519,10 +519,7 @@ class LiuYaoEngine {
       if (yaos[i].diZhi == null) continue;
       final zi = _diZhiIndex[yaos[i].diZhi!]!;
 
-      // 六冲
-      if (_diZhiIndex[yaos[i].diZhi!] == _liuChong[zi]) {
-        yaos[i].isChong = true;
-      }
+      // 六冲（已在下方 j 循环中配对标记，此处无需自检）
 
       // 六合（需成对）
       for (int j = i + 1; j < 6; j++) {
@@ -559,12 +556,8 @@ class LiuYaoEngine {
       // 三合局
       for (final ju in _sanHeJu) {
         if (ju.contains(zi)) {
-          var matched = yaos.where((y) =>
+          final matched = yaos.where((y) =>
             y.diZhi != null && ju.contains(_diZhiIndex[y.diZhi!]));
-          if (matched.length >= 2 && !matched.contains(yaos[i])) {
-            matched = yaos.where((y) =>
-              y.diZhi != null && ju.contains(_diZhiIndex[y.diZhi!]));
-          }
           if (matched.length >= 3) {
             final names = matched.map((y) => _diZhiName[_diZhiIndex[y.diZhi!]!]).toList();
             for (final y in matched) {
@@ -604,7 +597,8 @@ class LiuYaoEngine {
 
   /// 计算排盘时间的日干索引（0甲~9癸）
   static int _dayGanIndex(DateTime dt) {
-    // 日干支计算：基准点 1900-01-01 为甲子日（日干=0，日支=0）
+    // 日干索引：基准点 1900-01-01 为甲戌日（日干=甲=0，非甲子日，但日干同为甲），
+    // 此处仅需日干索引用于六神起例，diff % 10 结果正确。
     final base = DateTime(1900, 1, 1);
     final diff = dt.difference(base).inDays;
     return ((diff % 10) + 10) % 10;

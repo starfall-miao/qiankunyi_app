@@ -1,9 +1,39 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:qiankunyi_app/app.dart';
+import 'package:qiankunyi_app/core/theme/theme_provider.dart';
+import 'package:qiankunyi_app/features/paipan/providers/paipan_provider.dart';
+import 'package:qiankunyi_app/features/cases/providers/case_provider.dart';
+import 'package:qiankunyi_app/features/settings/settings_provider.dart';
+import 'package:qiankunyi_app/features/paipan/providers/bazi_provider.dart';
 
 void main() {
-  testWidgets('App launches successfully', (WidgetTester tester) async {
-    await tester.pumpWidget(const QianKunYiApp());
-    expect(find.text('乾坤易'), findsOneWidget);
+  testWidgets('App launches with main navigation',
+      (WidgetTester tester) async {
+    // Mock SharedPreferences for SettingsProvider init
+    SharedPreferences.setMockInitialValues({});
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => ThemeProvider()),
+          ChangeNotifierProvider(create: (_) => PaipanProvider()),
+          ChangeNotifierProvider(create: (_) => CaseProvider()),
+          ChangeNotifierProvider(create: (_) => SettingsProvider()..init()),
+          ChangeNotifierProvider(create: (_) => BaziProvider()),
+        ],
+        child: const QianKunYiApp(),
+      ),
+    );
+
+    // NavigationBar destinations should be visible
+    expect(find.text('排盘'), findsOneWidget);
+    expect(find.text('卦例'), findsOneWidget);
+    expect(find.text('日历'), findsOneWidget);
+    expect(find.text('参考'), findsOneWidget);
+    expect(find.text('设置'), findsOneWidget);
   });
 }

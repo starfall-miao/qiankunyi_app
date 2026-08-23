@@ -99,7 +99,7 @@ class AiService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode(body),
-      );
+      ).timeout(const Duration(seconds: 120));
 
       // 全链路日志：响应（statusCode + body 前 300 字符摘要）
       Logger.instance.info('$logTag响应',
