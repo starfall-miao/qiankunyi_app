@@ -845,7 +845,7 @@ class _SettingsPageState extends State<SettingsPage> {
       },
     );
   }
-Widget _buildSettingsRow({
+  Widget _buildSettingsRow({
     required IconData icon,
     required String title,
     required String subtitle,
