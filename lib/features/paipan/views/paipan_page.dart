@@ -1999,6 +1999,11 @@ class _BaziPageState extends State<BaziPage> {
             const SizedBox(height: 4),
             Text('${zhu.tianGan}${zhu.diZhi} · ${zhu.wuXing}',
                 style: TextStyle(fontSize: 11, color: t.withAlpha(150))),
+            if (zhu.naYin != null) ...[
+              const SizedBox(height: 2),
+              Text('纳音 ${zhu.naYin}',
+                  style: TextStyle(fontSize: 10, color: t.withAlpha(120))),
+            ],
           ],
         ),
       ),

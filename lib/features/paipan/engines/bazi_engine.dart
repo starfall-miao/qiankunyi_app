@@ -4,6 +4,7 @@ library;
 import 'package:tyme/tyme.dart' as tyme;
 
 import '../models/bazi_models.dart';
+import '../../reference/data/reference_data.dart';
 
 /// 天干中文字符列表（按顺序索引 0-9）
 const _tianGanCN = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
@@ -270,6 +271,14 @@ class BaiZiEngine {
     // 日干五行
     final dayWuXing = _tianGanWuXing[dayGan] ?? '';
 
+    // 纳音计算辅助
+    String? _naYin(String gan, String zhi) {
+      final ganIdx = _tianGanCN.indexOf(gan);
+      final zhiIdx = _diZhiCN.indexOf(zhi);
+      if (ganIdx < 0 || zhiIdx < 0) return null;
+      return getNaYin(ganIdx, zhiIdx)?.naYin;
+    }
+
     // 四柱
     final yearZhu = SiZhu(
       ganZhi: yearGZ,
@@ -279,6 +288,7 @@ class BaiZiEngine {
       diZhiCN: yearZhi,
       wuXing: _tianGanWuXing[yearGan] ?? '',
       cangGan: cangGanYear,
+      naYin: _naYin(yearGan, yearZhi),
     );
     final monthZhu = SiZhu(
       ganZhi: monthGZ,
@@ -288,6 +298,7 @@ class BaiZiEngine {
       diZhiCN: monthZhi,
       wuXing: _tianGanWuXing[monthGan] ?? '',
       cangGan: cangGanMonth,
+      naYin: _naYin(monthGan, monthZhi),
     );
     final dayZhu = SiZhu(
       ganZhi: dayGZ,
@@ -297,6 +308,7 @@ class BaiZiEngine {
       diZhiCN: dayZhi,
       wuXing: dayWuXing,
       cangGan: cangGanDay,
+      naYin: _naYin(dayGan, dayZhi),
     );
     final hourZhu = SiZhu(
       ganZhi: hourGZ,
@@ -306,6 +318,7 @@ class BaiZiEngine {
       diZhiCN: hourZhi,
       wuXing: _tianGanWuXing[hourGan] ?? '',
       cangGan: cangGanHour,
+      naYin: _naYin(hourGan, hourZhi),
     );
 
     // 大运（传入出生日期以计算真实起运年龄）
