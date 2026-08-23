@@ -446,16 +446,17 @@ class LiuYaoEngine {
       }).toList();
       bianGua = _restoreGua(bianYaos);
       // 重置变卦世应标记：yaos 中的标记与 _restoreGua 计算的 shiYaoIndex 一致
+      //（Dart 在 if (bianGua != null) 内自动提升为非 null，无需 ! 断言）
       if (bianGua != null) {
-        for (final y in bianGua!.yaos) {
+        for (final y in bianGua.yaos) {
           y.isShi = false;
           y.isYing = false;
         }
-        if (bianGua!.shiYaoIndex >= 0 && bianGua!.shiYaoIndex < bianGua!.yaos.length) {
-          bianGua!.yaos[bianGua!.shiYaoIndex].isShi = true;
+        if (bianGua.shiYaoIndex >= 0 && bianGua.shiYaoIndex < bianGua.yaos.length) {
+          bianGua.yaos[bianGua.shiYaoIndex].isShi = true;
         }
-        if (bianGua!.yingYaoIndex >= 0 && bianGua!.yingYaoIndex < bianGua!.yaos.length) {
-          bianGua!.yaos[bianGua!.yingYaoIndex].isYing = true;
+        if (bianGua.yingYaoIndex >= 0 && bianGua.yingYaoIndex < bianGua.yaos.length) {
+          bianGua.yaos[bianGua.yingYaoIndex].isYing = true;
         }
       }
     }

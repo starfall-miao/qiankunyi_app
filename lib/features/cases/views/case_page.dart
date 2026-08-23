@@ -1578,7 +1578,6 @@ class _AiChatSectionState extends State<_AiChatSection> {
   /// 本次请求是否为追问（追问时首个 chunk 滚到底部让输入框保持可见，
   /// 而不是滚到 AI 卡片顶部把刚发完的输入框滚出屏幕——用户反馈
   /// "追问框跑到左上角/找不到了"）。
-  bool _followUpMode = false;
   /// 流式开始时间（诊断：完成日志打印总耗时，用户可判断"等了多久"）。
   DateTime? _streamStartTime;
   /// 思考打字机节流：推理增量可能上千次/几十秒，全量 setState 每次重建
@@ -1830,7 +1829,6 @@ class _AiChatSectionState extends State<_AiChatSection> {
       clearBefore: false,
       logTag: 'AI追问',
       errPrefix: '追问失败',
-      followUp: true,
     );
   }
 
@@ -1865,7 +1863,6 @@ class _AiChatSectionState extends State<_AiChatSection> {
     required bool clearBefore,
     required String logTag,
     required String errPrefix,
-    bool followUp = false,
   }) async {
     // 防御：已有流式请求进行中时忽略并发触发（按钮/追问区已隐藏，双保险）
     if (_streaming || _streamSub != null) return;
@@ -1878,7 +1875,6 @@ class _AiChatSectionState extends State<_AiChatSection> {
       _thinking = '';
       _streamRetry = 0;
       _retryNote = '';
-      _followUpMode = followUp;
       _pendingPieces = '';
     });
     try {
