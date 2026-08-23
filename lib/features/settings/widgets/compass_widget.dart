@@ -86,16 +86,17 @@ const List<Map<String, String>> kShiErChangSheng = [
   {'name': '养', 'wx': '金', 'angle': '0'},
 ];
 
-// ============ 先天八卦 ============
+// ============ 先天八卦（0°=正北） ============
+// 标准先天八卦方位：乾南、坤北、离东、坎西、兑东南、震东北、巽西南、艮西北
 const List<Map<String, dynamic>> kXianTianBagua = [
-  {'name': '离', 'wx': '火', 'angle': '0', 'dir': '正南', 'symbol': '☲'},
-  {'name': '坤', 'wx': '土', 'angle': '45', 'dir': '西南', 'symbol': '☷'},
-  {'name': '兑', 'wx': '金', 'angle': '90', 'dir': '正西', 'symbol': '☱'},
-  {'name': '乾', 'wx': '金', 'angle': '135', 'dir': '西北', 'symbol': '☰'},
-  {'name': '坎', 'wx': '水', 'angle': '180', 'dir': '正北', 'symbol': '☵'},
-  {'name': '艮', 'wx': '土', 'angle': '225', 'dir': '东北', 'symbol': '☶'},
-  {'name': '震', 'wx': '木', 'angle': '270', 'dir': '正东', 'symbol': '☳'},
-  {'name': '巽', 'wx': '木', 'angle': '315', 'dir': '东南', 'symbol': '☴'},
+  {'name': '坤', 'wx': '土', 'angle': '0', 'dir': '正北', 'symbol': '☷'},
+  {'name': '兑', 'wx': '金', 'angle': '45', 'dir': '东南', 'symbol': '☱'},
+  {'name': '离', 'wx': '火', 'angle': '90', 'dir': '正东', 'symbol': '☲'},
+  {'name': '震', 'wx': '木', 'angle': '135', 'dir': '东北', 'symbol': '☳'},
+  {'name': '乾', 'wx': '金', 'angle': '180', 'dir': '正南', 'symbol': '☰'},
+  {'name': '巽', 'wx': '木', 'angle': '225', 'dir': '西南', 'symbol': '☴'},
+  {'name': '坎', 'wx': '水', 'angle': '270', 'dir': '正西', 'symbol': '☵'},
+  {'name': '艮', 'wx': '土', 'angle': '315', 'dir': '西北', 'symbol': '☶'},
 ];
 
 // ============ 后天八卦 ============
@@ -329,6 +330,26 @@ class _CompassWidgetState extends State<CompassWidget> {
     return kTwentyFourMountains[_nearestMountain(heading % 360)]['name']!;
   }
 
+  /// 按角度找最近匹配（角度值比较，非精确字符串相等）
+  String _nearestAngleMatch(List<Map> list, String angleStr) {
+    if (list.isEmpty) return '—';
+    final target = double.parse(angleStr);
+    int best = 0;
+    double bestDiff = 360;
+    for (int i = 0; i < list.length; i++) {
+      final a = double.parse(list[i]['angle']! as String);
+      double diff = (target - a).abs();
+      if (diff > 180) diff = 360 - diff;
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        best = i;
+      }
+    }
+    // 超过 22.5° 视为无匹配（二十四山间隔 15°，半间隔为 7.5°），放宽到 22.5°
+    if (bestDiff > 22.5) return '—';
+    return list[best]['name'] as String? ?? '—';
+  }
+
   void _showInfo(BuildContext ctx, int index, bool dark, Color t, Color gold) {
     final m = kTwentyFourMountains[index];
     showDialog(
@@ -359,11 +380,11 @@ class _CompassWidgetState extends State<CompassWidget> {
               if ((m['dir'] ?? '').isNotEmpty) _infoRow('方位', m['dir']!, t),
               _infoRow('角度', '${m['angle']}°', t),
               const Divider(height: 24),
-              _infoRow('天干', kHeavenlyStems.firstWhere((s) => s['angle'] == m['angle'], orElse: () => {'name': '—'})['name'] ?? '—', t),
-              _infoRow('地支', kEarthlyBranches.firstWhere((s) => s['angle'] == m['angle'], orElse: () => {'name': '—'})['name'] ?? '—', t),
-              _infoRow('十二长生', kShiErChangSheng.firstWhere((s) => s['angle'] == m['angle'], orElse: () => {'name': '—'})['name'] ?? '—', t),
-              _infoRow('先天八卦', kXianTianBagua.firstWhere((s) => s['angle'] == m['angle'], orElse: () => {'name': '—'})['name'] ?? '—', t),
-              _infoRow('后天八卦', kHouTianBagua.firstWhere((s) => s['angle'] == m['angle'], orElse: () => {'name': '—'})['name'] ?? '—', t),
+              _infoRow('天干', _nearestAngleMatch(kHeavenlyStems, m['angle']), t),
+              _infoRow('地支', _nearestAngleMatch(kEarthlyBranches, m['angle']), t),
+              _infoRow('十二长生', _nearestAngleMatch(kShiErChangSheng, m['angle']), t),
+              _infoRow('先天八卦', _nearestAngleMatch(kXianTianBagua, m['angle']), t),
+              _infoRow('后天八卦', _nearestAngleMatch(kHouTianBagua, m['angle']), t),
             ],
           ),
         ),

@@ -1578,7 +1578,6 @@ class _AiChatSectionState extends State<_AiChatSection> {
   /// 本次请求是否为追问（追问时首个 chunk 滚到底部让输入框保持可见，
   /// 而不是滚到 AI 卡片顶部把刚发完的输入框滚出屏幕——用户反馈
   /// "追问框跑到左上角/找不到了"）。
-  bool _followUpMode = false;
   /// 流式开始时间（诊断：完成日志打印总耗时，用户可判断"等了多久"）。
   DateTime? _streamStartTime;
   /// 思考打字机节流：推理增量可能上千次/几十秒，全量 setState 每次重建
@@ -1628,7 +1627,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
       return;
     }
     final isBazi = widget.caseModel.caseType == CaseType.bazi;
-    // 中文系统提示：输出格式（>>解卦<< 标记 + 逐行换行）。
+    // 中文系统提示：不再使用 >>解卦<< 标记（已废除，该标记破坏 Markdown 渲染）。
     // 思考约束：实测（2026-08-02）若提示词出现"简要/要点式"等措辞，模型会陷入
     // 反复思考"我要简洁输出"的元对话，思考长达 115s+/4 千增量。故明确：
     // 「勿冗长思考、勿复述排盘数据、不要讨论自己的输出格式」，直接给出正文。
@@ -1830,7 +1829,6 @@ class _AiChatSectionState extends State<_AiChatSection> {
       clearBefore: false,
       logTag: 'AI追问',
       errPrefix: '追问失败',
-      followUp: true,
     );
   }
 
@@ -1865,7 +1863,6 @@ class _AiChatSectionState extends State<_AiChatSection> {
     required bool clearBefore,
     required String logTag,
     required String errPrefix,
-    bool followUp = false,
   }) async {
     // 防御：已有流式请求进行中时忽略并发触发（按钮/追问区已隐藏，双保险）
     if (_streaming || _streamSub != null) return;
@@ -1878,7 +1875,6 @@ class _AiChatSectionState extends State<_AiChatSection> {
       _thinking = '';
       _streamRetry = 0;
       _retryNote = '';
-      _followUpMode = followUp;
       _pendingPieces = '';
     });
     try {
@@ -2196,11 +2192,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
       // - 追问：滚到底部，让最新回复 + 输入框同时可见（用户刚发完追问，
       //   输入框不应被滚出屏幕——用户反馈"追问框跑到左上角/找不到了"）。
       _autoScrolled = true;
-      if (_followUpMode) {
-        _scrollToBottom();
-      } else {
-        _scrollToBottom();
-      }
+      _scrollToBottom();
     }
     // content 增量节流：985 次增量若每次 setState 全量重建（含 Markdown
     // 解析）手机卡到"内容出不来"。累积 buffer，80ms 或 600 字符提交一次；
@@ -2491,10 +2483,6 @@ class _AiChatSectionState extends State<_AiChatSection> {
     final collapsed = content.replaceAll(RegExp(r'\s+'), ' ').trim();
     return collapsed;
   }
-
-  /// 把详情弹窗滚动到 AI 解卦卡片顶部（留 12px 顶部空隙），让用户看到 AI
-  /// 回复与上方上下文。**不滚到最底部**——底部是输入框，钉死在底部会让用户
-  /// 产生"内容全空只剩输入框"的体感。
 
   /// 滚到详情弹窗底部（最新 AI 消息 + 追问输入框可见）。
   /// 追问首个 chunk 时使用：用户刚发送追问，输入框保持在视野内。

@@ -97,6 +97,9 @@ class BaziResult {
     'hourZhu': hourZhu.ganZhi,
     'daYun': daYun.map((d) => {'ganZhi': d.ganZhi, 'startAge': d.startAge}).toList(),
     'liuNian': liuNian,
+    'wuXingCounts': wuXingCounts,
+    'wuXingWangShuai': wuXingWangShuai,
+    'shiShenMap': shiShenMap,
   };
 
   /// 从 JSON 反序列化（保留柱的简略信息）
@@ -134,6 +137,9 @@ class BaziResult {
       }).toList();
     }(),
     liuNian: j['liuNian'] as String?,
+    wuXingCounts: (j['wuXingCounts'] as Map<String, dynamic>?)?.map((k, v) => MapEntry(k, (v as num).toInt())) ?? {},
+    wuXingWangShuai: (j['wuXingWangShuai'] as Map<String, dynamic>?)?.cast<String, String>() ?? {},
+    shiShenMap: (j['shiShenMap'] as Map<String, dynamic>?)?.cast<String, String>() ?? {},
   );
 
   /// 从干支字符串解析 SiZhu（兼容旧数据）

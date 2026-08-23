@@ -336,6 +336,7 @@ class _SettingsPageState extends State<SettingsPage> {
           _buildSettingRow(
             icon: Icons.rule,
             title: '日破暗动规则',
+            subtitle: '（开发中，引擎暂未读取此设置）',
             trailing: DropdownButton<RiPoAnDongRule>(
               value: sp.riPoRule,
               underline: const SizedBox(),
@@ -348,11 +349,11 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
           const Divider(height: 16),
-          _buildSwitchRow('晚子时', '23:00-00:59 时柱判定', sp.wanZiShi, (v) {
+          _buildSwitchRow('晚子时', '23:00-00:59 时柱判定（开发中）', sp.wanZiShi, (v) {
             sp.wanZiShi = v;
           }),
           const Divider(height: 16),
-          _buildSwitchRow('辰沐土爻', '辰/戌/丑/未月土爻旺相', sp.chenMuTuYao, (v) {
+          _buildSwitchRow('辰沐土爻', '辰/戌/丑/未月土爻旺相（开发中）', sp.chenMuTuYao, (v) {
             sp.chenMuTuYao = v;
           }),
         ],
@@ -372,11 +373,11 @@ class _SettingsPageState extends State<SettingsPage> {
             sp.toggleDisplay('showTianGan');
           }),
           const Divider(height: 4),
-          _buildSwitchRow('纳音', '', sp.display.showNaYin, (v) {
+          _buildSwitchRow('纳音', '（引擎暂未填充纳音数据）', sp.display.showNaYin, (v) {
             sp.toggleDisplay('showNaYin');
           }),
           const Divider(height: 4),
-          _buildSwitchRow('神煞', '', sp.display.showShenSha, (v) {
+          _buildSwitchRow('神煞', '（引擎暂未填充神煞数据）', sp.display.showShenSha, (v) {
             sp.toggleDisplay('showShenSha');
           }),
           const Divider(height: 4),

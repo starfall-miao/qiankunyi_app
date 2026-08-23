@@ -29,38 +29,48 @@ List<YaoYinYang> _trigramYaos(int triIdx) {
 }
 
 /// 六十四卦映射表 [上卦索引][下卦索引] → GuaName
+/// 与 liuyao_engine 的 _hexagramMap 互为转置关系。
+/// 数据由京房八宫生成规则程序化核验。
 const _guaMap = <int, List<GuaName>>{
-  0: [ // 上卦乾
-    GuaName.qian, GuaName.guai, GuaName.daYou, GuaName.daZhuang,
-    GuaName.xiaoXu, GuaName.xu, GuaName.daXu, GuaName.tai,
+  // 乾(0)为上卦
+  0: [
+    GuaName.qian, GuaName.lv, GuaName.tongRen, GuaName.wuWang,
+    GuaName.gou, GuaName.song, GuaName.dun, GuaName.pi,
   ],
-  1: [ // 上卦兑
-    GuaName.lv2, GuaName.dui, GuaName.kui, GuaName.guiMei,
-    GuaName.zhongFu, GuaName.jie2, GuaName.sun, GuaName.lin,
+  // 兑(1)为上卦
+  1: [
+    GuaName.guai, GuaName.dui, GuaName.ge, GuaName.sui,
+    GuaName.daGuo, GuaName.kun2, GuaName.xian, GuaName.cui,
   ],
-  2: [ // 上卦离
-    GuaName.tongRen, GuaName.ge, GuaName.li, GuaName.feng,
-    GuaName.jiaRen, GuaName.jiJi, GuaName.bi2, GuaName.mingYi,
+  // 离(2)为上卦
+  2: [
+    GuaName.daYou, GuaName.kui, GuaName.li, GuaName.feng,
+    GuaName.ding, GuaName.weiJi, GuaName.lv2, GuaName.jin,
   ],
-  3: [ // 上卦震
-    GuaName.wuWang, GuaName.sui, GuaName.shiHe, GuaName.zhen,
-    GuaName.yi, GuaName.zhun, GuaName.fu, GuaName.yu,
+  // 震(3)为上卦
+  3: [
+    GuaName.daZhuang, GuaName.guiMei, GuaName.shiHe, GuaName.zhen,
+    GuaName.heng, GuaName.jie, GuaName.xiaoGuo, GuaName.yu,
   ],
-  4: [ // 上卦巽
-    GuaName.gou, GuaName.daGuo, GuaName.ding, GuaName.heng,
-    GuaName.xun, GuaName.jing, GuaName.sheng, GuaName.gu,
+  // 巽(4)为上卦
+  4: [
+    GuaName.xiaoXu, GuaName.zhongFu, GuaName.jiaRen, GuaName.yi2,
+    GuaName.xun, GuaName.huan, GuaName.jian2, GuaName.guan,
   ],
-  5: [ // 上卦坎
-    GuaName.song, GuaName.kun2, GuaName.weiJi, GuaName.jie,
-    GuaName.huan, GuaName.kan, GuaName.meng, GuaName.shi,
+  // 坎(5)为上卦
+  5: [
+    GuaName.xu, GuaName.jie2, GuaName.jiJi, GuaName.zhun,
+    GuaName.jing, GuaName.kan, GuaName.jian, GuaName.bi,
   ],
-  6: [ // 上卦艮
-    GuaName.dun, GuaName.xian, GuaName.lv, GuaName.jian,
-    GuaName.jian2, GuaName.jiJi, GuaName.gen, GuaName.bi,
+  // 艮(6)为上卦
+  6: [
+    GuaName.daXu, GuaName.sun, GuaName.bi2, GuaName.yi,
+    GuaName.gu, GuaName.meng, GuaName.gen, GuaName.bo,
   ],
-  7: [ // 上卦坤
-    GuaName.pi, GuaName.cui, GuaName.jin, GuaName.yu,
-    GuaName.guan, GuaName.bo, GuaName.qian2, GuaName.kun,
+  // 坤(7)为上卦
+  7: [
+    GuaName.tai, GuaName.lin, GuaName.mingYi, GuaName.fu,
+    GuaName.sheng, GuaName.shi, GuaName.qian2, GuaName.kun,
   ],
 };
 
@@ -72,11 +82,13 @@ const _xiaGuaGong = [
 
 /// 梅花易数排盘引擎
 class MeihuaEngine {
-  /// 数字起卦：两个数字定上下卦，可选第三个数字定动爻
+  /// 数字起卦：两个数字定上下卦，可选第三个数字定动爻（1=初爻，6=上爻）
   static PaipanResult fromNumbers(int num1, int num2, [int? num3]) {
     final upper = _numToTrigram(num1);
     final lower = _numToTrigram(num2);
-    final moving = (num3 ?? (num1 + num2)) % 6;
+    // 动爻：余 0 作 6→上爻(索引5)，余 1→初爻(索引0)，…余 5→五爻(索引4)
+    final movingRaw = (num3 ?? (num1 + num2)) % 6;
+    final moving = movingRaw == 0 ? 5 : movingRaw - 1;
     return _buildGua(upper, lower, moving, '数字起卦');
   }
 
@@ -88,7 +100,8 @@ class MeihuaEngine {
     final h = ((dt.hour + 1) ~/ 2).clamp(1, 12);
     final upper = _numToTrigram(y + m + d);
     final lower = _numToTrigram(y + m + d + h);
-    final moving = (y + m + d + h) % 6;
+    final movingRaw = (y + m + d + h) % 6;
+    final moving = movingRaw == 0 ? 5 : movingRaw - 1;
     return _buildGua(upper, lower, moving, '时间起卦');
   }
 
@@ -175,19 +188,15 @@ class MeihuaEngine {
   }
 
   /// 爻列表 → 0-7 八卦索引
+  /// 注意：mask 的 bit2=初爻、bit1=二爻、bit0=三爻，乾111→mask=7→索引0。
   static int _yaoMask(List<YaoModel> yaos) {
     int mask = 0;
     for (int i = 0; i < 3; i++) {
       if (yaos[i].yinYang == YaoYinYang.yang) mask |= (1 << (2 - i));
     }
-    // 转换为八卦索引
-    for (int i = 0; i < 8; i++) {
-      if (mask == i) return i;
-    }
     // 000→7(坤), 001→6(艮), 010→5(坎), 011→4(巽), 100→3(震), 101→2(离), 110→1(兑), 111→0(乾)
     const map = [7, 6, 5, 4, 3, 2, 1, 0];
-    if (mask >= 0 && mask <= 7) return map[mask];
-    return 0;
+    return map[mask];
   }
 
   /// 构建互卦（二三四爻为下卦，三四五爻为上卦）
