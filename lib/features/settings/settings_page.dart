@@ -623,7 +623,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ],
                       ),
                       subtitle: Text(preset.endpoint, style: const TextStyle(fontSize: 12)),
-                      isDense: true,
+                      dense: true,
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [

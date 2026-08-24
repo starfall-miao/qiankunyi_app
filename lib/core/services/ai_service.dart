@@ -97,6 +97,7 @@ class AiService {
         headers: {
           'Authorization': 'Bearer $apiKey',
           'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (compatible; QianKunYi/1.0)',
         },
         body: jsonEncode(body),
       ).timeout(const Duration(seconds: 120));
@@ -198,6 +199,7 @@ class AiService {
       req.headers['Authorization'] = 'Bearer $apiKey';
       req.headers['Content-Type'] = 'application/json';
       req.headers['Accept'] = 'text/event-stream';
+      req.headers['User-Agent'] = 'Mozilla/5.0 (compatible; QianKunYi/1.0)';
       req.body = jsonEncode(body);
 
       final res = await client.send(req);
