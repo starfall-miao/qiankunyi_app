@@ -311,7 +311,7 @@ class _CasePageState extends State<CasePage> {
           SnackBar(content: Text('已导出 $count 条卦例到 $path'), duration: const Duration(seconds: 3)),
         );
       }
-      Logger.instance.info('卦例文件导出', '$path (${count} 条)');
+      Logger.instance.info('卦例文件导出', '$path ($count 条)');
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -370,7 +370,9 @@ class _CasePageState extends State<CasePage> {
       final path = result.files.single.path;
       if (path == null) return;
       final text = await File(path).readAsString();
-      await _parseAndAddCases(context, text);
+      if (context.mounted) {
+        await _parseAndAddCases(context, text);
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
