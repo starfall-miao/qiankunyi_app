@@ -2696,11 +2696,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
             // 首次解卦：无 AI 回复且非流式中 → 显示开始按钮
             if (!_hasAssistantReply && !_loading && !_streaming)
               _buildStartButton(p),
-            // AI 对话历史 — 诊断：日志记录消息数便于排查"内容不显示"
-            if (_messages.isNotEmpty) {
-              Logger.instance.info('AI聊天渲染',
-                  '消息数: ${_messages.length} | 有AI回复: $_hasAssistantReply | 加载: $_loading | 流式: $_streaming');
-            }
+            // AI 对话历史
             ..._messages.asMap().entries.map((e) =>
                 _buildMessageCard(e.key, e.value, p, isDark, t)),
             // 有 AI 回复时显示追问输入（流式中隐藏防并发）

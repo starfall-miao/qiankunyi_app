@@ -623,7 +623,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ],
                       ),
                       subtitle: Text(preset.endpoint, style: const TextStyle(fontSize: 12)),
-                      dense: true,
+                      isDense: true,
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -850,18 +850,18 @@ class _SettingsPageState extends State<SettingsPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: '名称', dense: true)),
+              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: '名称', isDense: true)),
               const SizedBox(height: 6),
-              TextField(controller: endpointCtrl, decoration: const InputDecoration(labelText: 'API 地址', dense: true)),
+              TextField(controller: endpointCtrl, decoration: const InputDecoration(labelText: 'API 地址', isDense: true)),
               const SizedBox(height: 6),
-              TextField(controller: keyCtrl, decoration: const InputDecoration(labelText: 'API 密钥', dense: true), obscureText: true),
+              TextField(controller: keyCtrl, decoration: const InputDecoration(labelText: 'API 密钥', isDense: true), obscureText: true),
               const SizedBox(height: 6),
               TextField(
                 controller: modelsCtrl,
                 decoration: const InputDecoration(
                   labelText: '模型列表（逗号分隔）',
                   hintText: 'gpt-4, gpt-4o, gpt-3.5-turbo',
-                  dense: true,
+                  isDense: true,
                 ),
                 maxLines: 2,
               ),

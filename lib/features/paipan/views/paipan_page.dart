@@ -199,20 +199,13 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ── 输入区 ──
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 方法选择
-                Wrap(
-                  spacing: 8,
-                  children: List.generate(4, (i) {
-                    final cLabels = ['手工摇卦', '机器摇卦', '时间起卦', '数字起卦'];
-                    final sel = _liuyaoMethod == i;
-                    return ChoiceChip(
+        // 方法选择
+        Wrap(
+          spacing: 8,
+          children: List.generate(4, (i) {
+            final cLabels = ['手工摇卦', '机器摇卦', '时间起卦', '数字起卦'];
+            final sel = _liuyaoMethod == i;
+            return ChoiceChip(
               label: Text(cLabels[i], style: TextStyle(fontSize: 12, color: sel ? p : t)),
               selected: sel,
               onSelected: (v) => setState(() => _liuyaoMethod = i),
@@ -299,10 +292,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
           ),
-        ),  // ElevatedButton
-            ],  // Column
-          ),  // Padding
-        ),  // Card
+        ),
         const SizedBox(height: 12),
 
         // 排盘结果
@@ -641,13 +631,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Wrap(
+        Wrap(
           spacing: 8,
           children: List.generate(3, (i) {
             final labels = ['三数起卦', '日期起卦', '物象起卦'];
@@ -720,10 +704,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
           ),
-        ),  // ElevatedButton
-            ],  // Column
-          ),  // Padding
-        ),  // Card
+        ),
         const SizedBox(height: 12),
 
         FadeTransition(
