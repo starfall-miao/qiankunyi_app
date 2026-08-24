@@ -720,6 +720,16 @@ class _SettingsPageState extends State<SettingsPage> {
               onTap: () => _selectModelDialog(context, sp),
             ),
           ),
+          const Divider(height: 1),
+          // 提示词模板
+          Consumer<SettingsProvider>(
+            builder: (ctx, sp, _) => _buildSettingsRow(
+              icon: Icons.auto_awesome,
+              title: '提示词模板',
+              subtitle: sp.aiSystemPrompt.isEmpty ? '默认（已调优）' : '自定义',
+              onTap: () => _editPromptTemplate(context, sp),
+            ),
+          ),
         ],
       ),
     );
@@ -765,6 +775,49 @@ class _SettingsPageState extends State<SettingsPage> {
             },
             child: const Text('添加'),
           ),
+        ],
+      ),
+    );
+  }
+
+  /// 编辑 AI 提示词模板（多行文本）
+  void _editPromptTemplate(BuildContext context, SettingsProvider sp) {
+    final ctrl = TextEditingController(text: sp.aiSystemPrompt);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('提示词模板'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('自定义 AI 系统提示词，留空使用内置默认模板（已调优）。',
+                  style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(180))),
+              const SizedBox(height: 8),
+              TextField(
+                controller: ctrl,
+                maxLines: 8,
+                decoration: const InputDecoration(
+                  hintText: '输入自定义提示词…',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () {
+            // 恢复默认
+            sp.aiSystemPrompt = '';
+            Navigator.pop(ctx);
+          }, child: const Text('恢复默认')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(onPressed: () {
+            sp.aiSystemPrompt = ctrl.text.trim();
+            Navigator.pop(ctx);
+          }, child: const Text('保存')),
         ],
       ),
     );

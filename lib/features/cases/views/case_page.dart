@@ -1681,6 +1681,20 @@ class _ManualDuanYuEditorState extends State<_ManualDuanYuEditor> {
 }
 
 /// AI 解卦 / 追问 对话组件
+/// 默认 AI 系统提示词（六爻/梅花）
+const kDefaultLiuyaoSystemPrompt = '你是六爻/梅花解卦专家。'
+    '直接分析卦象即可，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式。'
+    '正式结果要详细清晰有条理，直接输出全文，不要附加任何包裹标记；'
+    '各爻逐行输出（初爻：…／二爻：…）；不同要点换行，禁止挤在一行。';
+
+/// 默认 AI 系统提示词（八字）
+const kDefaultBaziSystemPrompt = '你是八字命理专家，根据排盘信息直接分析命盘。'
+    '直接分析命盘即可，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式。'
+    '正式结果要详细清晰有条理，直接输出全文，不要附加任何包裹标记；'
+    '不同要点逐行输出，禁止挤在一行。';
+
+/// AI 模块（卦例详情弹窗中的解卦 / 追问区）
+
 class _AiChatSection extends StatefulWidget {
   final CaseModel caseModel;
   /// 父级详情弹窗的滚动控制器：AI 新消息后自动滚动到底部（让用户直接看到回复）
@@ -1777,19 +1791,12 @@ class _AiChatSectionState extends State<_AiChatSection> {
       return;
     }
     final isBazi = widget.caseModel.caseType == CaseType.bazi;
-    // 中文系统提示：不再使用 >>解卦<< 标记（已废除，该标记破坏 Markdown 渲染）。
-    // 思考约束：实测（2026-08-02）若提示词出现"简要/要点式"等措辞，模型会陷入
-    // 反复思考"我要简洁输出"的元对话，思考长达 115s+/4 千增量。故明确：
-    // 「勿冗长思考、勿复述排盘数据、不要讨论自己的输出格式」，直接给出正文。
-    final systemPrompt = isBazi
-        ? '你是八字命理专家，根据排盘信息直接分析命盘。'
-            '直接分析命盘即可，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式。'
-            '正式结果要详细清晰有条理，直接输出全文，不要附加任何包裹标记；'
-            '不同要点逐行输出，禁止挤在一行。'
-        : '你是六爻/梅花解卦专家。'
-            '直接分析卦象即可，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式。'
-            '正式结果要详细清晰有条理，直接输出全文，不要附加任何包裹标记；'
-            '各爻逐行输出（初爻：…／二爻：…）；不同要点换行，禁止挤在一行。';
+    // 中文系统提示：支持用户自定义（设置页 AI 配置 → 提示词模板），
+    // 留空时使用内置默认模板（精心调优过的提示词）。
+    final sp = context.read<SettingsProvider>();
+    final systemPrompt = sp.aiSystemPrompt.isNotEmpty
+        ? sp.aiSystemPrompt
+        : (isBazi ? kDefaultBaziSystemPrompt : kDefaultLiuyaoSystemPrompt);
     final prompt = _buildPromptForType();
     final messages = <Map<String, String>>[
       {'role': 'system', 'content': systemPrompt},
@@ -1952,17 +1959,19 @@ class _AiChatSectionState extends State<_AiChatSection> {
       return;
     }
     final isBazi = widget.caseModel.caseType == CaseType.bazi;
-    // 追问沿用解卦的输出格式（直接输出全文 + 逐行换行）。
-    // 与解卦一致：不要冗长思考/复述/讨论输出方式，直接回答。
-    final systemPrompt = isBazi
-        ? '你是八字命理专家，下面是对同一命盘的连续讨论。'
-            '直接回答问题，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式；'
-            '回答详细清晰有条理，直接输出全文，不要附加任何包裹标记；'
-            '不同要点逐行输出，禁止挤在一行。'
-        : '你是六爻/梅花解卦专家，下面是对同一卦象的连续讨论。'
-            '直接回答问题，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式；'
-            '回答详细清晰有条理，直接输出全文，不要附加任何包裹标记；'
-            '各爻逐行输出；不同要点换行，禁止挤在一行。';
+    // 追问提示词：支持用户自定义，留空使用内置
+    final sp = context.read<SettingsProvider>();
+    final systemPrompt = sp.aiSystemPrompt.isNotEmpty
+        ? sp.aiSystemPrompt
+        : (isBazi
+            ? '你是八字命理专家，下面是对同一命盘的连续讨论。'
+                '直接回答问题，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式；'
+                '回答详细清晰有条理，直接输出全文，不要附加任何包裹标记；'
+                '不同要点逐行输出，禁止挤在一行。'
+            : '你是六爻/梅花解卦专家，下面是对同一卦象的连续讨论。'
+                '直接回答问题，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式；'
+                '回答详细清晰有条理，直接输出全文，不要附加任何包裹标记；'
+                '各爻逐行输出；不同要点换行，禁止挤在一行。');
     // 构建上下文：系统提示 + 历史消息 + 当前问题（错误消息不进入 AI 上下文）。
     // 上下文容量保护：按约 131k tokens（≈85k 中文字符）上限，超出时丢弃
     // 最旧消息（保留最近的对话，保证追问多轮后不超模型窗口；正常追问
