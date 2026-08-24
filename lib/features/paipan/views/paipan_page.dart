@@ -825,127 +825,109 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     }
   }
 
-  /// 构建时间选择器（用于时间起卦/日期起卦，与八字界面一致）
-  /// 日期选择 + 用当前时间按钮 + 12 时辰快捷选择 + 时辰对照说明
+  /// 构建时间选择器 — 与八字 _buildInputCard 样式统一
   Widget _buildTimePicker(Color p, Color t, Color b, bool dark) {
-    const hours = [
-      '子', '丑', '寅', '卯', '辰', '巳',
-      '午', '未', '申', '酉', '戌', '亥',
+    const hours = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+    const timeRange = [
+      '23-01', '01-03', '03-05', '05-07', '07-09', '09-11',
+      '11-13', '13-15', '15-17', '17-19', '19-21', '21-23',
     ];
-    // 当前小时 → 时辰索引（23点/0点=子(0)，1-2=丑(1)…21-22=亥(11)）
     final hourIdx = (_selectedTime.hour == 23 || _selectedTime.hour == 0)
-        ? 0
-        : ((_selectedTime.hour + 1) ~/ 2) % 12;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+        ? 0 : ((_selectedTime.hour + 1) ~/ 2) % 12;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.calendar_month, size: 14, color: p.withAlpha(180)),
-            const SizedBox(width: 4),
-            Text('选择时间: ', style: TextStyle(fontSize: 12, color: t.withAlpha(200))),
-            TextButton.icon(
-              onPressed: () async {
-                final picked = await showDialog<DateTime>(
-                  context: context,
-                  builder: (_) => const CalendarPickerDialog(),
-                );
-                if (picked != null && mounted) {
-                  setState(() => _selectedTime = DateTime(
-                    picked.year, picked.month, picked.day,
-                    _selectedTime.hour, _selectedTime.minute,
-                  ));
-                }
-              },
-              icon: Icon(Icons.edit_calendar, size: 16, color: p),
-              label: Text(
-                '${_selectedTime.year}-${_selectedTime.month.toString().padLeft(2, '0')}-${_selectedTime.day.toString().padLeft(2, '0')}',
-                style: TextStyle(fontSize: 13, color: p),
-              ),
-              style: TextButton.styleFrom(
-                foregroundColor: p,
-                backgroundColor: p.withAlpha(15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  side: BorderSide(color: p.withAlpha(60)),
+            // 日期选择（与八字一致：InkWell + 容器 + 下拉箭头）
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () async {
+                      final picked = await showDialog<DateTime>(
+                        context: context,
+                        builder: (_) => const CalendarPickerDialog(),
+                      );
+                      if (picked != null && mounted) {
+                        setState(() => _selectedTime = DateTime(
+                          picked.year, picked.month, picked.day,
+                          _selectedTime.hour, _selectedTime.minute,
+                        ));
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: dark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: b.withAlpha(80)),
+                      ),
+                      child: Row(children: [
+                        Icon(Icons.calendar_today_outlined, size: 18, color: p),
+                        const SizedBox(width: 10),
+                        Text(
+                          '${_selectedTime.year} 年 ${_selectedTime.month} 月 ${_selectedTime.day} 日',
+                          style: TextStyle(fontSize: 15, color: t),
+                        ),
+                        const Spacer(),
+                        Icon(Icons.arrow_drop_down, color: t.withAlpha(120)),
+                      ]),
+                    ),
+                  ),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
+                const SizedBox(width: 8),
+                // 用当前时间
+                InkWell(
+                  onTap: () => setState(() => _selectedTime = DateTime.now()),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: p.withAlpha(15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: p.withAlpha(60)),
+                    ),
+                    child: Icon(Icons.my_location, size: 18, color: p),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 4),
-            // 用当前时间排盘
-            TextButton.icon(
-              onPressed: () {
-                setState(() => _selectedTime = DateTime.now());
-                _log.info('时间起卦', '使用当前时间 $_selectedTime');
-              },
-              icon: Icon(Icons.my_location, size: 14, color: p),
-              label: Text('当前时间', style: TextStyle(fontSize: 12, color: p)),
-              style: TextButton.styleFrom(
-                foregroundColor: p,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
+            const SizedBox(height: 12),
+
+            // 时辰选择（与八字一致）
+            Text('选择时辰', style: TextStyle(fontSize: 13, color: t.withAlpha(180))),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: List.generate(12, (i) {
+                final sel = hourIdx == i;
+                return ChoiceChip(
+                  label: Text(
+                    '${hours[i]} ${timeRange[i]}',
+                    style: TextStyle(fontSize: 11, color: sel ? p : t),
+                  ),
+                  selected: sel,
+                  onSelected: (_) => setState(() {
+                    _selectedTime = DateTime(
+                      _selectedTime.year, _selectedTime.month, _selectedTime.day,
+                      i == 0 ? 23 : (i - 1) * 2 + 1, 0,
+                    );
+                  }),
+                  selectedColor: p.withAlpha(40),
+                  backgroundColor: dark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
+                  side: BorderSide(color: sel ? p : b.withAlpha(80), width: sel ? 1.5 : 1),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  visualDensity: VisualDensity.compact,
+                );
+              }),
             ),
           ],
         ),
-        // 时辰选择（地支 + 时间区间）
-        Wrap(
-          spacing: 4,
-          runSpacing: 4,
-          children: List.generate(12, (i) {
-            final sel = hourIdx == i;
-            const timeRange = [
-              '23-01', '01-03', '03-05', '05-07', '07-09', '09-11',
-              '11-13', '13-15', '15-17', '17-19', '19-21', '21-23',
-            ];
-            return ChoiceChip(
-              label: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(hours[i], style: TextStyle(fontSize: 12, color: sel ? p : t)),
-                  Text(timeRange[i],
-                      style: TextStyle(fontSize: 8, color: sel ? p.withAlpha(180) : t.withAlpha(120))),
-                ],
-              ),
-              selected: sel,
-              onSelected: (_) => setState(() {
-                // 时辰→小时起点：子=23（晚子时），丑=1，寅=3…亥=21
-                _selectedTime = DateTime(
-                  _selectedTime.year, _selectedTime.month, _selectedTime.day,
-                  i == 0 ? 23 : (i - 1) * 2 + 1, 0,
-                );
-              }),
-              selectedColor: p.withAlpha(40),
-              backgroundColor: dark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
-              side: BorderSide(color: sel ? p : b.withAlpha(80), width: sel ? 1.5 : 1),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              visualDensity: VisualDensity.compact,
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            );
-          }),
-        ),
-        // 天干时辰对照表
-        const SizedBox(height: 6),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: p.withAlpha(10),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: p.withAlpha(40)),
-          ),
-          child: Text(
-            '时辰干支：子→壬/癸 丑→癸/己 寅→甲/丙 卯→乙 辰→戊/乙/癸 '
-            '巳→丙/庚/戊 午→丁/己 未→己/丁/乙 申→庚/壬/戊 酉→辛 '
-            '戌→戊/辛/丁 亥→壬/甲（本气在前，随日干五鼠遁取时柱天干）',
-            style: TextStyle(fontSize: 10, color: t.withAlpha(170), height: 1.4),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
