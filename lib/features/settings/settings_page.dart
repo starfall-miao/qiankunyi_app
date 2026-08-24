@@ -624,21 +624,48 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                       subtitle: Text(preset.endpoint, style: const TextStyle(fontSize: 12)),
                       dense: true,
-                      trailing: isBuiltin
-                          ? null
-                          : IconButton(
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.edit_outlined, size: 18, color: t.colorScheme.onSurface.withAlpha(150)),
+                            onPressed: () {
+                              _providerEditDialog(context, sp, i);
+                            },
+                          ),
+                          if (!isBuiltin)
+                            IconButton(
                               icon: Icon(Icons.delete_outline, size: 18, color: Colors.red.shade300),
                               onPressed: () {
                                 sp.removeCustomProvider(i);
                                 Navigator.pop(dialogCtx);
                               },
                             ),
+                        ],
+                      ),
                       onTap: () {
                         sp.selectAiPreset(i);
                         Navigator.pop(dialogCtx);
                       },
                     );
                   }),
+                  const Divider(),
+                  // 常见供应商快速添加
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16, top: 4, bottom: 4),
+                    child: Text('快速添加', style: TextStyle(fontSize: 12, color: t.colorScheme.onSurface.withAlpha(150))),
+                  ),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      _commonProviderChip('智谱 GLM', 'https://open.bigmodel.cn/api/paas/v4', 'glm-4.7-flash', ['glm-4.7-flash', 'glm-4.7', 'glm-5'], sp, dialogCtx),
+                      _commonProviderChip('OpenAI', 'https://api.openai.com/v1', 'gpt-4o', ['gpt-4o', 'gpt-4o-mini', 'gpt-4', 'gpt-3.5-turbo'], sp, dialogCtx),
+                      _commonProviderChip('DeepSeek', 'https://api.deepseek.com/v1', 'deepseek-chat', ['deepseek-chat', 'deepseek-reasoner'], sp, dialogCtx),
+                      _commonProviderChip('通义千问', 'https://dashscope.aliyuncs.com/compatible-mode/v1', 'qwen-turbo', ['qwen-turbo', 'qwen-plus', 'qwen-max'], sp, dialogCtx),
+                      _commonProviderChip('opencode zen', 'https://opencode.ai/zen/v1', 'mimo-v2.5-free', ['mimo-v2.5-free', 'north-mini-code-free', 'nemotron-3-ultra-free', 'big-pickle'], sp, dialogCtx),
+                    ],
+                  ),
                   const Divider(),
                   // 添加自定义提供商
                   TextButton.icon(
@@ -735,16 +762,41 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  /// 常见供应商快速添加 Chip
+  Widget _commonProviderChip(String name, String endpoint, String model, List<String> models, SettingsProvider sp, BuildContext dialogCtx) {
+    return ActionChip(
+      label: Text(name, style: const TextStyle(fontSize: 11)),
+      onPressed: () {
+        final exists = sp.aiProviders.any((p) => p.endpoint == endpoint);
+        if (!exists) {
+          sp.addCustomProvider(AiProviderPreset(
+            name: name,
+            endpoint: endpoint,
+            apiKey: '',
+            model: model,
+            models: models,
+          ));
+          Navigator.pop(dialogCtx);
+        } else {
+          Navigator.pop(dialogCtx);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$name 已存在'), duration: const Duration(seconds: 1)),
+          );
+        }
+      },
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+
   /// 添加自定义提供商弹窗
   void _addProviderDialog(BuildContext context, SettingsProvider sp) {
     final nameCtrl = TextEditingController();
     final endpointCtrl = TextEditingController();
-    final keyCtrl = TextEditingController();
-    final modelCtrl = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('添加 AI 提供商'),
+        title: const Text('添加自定义提供商'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -753,27 +805,111 @@ class _SettingsPageState extends State<SettingsPage> {
               const SizedBox(height: 8),
               TextField(controller: endpointCtrl, decoration: const InputDecoration(labelText: 'API 地址', hintText: 'https://api.example.com/v1')),
               const SizedBox(height: 8),
-              TextField(controller: keyCtrl, decoration: const InputDecoration(labelText: 'API 密钥', hintText: 'sk-...'), obscureText: true),
-              const SizedBox(height: 8),
-              TextField(controller: modelCtrl, decoration: const InputDecoration(labelText: '默认模型', hintText: 'gpt-4')),
+              Text('添加后可继续编辑 API 密钥、模型列表等', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(150))),
             ],
           ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          TextButton(
+          FilledButton(
             onPressed: () {
               if (nameCtrl.text.trim().isEmpty || endpointCtrl.text.trim().isEmpty) return;
               sp.addCustomProvider(AiProviderPreset(
                 name: nameCtrl.text.trim(),
-                endpoint: endpointCtrl.text.trim(),
-                apiKey: keyCtrl.text.trim(),
-                model: modelCtrl.text.trim().isNotEmpty ? modelCtrl.text.trim() : 'gpt-4',
-                models: [modelCtrl.text.trim().isNotEmpty ? modelCtrl.text.trim() : 'gpt-4'],
+                endpoint: endpointCtrl.text.trim().trimRight(),
+                apiKey: '',
+                model: 'gpt-4',
+                models: ['gpt-4'],
               ));
               Navigator.pop(ctx);
+              // 自动打开编辑弹窗
+              _providerEditDialog(context, sp, sp.aiProviders.length - 1);
             },
             child: const Text('添加'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 编辑提供商（名称、密钥、模型列表）
+  void _providerEditDialog(BuildContext context, SettingsProvider sp, int index) {
+    final providers = sp.aiProviders;
+    if (index < 0 || index >= providers.length) return;
+    final p = providers[index];
+    final nameCtrl = TextEditingController(text: p.name);
+    final endpointCtrl = TextEditingController(text: p.endpoint);
+    final keyCtrl = TextEditingController(text: p.apiKey);
+    // 模型列表用逗号分隔
+    final modelsCtrl = TextEditingController(text: p.models.join(', '));
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('编辑 ${p.name}'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: '名称', dense: true)),
+              const SizedBox(height: 6),
+              TextField(controller: endpointCtrl, decoration: const InputDecoration(labelText: 'API 地址', dense: true)),
+              const SizedBox(height: 6),
+              TextField(controller: keyCtrl, decoration: const InputDecoration(labelText: 'API 密钥', dense: true), obscureText: true),
+              const SizedBox(height: 6),
+              TextField(
+                controller: modelsCtrl,
+                decoration: const InputDecoration(
+                  labelText: '模型列表（逗号分隔）',
+                  hintText: 'gpt-4, gpt-4o, gpt-3.5-turbo',
+                  dense: true,
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 4),
+              Text('当前模型：${p.models.join("、")}',
+                  style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withAlpha(150))),
+              if (!p.builtin) ...[
+                const SizedBox(height: 12),
+                TextButton.icon(
+                  onPressed: () {
+                    if (p.builtin) return;
+                    sp.removeCustomProvider(index);
+                    Navigator.pop(ctx);
+                  },
+                  icon: Icon(Icons.delete_outline, size: 16, color: Colors.red.shade300),
+                  label: Text('删除此提供商', style: TextStyle(color: Colors.red.shade300, fontSize: 13)),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(
+            onPressed: () {
+              if (nameCtrl.text.trim().isEmpty) return;
+              final newModels = modelsCtrl.text
+                  .split(',')
+                  .map((s) => s.trim())
+                  .where((s) => s.isNotEmpty)
+                  .toList();
+              final updated = AiProviderPreset(
+                name: nameCtrl.text.trim(),
+                endpoint: endpointCtrl.text.trim(),
+                apiKey: keyCtrl.text.trim(),
+                model: newModels.isNotEmpty ? newModels.first : p.model,
+                models: newModels.isNotEmpty ? newModels : p.models,
+              );
+              if (p.builtin) {
+                // 内置提供商：只更新 key，不修改其他字段
+                sp.aiApiKey = keyCtrl.text.trim();
+              } else {
+                sp.updateCustomProvider(index, updated);
+              }
+              Navigator.pop(ctx);
+              Logger.instance.info('AI提供商已更新', nameCtrl.text.trim());
+            },
+            child: const Text('保存'),
           ),
         ],
       ),

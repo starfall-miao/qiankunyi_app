@@ -2940,32 +2940,36 @@ class _AiChatSectionState extends State<_AiChatSection> {
   Widget _buildFollowUpInput(Color p) {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _questionCtrl,
-              decoration: InputDecoration(
-                hintText: '输入追问…',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: double.infinity, // 强制全宽，防止布局错位到左上角
+        decoration: BoxDecoration(
+          border: Border.all(color: p.withAlpha(40)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _questionCtrl,
+                decoration: InputDecoration(
+                  hintText: '输入追问…',
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 8),
+                  isDense: true,
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 8),
-                isDense: true,
+                maxLines: 2,
+                minLines: 1,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _askFollowUp(),
               ),
-              maxLines: 2,
-              minLines: 1,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _askFollowUp(),
             ),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            onPressed: _askFollowUp,
-            icon: Icon(Icons.send, color: p),
-          ),
-        ],
+            IconButton(
+              onPressed: _askFollowUp,
+              icon: Icon(Icons.send, color: p),
+            ),
+          ],
+        ),
       ),
     );
   }
