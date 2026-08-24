@@ -1793,7 +1793,6 @@ class _AiChatSectionState extends State<_AiChatSection> {
     final isBazi = widget.caseModel.caseType == CaseType.bazi;
     // 中文系统提示：支持用户自定义（设置页 AI 配置 → 提示词模板），
     // 留空时使用内置默认模板（精心调优过的提示词）。
-    final sp = context.read<SettingsProvider>();
     final systemPrompt = sp.aiSystemPrompt.isNotEmpty
         ? sp.aiSystemPrompt
         : (isBazi ? kDefaultBaziSystemPrompt : kDefaultLiuyaoSystemPrompt);
@@ -1960,7 +1959,6 @@ class _AiChatSectionState extends State<_AiChatSection> {
     }
     final isBazi = widget.caseModel.caseType == CaseType.bazi;
     // 追问提示词：支持用户自定义，留空使用内置
-    final sp = context.read<SettingsProvider>();
     final systemPrompt = sp.aiSystemPrompt.isNotEmpty
         ? sp.aiSystemPrompt
         : (isBazi
