@@ -2750,6 +2750,8 @@ class _AiChatSectionState extends State<_AiChatSection> {
     final isUser = m.role == 'user';
     final isError = m.role == 'error';
     final errColor = isDark ? const Color(0xFFE08A8A) : const Color(0xFFC0392B);
+    // 诊断：记录消息渲染时的内容长度
+    Logger.instance.info('AI消息渲染', 'idx=$i role=${m.role} len=${m.content.length}');
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(8),
