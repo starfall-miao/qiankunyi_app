@@ -90,19 +90,32 @@ class ReferencePage extends StatelessWidget {
             ],
           ),
         ),
-        body: const TabBarView(
-          children: [
-            _GuaCiTab(),
-            _NaYinTab(),
-            _XingXiuTab(),
-            _XiangYiTab(),
-            _QinXingTab(),
-            _ShenShaTab(),
-            _DongBianTab(),
-            _MeiHuaTab(),
-            _LiuYaoRefTab(),
-            _BaziRefTab(),
-          ],
+        body: LayoutBuilder(
+          builder: (ctx, constraints) {
+            final content = const TabBarView(
+              children: [
+                _GuaCiTab(),
+                _NaYinTab(),
+                _XingXiuTab(),
+                _XiangYiTab(),
+                _QinXingTab(),
+                _ShenShaTab(),
+                _DongBianTab(),
+                _MeiHuaTab(),
+                _LiuYaoRefTab(),
+                _BaziRefTab(),
+              ],
+            );
+            if (constraints.maxWidth > 1100) {
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1000),
+                  child: content,
+                ),
+              );
+            }
+            return content;
+          },
         ),
       ),
     );

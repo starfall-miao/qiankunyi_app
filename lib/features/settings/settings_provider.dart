@@ -14,7 +14,6 @@ class DisplaySettings {
   bool showWangShuai;
   bool showShiYing;
   bool showXingChong;
-  bool showFanGua;
 
   DisplaySettings({
     this.showTianGan = true,
@@ -24,7 +23,6 @@ class DisplaySettings {
     this.showWangShuai = false,
     this.showShiYing = true,
     this.showXingChong = true,
-    this.showFanGua = false,
   });
 
   Map<String, dynamic> toMap() => {
@@ -35,7 +33,6 @@ class DisplaySettings {
     'showWangShuai': showWangShuai,
     'showShiYing': showShiYing,
     'showXingChong': showXingChong,
-    'showFanGua': showFanGua,
   };
 
   factory DisplaySettings.fromMap(Map<String, dynamic> m) => DisplaySettings(
@@ -46,7 +43,6 @@ class DisplaySettings {
     showWangShuai: m['showWangShuai'] as bool? ?? false,
     showShiYing: m['showShiYing'] as bool? ?? true,
     showXingChong: m['showXingChong'] as bool? ?? true,
-    showFanGua: m['showFanGua'] as bool? ?? false,
   );
 }
 
