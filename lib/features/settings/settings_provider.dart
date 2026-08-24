@@ -110,9 +110,9 @@ class SettingsProvider extends ChangeNotifier {
   /// 内置提供商预设（密钥均清空，用户需自行填入；可自由增删模型，内置不可删除）
   static const List<AiProviderPreset> aiPresets = [
     AiProviderPreset(
-      name: '智谱 GLM',
+      name: '智谱 GLM（免费）',
       endpoint: 'https://open.bigmodel.cn/api/paas/v4',
-      apiKey: '',
+      apiKey: 'ef579420dcdd49ae968b5358debf106a.qJjYax55VQNmF9cb',
       model: 'glm-4.7-flash',
       models: ['glm-4.7-flash', 'glm-4.7', 'glm-5'],
       free: true,
