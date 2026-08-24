@@ -49,6 +49,15 @@ class AiStreamPiece {
 }
 
 /// AI 解卦服务
+/// 根据端点获取合适的 User-Agent
+String _userAgent(String endpoint) {
+  if (endpoint.contains('opencode.ai')) {
+    return 'OpenCode/1.0';
+  }
+  return 'Mozilla/5.0 (compatible; QianKunYi/1.0)';
+}
+
+/// 单例 AI 服务
 class AiService {
   static final AiService _instance = AiService._();
   factory AiService() => _instance;
@@ -97,7 +106,7 @@ class AiService {
         headers: {
           'Authorization': 'Bearer $apiKey',
           'Content-Type': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (compatible; QianKunYi/1.0)',
+          'User-Agent': _userAgent(endpoint),
         },
         body: jsonEncode(body),
       ).timeout(const Duration(seconds: 120));
@@ -199,7 +208,7 @@ class AiService {
       req.headers['Authorization'] = 'Bearer $apiKey';
       req.headers['Content-Type'] = 'application/json';
       req.headers['Accept'] = 'text/event-stream';
-      req.headers['User-Agent'] = 'Mozilla/5.0 (compatible; QianKunYi/1.0)';
+      req.headers['User-Agent'] = _userAgent(endpoint);
       req.body = jsonEncode(body);
 
       final res = await client.send(req);

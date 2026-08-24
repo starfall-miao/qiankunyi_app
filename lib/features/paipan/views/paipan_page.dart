@@ -1537,12 +1537,18 @@ class _BaziPageState extends State<BaziPage> {
                     children: List.generate(12, (i) {
                       final sel = _hourIndex == i;
                       return ChoiceChip(
-                        label: Text(
-                          _hourOptions[i].split('\n')[0],
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: sel ? p : t,
-                          ),
+                        label: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _hourOptions[i].replaceAll('\n', '('),
+                              style: TextStyle(fontSize: 11, color: sel ? p : t),
+                            ),
+                            Text(
+                              _hourOptions[i].split('\n')[1],
+                              style: TextStyle(fontSize: 8, color: sel ? p.withAlpha(180) : t.withAlpha(120)),
+                            ),
+                          ],
                         ),
                         selected: sel,
                         onSelected: (_) => setState(() => _hourIndex = i),
@@ -1873,7 +1879,7 @@ class _BaziPageState extends State<BaziPage> {
             boundaryKey: _baziScreenshotKey,
             child: BaziScreenshotTemplate(
               birthText: '${r.birth.year}年${r.birth.month}月${r.birth.day}日 '
-                  '${_hourOptions[_hourIndex].split('\n')[0]} · ${r.isMale ? '男' : '女'}',
+                  '${_hourOptions[_hourIndex].replaceAll('\n', '（')} · ${r.isMale ? '男' : '女'}',
               result: r,
             ),
           ),

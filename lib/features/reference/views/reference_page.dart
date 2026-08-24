@@ -583,51 +583,30 @@ class _XiangYiTabState extends State<_XiangYiTab> {
 
     return Column(
       children: [
-        // ── 第一行：八卦选择 ──
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: guaNames.map((name) {
-                final sel = name == _selectedGua;
-                final sym = _guaSymbols[name] ?? '';
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(10),
-                      onTap: () => setState(() { _selectedGua = name; _selectedCategory = null; }),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: sel ? p.withAlpha(25) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: sel ? p.withAlpha(120) : t.withAlpha(40),
-                            width: sel ? 1.5 : 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(sym, style: TextStyle(fontSize: 16, color: sel ? p : t.withAlpha(160))),
-                            const SizedBox(width: 4),
-                            Text(name, style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: sel ? FontWeight.bold : FontWeight.normal,
-                              color: sel ? p : t.withAlpha(180),
-                            )),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
+        // ── 八卦选择（精简下拉） ──
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: Row(
+            children: [
+              Icon(Icons.explore, size: 16, color: p),
+              const SizedBox(width: 6),
+              Text('八卦：', style: TextStyle(fontSize: 13, color: t.withAlpha(200))),
+              DropdownButton<String>(
+                value: _selectedGua,
+                underline: const SizedBox(),
+                isDense: true,
+                items: guaNames.map((name) {
+                  final sym = _guaSymbols[name] ?? '';
+                  return DropdownMenuItem(
+                    value: name,
+                    child: Text('$sym $name', style: TextStyle(fontSize: 14, color: t)),
+                  );
+                }).toList(),
+                onChanged: (v) {
+                  if (v != null) setState(() { _selectedGua = v; _selectedCategory = null; });
+                },
+              ),
+            ],
           ),
         ),
         const Divider(height: 1, indent: 8, endIndent: 8),

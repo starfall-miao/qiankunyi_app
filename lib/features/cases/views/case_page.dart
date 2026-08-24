@@ -11,6 +11,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/services/ai_service.dart';
@@ -286,7 +287,7 @@ class _CasePageState extends State<CasePage> {
         ),
       ),
     );
-    Logger.instance.info('卦例导出', '共 $all.length 条');
+    Logger.instance.info('卦例导出', '共 ${all.length} 条');
   }
 
   /// 导出卦例到文件（file_picker 选择保存位置）
@@ -296,15 +297,24 @@ class _CasePageState extends State<CasePage> {
       final now = DateTime.now();
       final defaultName =
           '乾坤易卦例_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.json';
+      final bytes = utf8.encode(jsonStr);
       final path = await FilePicker.platform.saveFile(
         dialogTitle: '保存卦例',
         fileName: defaultName,
+        bytes: bytes,
         type: FileType.custom,
         allowedExtensions: ['json'],
       );
       if (path == null) return; // 用户取消
-      final file = File(path);
-      await file.writeAsString(jsonStr);
+      // 桌面端 saveFile 返回路径后需自行写入，移动端已写入 bytes
+      try {
+        final file = File(path);
+        if (!await file.exists()) {
+          await file.writeAsString(jsonStr);
+        }
+      } catch (_) {
+        // 移动端已写入，无需额外操作
+      }
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('已导出 $count 条卦例到 $path'), duration: const Duration(seconds: 3)),
@@ -2976,8 +2986,8 @@ class _AiChatSectionState extends State<_AiChatSection> {
   }
 }
 
-/// AI 消息正文 — 纯文本渲染（保证内容永远可见，不依赖 Markdown 解析）
-class _AiMarkdownBody extends StatelessWidget {
+/// AI 消息正文 — 优先 Markdown 渲染，失败自动降级纯文本
+class _AiMarkdownBody extends StatefulWidget {
   final String raw;
   final Color baseColor;
   const _AiMarkdownBody({
@@ -2986,11 +2996,36 @@ class _AiMarkdownBody extends StatelessWidget {
   });
 
   @override
+  State<_AiMarkdownBody> createState() => _AiMarkdownBodyState();
+}
+
+class _AiMarkdownBodyState extends State<_AiMarkdownBody> {
+  bool _usePlainText = false;
+
+  @override
   Widget build(BuildContext context) {
-    return SelectableText(
-      raw,
-      style: TextStyle(fontSize: 13, height: 1.6, color: baseColor),
-    );
+    if (_usePlainText) {
+      return SelectableText(
+        widget.raw,
+        style: TextStyle(fontSize: 13, height: 1.6, color: widget.baseColor),
+      );
+    }
+    try {
+      return Markdown(
+        data: widget.raw,
+        styleSheet: MarkdownStyleSheet(
+          p: TextStyle(fontSize: 13, color: widget.baseColor),
+          strong: TextStyle(fontWeight: FontWeight.bold, color: widget.baseColor),
+          listBullet: TextStyle(fontSize: 13, color: widget.baseColor),
+        ),
+      );
+    } catch (e) {
+      _usePlainText = true;
+      return SelectableText(
+        widget.raw,
+        style: TextStyle(fontSize: 13, height: 1.6, color: widget.baseColor),
+      );
+    }
   }
 }
 
