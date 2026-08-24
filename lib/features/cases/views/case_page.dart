@@ -11,7 +11,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/services/ai_service.dart';
@@ -2975,12 +2974,8 @@ class _AiChatSectionState extends State<_AiChatSection> {
   }
 }
 
-/// 用户反馈"解卦成功但界面没有内容显示"：flutter_markdown 对个别异常输入
-/// （未闭合语法、特殊字符组合等）可能抛错导致卡片空白/布局塌陷。这里把
-/// Markdown 渲染包在 try-catch 里，一旦抛错立即降级为纯文本 SelectableText，
-/// 保证内容永远可见。>>> / <<< 标记在渲染前转义为全角，防止被解析成
-/// blockquote 破坏布局。
-class _AiMarkdownBody extends StatefulWidget {
+/// AI 消息正文 — 纯文本渲染（保证内容永远可见，不依赖 Markdown 解析）
+class _AiMarkdownBody extends StatelessWidget {
   final String raw;
   final Color baseColor;
   const _AiMarkdownBody({
@@ -2989,49 +2984,11 @@ class _AiMarkdownBody extends StatefulWidget {
   });
 
   @override
-  State<_AiMarkdownBody> createState() => _AiMarkdownBodyState();
-}
-
-class _AiMarkdownBodyState extends State<_AiMarkdownBody> {
-  bool _usePlainText = false;
-
-  String get _sanitized => widget.raw
-      .replaceAll('>>>', '＞＞＞')
-      .replaceAll('<<<', '＜＜＜');
-
-  @override
   Widget build(BuildContext context) {
-    if (_usePlainText) {
-      // 降级：纯文本完整展示（SelectableText 可长按复制）
-      return SelectableText(
-        widget.raw,
-        style: TextStyle(fontSize: 13, height: 1.6, color: widget.baseColor),
-      );
-    }
-    try {
-      return Markdown(
-        data: _sanitized,
-        styleSheet: MarkdownStyleSheet(
-          p: TextStyle(fontSize: 13, color: widget.baseColor),
-          h1: TextStyle(fontSize: 16, color: widget.baseColor,
-              fontWeight: FontWeight.bold),
-          h2: TextStyle(fontSize: 15, color: widget.baseColor,
-              fontWeight: FontWeight.bold),
-          h3: TextStyle(fontSize: 14, color: widget.baseColor,
-              fontWeight: FontWeight.bold),
-          strong: TextStyle(fontWeight: FontWeight.bold, color: widget.baseColor),
-          blockquote: TextStyle(fontSize: 13, color: widget.baseColor),
-        ),
-      );
-    } catch (e) {
-      // Markdown 解析/渲染异常 → 降级纯文本，内容不丢失
-      Logger.instance.warn('AI解卦', 'Markdown 渲染异常，降级纯文本: $e');
-      _usePlainText = true;
-      return SelectableText(
-        widget.raw,
-        style: TextStyle(fontSize: 13, height: 1.6, color: widget.baseColor),
-      );
-    }
+    return SelectableText(
+      raw,
+      style: TextStyle(fontSize: 13, height: 1.6, color: baseColor),
+    );
   }
 }
 
