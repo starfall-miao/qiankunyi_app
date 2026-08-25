@@ -13,6 +13,7 @@ import '../data/meihua_data.dart';
 import '../data/liuyao_reference_data.dart';
 import '../data/bazi_reference_data.dart';
 import '../../paipan/models/gua_model.dart';
+import '../../cases/models/case_models.dart';
 
 // ─── 六爻阴阳模式 ───
 // 正确推导：每卦6条爻的阴阳由上下卦的三爻模式决定。
@@ -134,6 +135,24 @@ class _GuaCiTab extends StatefulWidget {
 class _GuaCiTabState extends State<_GuaCiTab> {
   final _gongNames = ['乾宫', '兑宫', '离宫', '震宫', '巽宫', '坎宫', '艮宫', '坤宫'];
   String _selectedGong = '乾宫';
+  final _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  /// 获取当前宫卦列表，搜索过滤
+  List<GuaCi> get _filteredGua {
+    final gongData = baguaGong[_selectedGong] ?? [];
+    if (_searchQuery.isEmpty) return gongData;
+    return gongData.where((g) {
+      final cn = guaNameCN[g.name] ?? g.name.name;
+      return cn.contains(_searchQuery) || g.name.name.contains(_searchQuery);
+    }).toList();
+  }
 
   Color _gongColor(String gong) {
     switch (gong) {
@@ -152,7 +171,7 @@ class _GuaCiTabState extends State<_GuaCiTab> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final gongData = baguaGong[_selectedGong] ?? [];
+    final filtered = _filteredGua;
 
     return Column(
       children: [
@@ -183,13 +202,39 @@ class _GuaCiTabState extends State<_GuaCiTab> {
             }).toList(),
           ),
         ),
-        Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-            itemCount: gongData.length,
-            separatorBuilder: (_, __) => const Divider(height: 4),
-            itemBuilder: (ctx, i) => _buildGuaCard(context, theme, gongData[i], i),
+        // 搜索框
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: TextField(
+            controller: _searchCtrl,
+            decoration: InputDecoration(
+              hintText: '搜索卦名…',
+              prefixIcon: const Icon(Icons.search, size: 18),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 16),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              isDense: true,
+            ),
+            onChanged: (v) => setState(() => _searchQuery = v),
           ),
+        ),
+        Expanded(
+          child: filtered.isEmpty
+              ? Center(child: Text('未找到匹配的卦', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)))
+              : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, __) => const Divider(height: 4),
+                  itemBuilder: (ctx, i) => _buildGuaCard(context, theme, filtered[i], i),
+                ),
         ),
       ],
     );
