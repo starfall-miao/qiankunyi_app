@@ -11,7 +11,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/services/ai_service.dart';
@@ -2986,8 +2985,9 @@ class _AiChatSectionState extends State<_AiChatSection> {
   }
 }
 
-/// AI 消息正文 — 优先 Markdown 渲染，失败自动降级纯文本
-class _AiMarkdownBody extends StatefulWidget {
+/// AI 消息正文 — 纯文本渲染（Markdown 在布局阶段可能抛异常）
+/// 排版增强：识别标题/列表行，加大间距和字体，提升可读性
+class _AiMarkdownBody extends StatelessWidget {
   final String raw;
   final Color baseColor;
   const _AiMarkdownBody({
@@ -2996,36 +2996,40 @@ class _AiMarkdownBody extends StatefulWidget {
   });
 
   @override
-  State<_AiMarkdownBody> createState() => _AiMarkdownBodyState();
-}
-
-class _AiMarkdownBodyState extends State<_AiMarkdownBody> {
-  bool _usePlainText = false;
-
-  @override
   Widget build(BuildContext context) {
-    if (_usePlainText) {
-      return SelectableText(
-        widget.raw,
-        style: TextStyle(fontSize: 13, height: 1.6, color: widget.baseColor),
-      );
-    }
-    try {
-      return Markdown(
-        data: widget.raw,
-        styleSheet: MarkdownStyleSheet(
-          p: TextStyle(fontSize: 13, color: widget.baseColor),
-          strong: TextStyle(fontWeight: FontWeight.bold, color: widget.baseColor),
-          listBullet: TextStyle(fontSize: 13, color: widget.baseColor),
-        ),
-      );
-    } catch (e) {
-      _usePlainText = true;
-      return SelectableText(
-        widget.raw,
-        style: TextStyle(fontSize: 13, height: 1.6, color: widget.baseColor),
-      );
-    }
+    final lines = raw.split('\n');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final line in lines)
+          if (line.trim().isEmpty)
+            const SizedBox(height: 6)
+          else if (line.startsWith('### ') || line.startsWith('## '))
+            Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 4),
+              child: Text(
+                line.replaceAll(RegExp(r'^#+\s*'), ''),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: baseColor),
+              ),
+            )
+          else if (line.startsWith('- ') || line.startsWith('* '))
+            Padding(
+              padding: const EdgeInsets.only(left: 8, top: 2),
+              child: SelectableText(
+                '• ${line.substring(2)}',
+                style: TextStyle(fontSize: 13, height: 1.5, color: baseColor),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: SelectableText(
+                line,
+                style: TextStyle(fontSize: 13, height: 1.5, color: baseColor),
+              ),
+            ),
+      ],
+    );
   }
 }
 
