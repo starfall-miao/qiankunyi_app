@@ -1,6 +1,7 @@
 // 落·乾坤 - 应用入口
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'core/theme/app_theme.dart';
@@ -112,8 +113,21 @@ class _MainShellState extends State<MainShell> {
     final width = MediaQuery.of(context).size.width;
     final isDesktop = width > 900;
 
-    return Scaffold(
-      body: Row(
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          final key = event.logicalKey;
+          if (key == LogicalKeyboardKey.digit1) { setState(() => _currentIndex = 0); return KeyEventResult.handled; }
+          if (key == LogicalKeyboardKey.digit2) { setState(() => _currentIndex = 1); return KeyEventResult.handled; }
+          if (key == LogicalKeyboardKey.digit3) { setState(() => _currentIndex = 2); return KeyEventResult.handled; }
+          if (key == LogicalKeyboardKey.digit4) { setState(() => _currentIndex = 3); return KeyEventResult.handled; }
+          if (key == LogicalKeyboardKey.digit5) { setState(() => _currentIndex = 4); return KeyEventResult.handled; }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Scaffold(
+        body: Row(
         children: [
           // 桌面端：左侧导航栏（NavigationRail）
           if (isDesktop && !tp.immersiveMode)
@@ -157,6 +171,7 @@ class _MainShellState extends State<MainShell> {
               destinations: _navDestinations,
             )
           : null,
+      ),
     );
   }
 }
