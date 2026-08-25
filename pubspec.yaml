@@ -58,9 +58,6 @@ dependencies:
   # HTTP client for AI API calls
   http: ^1.2.2
 
-  # Markdown rendering for AI responses
-  flutter_markdown: ^0.7.6
-
   # File picker for save dialog
   file_picker: ^8.1.6
 
