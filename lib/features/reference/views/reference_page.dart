@@ -1053,6 +1053,8 @@ class _LiuYaoRefTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
+        // 快速入门课程
+        _liuyaoCourse,
         _sectionHeader(p, '六神详解'),
         ...liuShenList.map((s) => Card(
           margin: const EdgeInsets.only(bottom: 6),
@@ -1239,6 +1241,8 @@ class _MeiHuaTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
+        // 快速入门课程
+        _meihuaCourse,
         // ── 标题 ──
         Card(
           color: p.withAlpha(15),
@@ -1500,6 +1504,8 @@ class _BaziRefTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
+        // 快速入门课程
+        _baziCourse,
         _sectionHeader(p, '八字基础'),
         Card(
           child: Padding(
@@ -1721,3 +1727,113 @@ class _BaziRefTab extends StatelessWidget {
     );
   }
 }
+
+/// 快速入门课程卡片（六爻/梅花/八字入门）
+class _CourseCard extends StatelessWidget {
+  final String title;
+  final String emoji;
+  final List<({String t, String d})> sections;
+  const _CourseCard({
+    required this.title,
+    required this.emoji,
+    required this.sections,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: scheme.primary.withAlpha(40)),
+      ),
+      child: ExpansionTile(
+        leading: Text(emoji, style: const TextStyle(fontSize: 22)),
+        title: Text(title,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        subtitle: const Text('快速入门 · 点击展开', style: TextStyle(fontSize: 11)),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: sections.map((s) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(s.t,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: scheme.primary,
+                        )),
+                    const SizedBox(height: 3),
+                    Text(s.d,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.6,
+                          color: Theme.of(context).colorScheme.onSurface.withAlpha(180),
+                        )),
+                  ],
+                ),
+              )).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 六爻快速入门内容
+const _liuyaoCourse = _CourseCard(
+  title: '六爻占卜 · 快速入门',
+  emoji: '🪙',
+  sections: [
+    (t: '1. 什么是六爻？', d: '六爻用三枚铜钱（或硬币）摇动六次，每次记一爻，自下而上组成一卦。'
+        '三次铜钱出现不同组合决定爻的阴阳：三正为老阳（动爻○）、两正一背为少阳（—）、'
+        '一正两背为少阴（--）、三背为老阴（动爻×）。'),
+    (t: '2. 起卦之后看什么？', d: '排盘会给出本卦、变卦、互卦。有动爻的卦会变成变卦，代表事情的发展变化；'
+        '互卦代表事情的过程。卦中有"世爻"和"应爻"，世爻代表自己，应爻代表对方。'),
+    (t: '3. 六亲与用神', d: '六亲是卦中五行生克关系：父母、兄弟、子孙、妻财、官鬼。'
+        '解卦关键是找"用神"——占财看妻财，占官看官鬼，占父母看父母，占子孙看子孙，占竞争看兄弟。'),
+    (t: '4. 旺衰生克断吉凶', d: '先看用神旺衰（得月令、日辰生扶则旺），再看动爻对用神的生克：'
+        '用神旺相且受生 → 吉；用神休囚受克 → 凶。再看六神（青龙/朱雀/勾陈/腾蛇/白虎/玄武）辅助判断吉凶方向。'),
+  ],
+);
+
+/// 梅花易数快速入门内容
+const _meihuaCourse = _CourseCard(
+  title: '梅花易数 · 快速入门',
+  emoji: '🌸',
+  sections: [
+    (t: '1. 什么是梅花易数？', d: '北宋邵雍所创，用"数"起"象"，以先天八卦数为依据，'
+        '随时随地可起卦，是最灵便的占卜法。先天数：乾1兑2离3震4巽5坎6艮7坤8。'),
+    (t: '2. 时间起卦', d: '用年月日时取数：年数+月数+日数之和除8取余数为上卦；'
+        '再加时辰数除8取余数为下卦；总和除6取余数为动爻（余0取6）。'),
+    (t: '3. 体用生克', d: '不动之卦为体卦（代表自己），动爻所在的卦为用卦（代表所问之事）。'
+        '体克用吉，用生体吉；体生用为泄气，用克体凶。比和（同五行）为吉。'),
+    (t: '4. 万物类象断事', d: '每个卦都有丰富类象：乾为天为君为父为金玉；坤为地为母为柔顺为田土；'
+        '八卦类象结合体用生克，把抽象卦象落到具体人事上，再结合时间、方位综合判断。'),
+  ],
+);
+
+/// 八字快速入门内容
+const _baziCourse = _CourseCard(
+  title: '八字命理 · 快速入门',
+  emoji: '📜',
+  sections: [
+    (t: '1. 什么是八字？', d: '八字即出生年月日时的四柱干支，每柱一天干一地支，共八个字。'
+        '日柱天干代表"日主"（自己），是整个命盘的核心。'),
+    (t: '2. 十天干五行', d: '甲乙属木、丙丁属火、戊己属土、庚辛属金、壬癸属水。'
+        '五行之间相生：木生火、火生土、土生金、金生水、水生木；相克：木克土、土克水、水克火、火克金、金克木。'),
+    (t: '3. 十神关系', d: '以日主为基准，与其它天干的关系生出十神：'
+        '生我者为印（正印/偏印），我生者为食伤（食神/伤官），'
+        '克我者为官杀（正官/七杀），我克者为财（正财/偏财），同我者为比劫（比肩/劫财）。'),
+    (t: '4. 大运与流年', d: '每十年一步大运，记录人生的阶段起伏；每年一柱流年，代表当年的运势。'
+        '看大运流年与大运干支对日主的生克，结合五行喜忌判断吉凶。'
+        '命理仅供参考，命运掌握在自己手中！'),
+  ],
+);
