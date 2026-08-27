@@ -11,6 +11,7 @@ import '../../core/utils/logger.dart';
 import 'settings_provider.dart';
 import 'views/about_page.dart';
 import 'views/compass_page.dart';
+import '../onboarding/views/onboarding_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -86,6 +87,23 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildSectionHeader(theme, '📖 信息'),
                 const SizedBox(height: 8),
                 _buildAboutButton(theme),
+                const SizedBox(height: 8),
+                // 使用引导（重新查看）
+                _buildSettingsRow(
+                  icon: Icons.menu_book,
+                  title: '使用引导',
+                  subtitle: '重新查看首次启动引导',
+                  onTap: () {
+                    final nav = Navigator.of(context);
+                    nav.push(
+                      MaterialPageRoute(
+                        builder: (_) => OnboardingPage(
+                          onDone: () => nav.pop(),
+                        ),
+                      ),
+                    );
+                  },
+                ),
                 const SizedBox(height: 32),
               ],
             );

@@ -13,6 +13,7 @@ import 'features/reference/views/reference_page.dart';
 import 'features/settings/settings_page.dart';
 import 'features/settings/settings_provider.dart';
 import 'features/calendar/views/calendar_page.dart';
+import 'features/onboarding/views/onboarding_page.dart';
 
 /// 落·乾坤 应用入口 Widget
 class QianKunYiApp extends StatelessWidget {
@@ -31,7 +32,9 @@ class QianKunYiApp extends StatelessWidget {
               useAcrylic: tp.acrylicEffect, acrylicOpacity: tp.acrylicOpacity),
           themeMode: tp.themeMode,
           builder: (ctx, child) => _FontScaled(child: child!),
-          home: const MainShell(),
+          home: sp.loaded && !sp.onboardingDone
+              ? OnboardingPage(onDone: () => sp.onboardingDone = true)
+              : const MainShell(),
         );
       },
     );

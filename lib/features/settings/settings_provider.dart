@@ -115,6 +115,8 @@ class SettingsProvider extends ChangeNotifier {
   bool _chenMuTuYao = false;
   DisplaySettings _display = DisplaySettings();
   bool _loaded = false;
+  /// 使用引导是否已完成（首次启动自动弹出，完成后可在设置页重新查看）
+  bool _onboardingDone = false;
   SharedPreferences? _prefs;
 
   // ===== AI 解卦配置 =====
@@ -167,6 +169,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get chenMuTuYao => _chenMuTuYao;
   DisplaySettings get display => _display;
   bool get loaded => _loaded;
+  bool get onboardingDone => _onboardingDone;
   // AI Getters
   String get aiEndpoint => _aiEndpoint;
   String get aiApiKey => _aiApiKey;
@@ -257,6 +260,7 @@ class SettingsProvider extends ChangeNotifier {
             return MapEntry<String, dynamic>(p[0], p[1] == 'true');
           })));
     }
+    _onboardingDone = _prefs!.getBool('onboarding_done') ?? false;
     _loaded = true;
     notifyListeners();
   }
@@ -419,5 +423,10 @@ class SettingsProvider extends ChangeNotifier {
     _prefs?.setBool('ai_enabled', v);
     notifyListeners();
     Logger.instance.info('AI 解卦: ${v ? "开启" : "关闭"}');
+  }
+  set onboardingDone(bool v) {
+    _onboardingDone = v;
+    _prefs?.setBool('onboarding_done', v);
+    notifyListeners();
   }
 }
