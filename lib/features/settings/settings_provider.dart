@@ -5,6 +5,17 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/utils/logger.dart';
 
+/// 内置免费提供商 API Key 简单混淆（XOR 0x5A + Base64），
+/// 避免源码明文暴露；运行时解码为真实 Key。
+String _decodeKey(String encoded) {
+  try {
+    final bytes = base64Decode(encoded);
+    return String.fromCharCodes(bytes.map((b) => b ^ 0x5A));
+  } catch (_) {
+    return '';
+  }
+}
+
 /// 排盘显示要素开关
 class DisplaySettings {
   bool showTianGan;
@@ -107,14 +118,23 @@ class SettingsProvider extends ChangeNotifier {
   SharedPreferences? _prefs;
 
   // ===== AI 解卦配置 =====
-  /// 内置提供商预设（密钥均清空，用户需自行填入；可自由增删模型，内置不可删除）
-  static const List<AiProviderPreset> aiPresets = [
+  /// 内置提供商预设（内置免费 Key 源码混淆存储，运行时解码）
+  static final List<AiProviderPreset> aiPresets = [
     AiProviderPreset(
       name: '智谱 GLM（免费）',
       endpoint: 'https://open.bigmodel.cn/api/paas/v4',
-      apiKey: 'ef579420dcdd49ae968b5358debf106a.qJjYax55VQNmF9cb',
+      apiKey: _decodeKey('PzxvbWNuaGo+OT4+bmM7P2NsYjhvaW9iPj84PGtqbDt0KxAwAzsib28MCxQ3HGM5OA=='),
       model: 'glm-4.7-flash',
       models: ['glm-4.7-flash', 'glm-4.7', 'glm-5'],
+      free: true,
+      builtin: true,
+    ),
+    AiProviderPreset(
+      name: '商汤日日新（免费）',
+      endpoint: 'https://token.sensenova.cn/v1',
+      apiKey: _decodeKey('KTF3LQ44PTs5DyoOKggvEClvFxYgaQ8zNzMiaBsUIjwyGSI='),
+      model: 'glm-5.2',
+      models: ['glm-5.2', 'glm-5.1', 'glm-4.7-flash'],
       free: true,
       builtin: true,
     ),

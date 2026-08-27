@@ -1746,7 +1746,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
   /// 与 _retryNote 配合在卡片上标注"连接中断，自动重试 n/3…"，防止
   /// 瞬时网络错误直接丢结果（用户反馈"信号灯超时时应该自动重试三次"）。
   int _streamRetry = 0;
-  static const int _maxStreamRetry = 3;
+  static const int _maxStreamRetry = 20;
   /// 重试提示文案：非空时显示在"正在思考…"上方，用户可见当前重试状态。
   String _retryNote = '';
   /// 本次请求是否为追问（追问时首个 chunk 滚到底部让输入框保持可见，
@@ -2467,7 +2467,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
   }) async {
     final sp = context.read<SettingsProvider>();
     int retry = 0;
-    while (retry < 3) {
+    while (retry < 20) {
       retry++;
       if (retry > 1) {
         // async gap 之后：弹窗可能已关闭（dispose），先守卫再 setState

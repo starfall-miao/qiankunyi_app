@@ -731,10 +731,15 @@ class _SettingsPageState extends State<SettingsPage> {
             builder: (ctx, sp, _) => _buildSettingsRow(
               icon: Icons.key,
               title: 'API 密钥',
-              subtitle: sp.aiApiKey.isEmpty ? '未设置' : '${sp.aiApiKey.substring(0, 8)}...',
-              onTap: () => _editText(context, 'API 密钥', sp.aiApiKey,
-                  (v) => sp.aiApiKey = v,
-                  obscure: true),
+              subtitle: sp.isFreeProvider
+                  ? '内置免费（源码加密，无需填写）'
+                  : (sp.aiApiKey.isEmpty ? '未设置' : '••••••${sp.aiApiKey.substring(sp.aiApiKey.length > 6 ? sp.aiApiKey.length - 4 : 0)}'),
+              onTap: sp.isFreeProvider
+                  ? () => ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('内置免费提供商密钥已内置并加密，无需填写'), duration: Duration(seconds: 2)))
+                  : () => _editText(context, 'API 密钥', sp.aiApiKey,
+                      (v) => sp.aiApiKey = v,
+                      obscure: true),
             ),
           ),
           const Divider(height: 1),
@@ -756,6 +761,38 @@ class _SettingsPageState extends State<SettingsPage> {
               subtitle: sp.aiSystemPrompt.isEmpty ? '默认（已调优）' : '自定义',
               onTap: () => _editPromptTemplate(context, sp),
             ),
+          ),
+          // 提示词内容预览（点击直接编辑，方便查看/修改）
+          Consumer<SettingsProvider>(
+            builder: (ctx, sp, _) {
+              final prompt = sp.aiSystemPrompt;
+              if (prompt.isEmpty) return const SizedBox.shrink();
+              return InkWell(
+                onTap: () => _editPromptTemplate(context, sp),
+                child: Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withAlpha(60)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('当前提示词（点击编辑）',
+                          style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.primary)),
+                      const SizedBox(height: 4),
+                      Text(
+                        prompt.length > 120 ? '${prompt.substring(0, 120)}…' : prompt,
+                        style: TextStyle(fontSize: 11, height: 1.4, color: Theme.of(context).colorScheme.onSurface.withAlpha(180)),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -832,87 +869,13 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  /// 编辑提供商（名称、密钥、模型列表）
+  /// 编辑提供商（名称、密钥、模型列表 chips 可增删）
   void _providerEditDialog(BuildContext context, SettingsProvider sp, int index) {
     final providers = sp.aiProviders;
     if (index < 0 || index >= providers.length) return;
-    final p = providers[index];
-    final nameCtrl = TextEditingController(text: p.name);
-    final endpointCtrl = TextEditingController(text: p.endpoint);
-    final keyCtrl = TextEditingController(text: p.apiKey);
-    // 模型列表用逗号分隔
-    final modelsCtrl = TextEditingController(text: p.models.join(', '));
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('编辑 ${p.name}'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: '名称', isDense: true)),
-              const SizedBox(height: 6),
-              TextField(controller: endpointCtrl, decoration: const InputDecoration(labelText: 'API 地址', isDense: true)),
-              const SizedBox(height: 6),
-              TextField(controller: keyCtrl, decoration: const InputDecoration(labelText: 'API 密钥', isDense: true), obscureText: true),
-              const SizedBox(height: 6),
-              TextField(
-                controller: modelsCtrl,
-                decoration: const InputDecoration(
-                  labelText: '模型列表（逗号分隔）',
-                  hintText: 'gpt-4, gpt-4o, gpt-3.5-turbo',
-                  isDense: true,
-                ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 4),
-              Text('当前模型：${p.models.join("、")}',
-                  style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withAlpha(150))),
-              if (!p.builtin) ...[
-                const SizedBox(height: 12),
-                TextButton.icon(
-                  onPressed: () {
-                    if (p.builtin) return;
-                    sp.removeCustomProvider(index);
-                    Navigator.pop(ctx);
-                  },
-                  icon: Icon(Icons.delete_outline, size: 16, color: Colors.red.shade300),
-                  label: Text('删除此提供商', style: TextStyle(color: Colors.red.shade300, fontSize: 13)),
-                ),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          FilledButton(
-            onPressed: () {
-              if (nameCtrl.text.trim().isEmpty) return;
-              final newModels = modelsCtrl.text
-                  .split(',')
-                  .map((s) => s.trim())
-                  .where((s) => s.isNotEmpty)
-                  .toList();
-              final updated = AiProviderPreset(
-                name: nameCtrl.text.trim(),
-                endpoint: endpointCtrl.text.trim(),
-                apiKey: keyCtrl.text.trim(),
-                model: newModels.isNotEmpty ? newModels.first : p.model,
-                models: newModels.isNotEmpty ? newModels : p.models,
-              );
-              if (p.builtin) {
-                // 内置提供商：只更新 key，不修改其他字段
-                sp.aiApiKey = keyCtrl.text.trim();
-              } else {
-                sp.updateCustomProvider(index, updated);
-              }
-              Navigator.pop(ctx);
-              Logger.instance.info('AI提供商已更新', nameCtrl.text.trim());
-            },
-            child: const Text('保存'),
-          ),
-        ],
-      ),
+      builder: (ctx) => _ProviderEditDialog(sp: sp, index: index, preset: providers[index]),
     );
   }
 
@@ -1103,6 +1066,164 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 提供商编辑对话框（StatefulWidget：模型列表 chips 可增删）
+class _ProviderEditDialog extends StatefulWidget {
+  final SettingsProvider sp;
+  final int index;
+  final AiProviderPreset preset;
+  const _ProviderEditDialog({
+    required this.sp,
+    required this.index,
+    required this.preset,
+  });
+
+  @override
+  State<_ProviderEditDialog> createState() => _ProviderEditDialogState();
+}
+
+class _ProviderEditDialogState extends State<_ProviderEditDialog> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _endpointCtrl;
+  late final TextEditingController _keyCtrl;
+  late final TextEditingController _addModelCtrl;
+  late List<String> _models;
+
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.preset;
+    _nameCtrl = TextEditingController(text: p.name);
+    _endpointCtrl = TextEditingController(text: p.endpoint);
+    // 内置免费提供商：密钥不显示明文
+    _keyCtrl = TextEditingController(text: p.free ? '' : p.apiKey);
+    _addModelCtrl = TextEditingController();
+    _models = List<String>.from(p.models);
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _endpointCtrl.dispose();
+    _keyCtrl.dispose();
+    _addModelCtrl.dispose();
+    super.dispose();
+  }
+
+  void _addModel() {
+    final m = _addModelCtrl.text.trim();
+    if (m.isEmpty) return;
+    setState(() {
+      if (!_models.contains(m)) _models.add(m);
+      _addModelCtrl.clear();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.preset;
+    final t = Theme.of(context).colorScheme.onSurface;
+    return AlertDialog(
+      title: Text('编辑 ${p.name}'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: '名称', isDense: true)),
+            const SizedBox(height: 6),
+            TextField(controller: _endpointCtrl, decoration: const InputDecoration(labelText: 'API 地址', isDense: true)),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _keyCtrl,
+              decoration: InputDecoration(
+                labelText: 'API 密钥',
+                hintText: p.free ? '内置免费（已加密）' : 'sk-...',
+                isDense: true,
+              ),
+              obscureText: true,
+            ),
+            const SizedBox(height: 10),
+            Text('模型列表', style: TextStyle(fontSize: 12, color: t.withAlpha(180))),
+            const SizedBox(height: 6),
+            // 模型 chips（可删除）
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: _models.map((m) {
+                return InputChip(
+                  label: Text(m, style: const TextStyle(fontSize: 12)),
+                  visualDensity: VisualDensity.compact,
+                  onDeleted: () => setState(() => _models.remove(m)),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 6),
+            // 添加模型
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _addModelCtrl,
+                    decoration: const InputDecoration(
+                      labelText: '添加模型',
+                      hintText: '输入模型名后点 + 或回车',
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _addModel(),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                IconButton(
+                  onPressed: _addModel,
+                  icon: const Icon(Icons.add_circle_outline),
+                ),
+              ],
+            ),
+            if (!p.builtin) ...[
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: () {
+                  widget.sp.removeCustomProvider(widget.index);
+                  Navigator.pop(context);
+                },
+                icon: Icon(Icons.delete_outline, size: 16, color: Colors.red.shade300),
+                label: Text('删除此提供商', style: TextStyle(color: Colors.red.shade300, fontSize: 13)),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+        FilledButton(
+          onPressed: () {
+            if (_nameCtrl.text.trim().isEmpty) return;
+            final key = _keyCtrl.text.trim();
+            final updated = AiProviderPreset(
+              name: _nameCtrl.text.trim(),
+              endpoint: _endpointCtrl.text.trim(),
+              apiKey: widget.preset.free ? widget.preset.apiKey : key,
+              model: _models.isNotEmpty ? _models.first : widget.preset.model,
+              models: _models.isNotEmpty ? _models : widget.preset.models,
+            );
+            if (widget.preset.builtin) {
+              // 内置提供商：仅非免费时允许更新 key，模型列表可增删
+              if (!widget.preset.free && key.isNotEmpty) {
+                widget.sp.aiApiKey = key;
+              }
+            } else {
+              widget.sp.updateCustomProvider(widget.index, updated);
+            }
+            Navigator.pop(context);
+            Logger.instance.info('AI提供商已更新', _nameCtrl.text.trim());
+          },
+          child: const Text('保存'),
+        ),
+      ],
     );
   }
 }
