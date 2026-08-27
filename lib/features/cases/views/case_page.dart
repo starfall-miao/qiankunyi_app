@@ -2854,8 +2854,19 @@ class _AiChatSectionState extends State<_AiChatSection> {
       Text('🤖 AI 解卦',
           style: TextStyle(
               fontSize: 14, fontWeight: FontWeight.bold, color: t)),
+      const Spacer(),
+      // 保存对话图片
+      if (_localMessages.any((m) => m.content.trim().isNotEmpty))
+        IconButton(
+          onPressed: _saveChatImage,
+          icon: Icon(Icons.image_outlined, size: 18, color: t.withAlpha(150)),
+          tooltip: '保存对话为图片',
+          padding: const EdgeInsets.all(6),
+          constraints: const BoxConstraints(),
+          iconSize: 18,
+        ),
       if (_loading || _streaming) ...[
-        const Spacer(),
+        const SizedBox(width: 6),
         // 停止按钮：中断生成/重试
         TextButton.icon(
           onPressed: _cancelAiRequest,
@@ -2896,6 +2907,137 @@ class _AiChatSectionState extends State<_AiChatSection> {
         ),
       ),
     );
+  }
+
+  /// 保存 AI 对话为图片：弹窗勾选要包含的对话，渲染卦头+对话为 PNG 保存。
+  Future<void> _saveChatImage() async {
+    if (!mounted) return;
+    // 可选择的非空消息
+    final selectable = <int>[];
+    for (var i = 0; i < _localMessages.length; i++) {
+      if (_localMessages[i].content.trim().isNotEmpty) selectable.add(i);
+    }
+    if (selectable.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('暂无可保存的对话内容')),
+        );
+      }
+      return;
+    }
+    final selected = <int>{...selectable};
+    final key = GlobalKey();
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        final cm = widget.caseModel;
+        return StatefulBuilder(
+          builder: (ctx, setS) {
+            return AlertDialog(
+              title: const Text('保存对话为图片'),
+              content: SizedBox(
+                width: 360,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('勾选要包含的对话（含卦象信息）',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                    const SizedBox(height: 8),
+                    // 不可见的截图渲染
+                    RepaintBoundary(
+                      key: key,
+                      child: _AiChatScreenshotTemplate(
+                        caseModel: cm,
+                        messages: [
+                          for (var i = 0; i < _localMessages.length; i++)
+                            if (selected.contains(i)) _localMessages[i],
+                        ],
+                      ),
+                    ),
+                    // 对话勾选列表
+                    Flexible(
+                      child: ListView(
+                        shrinkWrap: true,
+                        children: [
+                          for (final i in selectable)
+                            CheckboxListTile(
+                              dense: true,
+                              value: selected.contains(i),
+                              title: Text(
+                                '${_localMessages[i].role == 'user' ? '你' : 'AI'} · ${_localMessages[i].content.length}字',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              subtitle: Text(
+                                _localMessages[i].content.length > 40
+                                    ? _localMessages[i].content.substring(0, 40)
+                                    : _localMessages[i].content,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 10, color: Colors.grey.shade600),
+                              ),
+                              onChanged: (v) => setS(() {
+                                if (v == true) {
+                                  selected.add(i);
+                                } else {
+                                  selected.remove(i);
+                                }
+                              }),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('取消')),
+                FilledButton(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    await _captureAndSaveChat(key);
+                  },
+                  child: const Text('保存图片'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// 捕获 RepaintBoundary 并保存 PNG
+  Future<void> _captureAndSaveChat(GlobalKey key) async {
+    try {
+      final boundary =
+          key.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+      final pngBytes = byteData.buffer.asUint8List();
+      if (!mounted) return;
+      final savedPath = await saveImageWithDialog(
+        context: context,
+        pngBytes: pngBytes,
+        defaultFileName:
+            buildImageFileName('${widget.caseModel.guaName}_AI对话'),
+      );
+      if (savedPath != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('对话图片已保存: $savedPath')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存对话图片失败: $e')),
+        );
+      }
+    }
   }
 
   /// 单条对话消息卡片：错误 / 用户 / AI 三种样式。
@@ -3303,6 +3445,109 @@ class _ThinkingCollapseBoxState extends State<_ThinkingCollapseBox> {
                   fontSize: 12, height: 1.5, color: t.withAlpha(150)),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// AI 对话截图模板（保存图片用）：卦象信息头部 + 勾选的对话内容
+class _AiChatScreenshotTemplate extends StatelessWidget {
+  final CaseModel caseModel;
+  final List<AiMessage> messages;
+  const _AiChatScreenshotTemplate({
+    required this.caseModel,
+    required this.messages,
+  });
+
+  static const _bg = Color(0xFFF5F0EB);
+  static const _text = Color(0xFF4A3728);
+  static const _sub = Color(0xFF9A8A78);
+  static const _gold = Color(0xFFB08A3E);
+
+  @override
+  Widget build(BuildContext context) {
+    // 卦信息
+    final mtd = methodCN[caseModel.method] ?? caseModel.method;
+    final askParts = <String>[
+      if (caseModel.askObject != null && caseModel.askObject!.isNotEmpty)
+        caseModel.askObject!,
+      if (caseModel.askEvent != null && caseModel.askEvent!.isNotEmpty)
+        caseModel.askEvent!,
+    ];
+    return Container(
+      width: 340,
+      color: _bg,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 标题
+          Row(children: [
+            const Text('☯ ', style: TextStyle(fontSize: 15, color: _gold)),
+            Text('${caseModel.guaName} · AI 解卦',
+                style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: _text)),
+          ]),
+          const SizedBox(height: 6),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: _gold.withAlpha(16),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              '${caseModel.guaGong.isNotEmpty ? "宫位 ${caseModel.guaGong} · " : ""}'
+              '$mtd'
+              '${askParts.isNotEmpty ? " · 占问:${askParts.join(" / ")}" : ""}',
+              style: const TextStyle(fontSize: 10.5, color: _sub),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // 对话
+          ...messages.map((m) {
+            final isUser = m.role == 'user';
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isUser ? '👤 你' : '🤖 AI',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: isUser ? _sub : _gold,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isUser
+                          ? const Color(0xFFF0EDE8)
+                          : const Color(0xFFFAF6F0),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      m.content,
+                      style: const TextStyle(fontSize: 11.5, height: 1.6, color: _text),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 6),
+          Center(
+            child: Text('— 来自「落·乾坤」',
+                style: TextStyle(fontSize: 9, color: _sub)),
+          ),
         ],
       ),
     );
