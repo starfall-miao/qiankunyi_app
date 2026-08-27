@@ -959,6 +959,8 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     // Dialog 让用户输入标题
     final titleCtrl = TextEditingController(text: '$guaNameStr — ${methodToCN(result.method)}');
     final notesCtrl = TextEditingController();
+    final askObjectCtrl = TextEditingController();
+    final askEventCtrl = TextEditingController();
     // 断语已迁移到卦例详情页（人工断语编辑器），保存对话框不再提供断语输入
     showDialog(
       context: context,
@@ -973,8 +975,19 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
             ),
             const SizedBox(height: 12),
             TextField(
+              controller: askObjectCtrl,
+              decoration: const InputDecoration(labelText: '占问对象（可选）', hintText: '如：朋友 / 家人 / 工作 / 房贷'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: askEventCtrl,
+              decoration: const InputDecoration(labelText: '占问事件（可选）', hintText: '如：是否应该换工作'),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 12),
+            TextField(
               controller: notesCtrl,
-              decoration: const InputDecoration(labelText: '备注（可选）', hintText: '记录占问事项'),
+              decoration: const InputDecoration(labelText: '备注（可选）', hintText: '补充说明'),
               maxLines: 2,
             ),
           ],
@@ -989,6 +1002,8 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                   result: result,
                   title: titleCtrl.text.trim(),
                   notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
+                  askObject: askObjectCtrl.text.trim().isEmpty ? null : askObjectCtrl.text.trim(),
+                  askEvent: askEventCtrl.text.trim().isEmpty ? null : askEventCtrl.text.trim(),
                   caseType: caseType,
                 );
                 context.read<CaseProvider>().addCase(cm);
@@ -2152,6 +2167,8 @@ class _BaziPageState extends State<BaziPage> {
         '八字排盘 · ${r.yearZhu.ganZhi} ${r.monthZhu.ganZhi} ${r.dayZhu.ganZhi} ${r.hourZhu.ganZhi}';
     final titleCtrl = TextEditingController(text: defaultTitle);
     final notesCtrl = TextEditingController();
+    final askObjectCtrl = TextEditingController();
+    final askEventCtrl = TextEditingController();
 
     showDialog(
       context: context,
@@ -2169,10 +2186,27 @@ class _BaziPageState extends State<BaziPage> {
             ),
             const SizedBox(height: 12),
             TextField(
+              controller: askObjectCtrl,
+              decoration: const InputDecoration(
+                labelText: '占问对象（可选）',
+                hintText: '如：朋友 / 家人 / 工作 / 健康',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: askEventCtrl,
+              decoration: const InputDecoration(
+                labelText: '占问事件（可选）',
+                hintText: '如：近期运势如何',
+              ),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 12),
+            TextField(
               controller: notesCtrl,
               decoration: const InputDecoration(
                 labelText: '备注（可选）',
-                hintText: '记录占问事项',
+                hintText: '补充说明',
               ),
               maxLines: 2,
             ),
@@ -2192,6 +2226,12 @@ class _BaziPageState extends State<BaziPage> {
                 notes: notesCtrl.text.trim().isEmpty
                     ? null
                     : notesCtrl.text.trim(),
+                askObject: askObjectCtrl.text.trim().isEmpty
+                    ? null
+                    : askObjectCtrl.text.trim(),
+                askEvent: askEventCtrl.text.trim().isEmpty
+                    ? null
+                    : askEventCtrl.text.trim(),
               );
               context.read<CaseProvider>().addCase(cm);
               _log.info('保存八字排盘: ${cm.title}');

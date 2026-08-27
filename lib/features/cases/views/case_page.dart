@@ -588,6 +588,33 @@ class _CasePageState extends State<CasePage> {
                   ),
                 ),
               ]),
+              // 占问信息（对象/事件）
+              if ((c.askObject != null && c.askObject!.isNotEmpty) ||
+                  (c.askEvent != null && c.askEvent!.isNotEmpty)) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withAlpha(12),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Theme.of(context).colorScheme.primary.withAlpha(30)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (c.askObject != null && c.askObject!.isNotEmpty)
+                        Text('占问对象：${c.askObject}',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: p)),
+                      if (c.askEvent != null && c.askEvent!.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text('占问事件：${c.askEvent}',
+                            style: TextStyle(fontSize: 13, color: t)),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
               if (c.notes != null && c.notes!.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Container(
@@ -1808,9 +1835,23 @@ class _AiChatSectionState extends State<_AiChatSection> {
     final isBazi = widget.caseModel.caseType == CaseType.bazi;
     // 中文系统提示：支持用户自定义（设置页 AI 配置 → 提示词模板），
     // 留空时使用内置默认模板（精心调优过的提示词）。
-    final systemPrompt = sp.aiSystemPrompt.isNotEmpty
+    var systemPrompt = sp.aiSystemPrompt.isNotEmpty
         ? sp.aiSystemPrompt
         : (isBazi ? kDefaultBaziSystemPrompt : kDefaultLiuyaoSystemPrompt);
+    // 注入占问信息：让 AI 优先解析原卦，再结合占问对象/事件分析
+    final askParts = <String>[
+      if (widget.caseModel.askObject != null &&
+          widget.caseModel.askObject!.isNotEmpty)
+        '占问对象：${widget.caseModel.askObject}',
+      if (widget.caseModel.askEvent != null &&
+          widget.caseModel.askEvent!.isNotEmpty)
+        '占问事件：${widget.caseModel.askEvent}',
+    ];
+    if (askParts.isNotEmpty) {
+      systemPrompt = '$systemPrompt\n\n【本次占问背景】\n${askParts.join("；")}\n'
+          '要求：先结合卦象/命盘信息完整解析原局（卦象含义、六亲/五行关系、'
+          '旺衰生克等），再结合上述占问背景给出针对性分析与建议，最后给出明确结论。';
+    }
     final prompt = _buildPromptForType();
     final messages = <Map<String, String>>[
       {'role': 'system', 'content': systemPrompt},
@@ -1974,7 +2015,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
     }
     final isBazi = widget.caseModel.caseType == CaseType.bazi;
     // 追问提示词：支持用户自定义，留空使用内置
-    final systemPrompt = sp.aiSystemPrompt.isNotEmpty
+    var systemPrompt = sp.aiSystemPrompt.isNotEmpty
         ? sp.aiSystemPrompt
         : (isBazi
             ? '你是八字命理专家，下面是对同一命盘的连续讨论。'
@@ -1985,6 +2026,18 @@ class _AiChatSectionState extends State<_AiChatSection> {
                 '直接回答问题，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式；'
                 '回答详细清晰有条理，直接输出全文，不要附加任何包裹标记；'
                 '各爻逐行输出；不同要点换行，禁止挤在一行。');
+    // 注入占问信息（追问同样结合占问背景）
+    final askParts = <String>[
+      if (widget.caseModel.askObject != null &&
+          widget.caseModel.askObject!.isNotEmpty)
+        '占问对象：${widget.caseModel.askObject}',
+      if (widget.caseModel.askEvent != null &&
+          widget.caseModel.askEvent!.isNotEmpty)
+        '占问事件：${widget.caseModel.askEvent}',
+    ];
+    if (askParts.isNotEmpty) {
+      systemPrompt = '$systemPrompt\n\n（本次占问背景：${askParts.join("；")}）';
+    }
     // 构建上下文：系统提示 + 历史消息 + 当前问题（错误消息不进入 AI 上下文）。
     // 上下文容量保护：按约 131k tokens（≈85k 中文字符）上限，超出时丢弃
     // 最旧消息（保留最近的对话，保证追问多轮后不超模型窗口；正常追问

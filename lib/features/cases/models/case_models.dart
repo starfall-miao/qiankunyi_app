@@ -112,6 +112,8 @@ class CaseModel {
   final String paipanData;     // 排盘JSON数据
   final String? notes;         // 用户备注
   final String? duanYu;        // 人工断语
+  final String? askObject;     // 占问对象（如：朋友/房贷/健康）
+  final String? askEvent;      // 占问事件（如：是否应该换工作）
   final List<String> tags;     // 标签
   final List<AiMessage> aiMessages; // AI 对话历史
   final CaseType caseType;     // 卦例类型
@@ -127,6 +129,8 @@ class CaseModel {
     required this.paipanData,
     this.notes,
     this.duanYu,
+    this.askObject,
+    this.askEvent,
     this.tags = const [],
     this.aiMessages = const [],
     this.caseType = CaseType.liuyao,
@@ -144,6 +148,8 @@ class CaseModel {
     String? paipanData,
     String? notes,
     String? duanYu,
+    String? askObject,
+    String? askEvent,
     List<String>? tags,
     List<AiMessage>? aiMessages,
     CaseType? caseType,
@@ -159,6 +165,8 @@ class CaseModel {
       paipanData: paipanData ?? this.paipanData,
       notes: notes ?? this.notes,
       duanYu: duanYu ?? this.duanYu,
+      askObject: askObject ?? this.askObject,
+      askEvent: askEvent ?? this.askEvent,
       tags: tags ?? this.tags,
       aiMessages: aiMessages ?? this.aiMessages,
       caseType: caseType ?? this.caseType,
@@ -176,6 +184,8 @@ class CaseModel {
     'paipanData': paipanData,
     'notes': notes,
     'duanYu': duanYu,
+    'askObject': askObject,
+    'askEvent': askEvent,
     'tags': jsonEncode(tags),
     'aiMessages': jsonEncode(aiMessages.map((m) => m.toJson()).toList()),
     'caseType': caseType.name,
@@ -192,6 +202,8 @@ class CaseModel {
     paipanData: map['paipanData'] as String,
     notes: map['notes'] as String?,
     duanYu: map['duanYu'] as String?,
+    askObject: map['askObject'] as String?,
+    askEvent: map['askEvent'] as String?,
     tags: (map['tags'] != null) ? (jsonDecode(map['tags'] as String) as List).cast<String>() : [],
     aiMessages: (map['aiMessages'] != null)
         ? (jsonDecode(map['aiMessages'] as String) as List).map((e) => AiMessage.fromJson(e as Map<String, dynamic>)).toList()
@@ -207,6 +219,8 @@ class CaseModel {
     required String title,
     String? notes,
     String? duanYu,
+    String? askObject,
+    String? askEvent,
     List<String>? tags,
     CaseType? caseType,  // 传 'meihua' 覆盖默认值（引擎method无法区分）
   }) {
@@ -221,6 +235,8 @@ class CaseModel {
       paipanData: jsonEncode(result.toJson()),
       notes: notes,
       duanYu: duanYu,
+      askObject: askObject,
+      askEvent: askEvent,
       tags: tags ?? [],
       caseType: caseType ?? CaseType.liuyao,
       createdAt: now,
@@ -234,6 +250,8 @@ class CaseModel {
     required String title,
     String? notes,
     String? duanYu,
+    String? askObject,
+    String? askEvent,
     List<String>? tags,
   }) {
     final now = DateTime.now();
@@ -246,6 +264,8 @@ class CaseModel {
       paipanData: jsonEncode(result.toJson()),
       notes: notes,
       duanYu: duanYu,
+      askObject: askObject,
+      askEvent: askEvent,
       tags: tags ?? ['八字'],
       caseType: CaseType.bazi,
       createdAt: now,
