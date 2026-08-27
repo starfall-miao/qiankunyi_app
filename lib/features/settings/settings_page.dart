@@ -4,6 +4,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 import '../../core/theme/theme_provider.dart';
 import '../../core/theme/app_theme.dart';
@@ -1164,6 +1166,61 @@ class _ProviderEditDialogState extends State<_ProviderEditDialog> {
     });
   }
 
+  /// 从上游获取模型列表（GET {endpoint}/models）
+  Future<void> _fetchModels() async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('正在从上游获取模型列表…'), duration: const Duration(seconds: 3)),
+    );
+    try {
+      final endpoint = _endpointCtrl.text.trim().replaceAll(RegExp(r'/+$'), '');
+      final key = widget.preset.free ? widget.preset.apiKey : _keyCtrl.text.trim();
+      final url = '$endpoint/models';
+      final res = await http.get(
+        Uri.parse(url),
+        headers: {
+          if (key.isNotEmpty) 'Authorization': 'Bearer $key',
+          'Accept': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 20));
+      if (res.statusCode != 200) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('获取失败 HTTP ${res.statusCode}: ${res.body.length > 100 ? res.body.substring(0, 100) : res.body}')),
+          );
+        }
+        return;
+      }
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final list = data['data'] as List? ?? [];
+      final ids = list
+          .map((e) => e is Map ? (e['id']?.toString() ?? '') : e.toString())
+          .where((s) => s.isNotEmpty)
+          .toList();
+      if (ids.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('接口未返回模型列表（可能需登录/付费）')),
+          );
+        }
+        return;
+      }
+      setState(() {
+        _models = ids;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已获取 ${ids.length} 个模型')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('获取失败: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = widget.preset;
@@ -1224,6 +1281,21 @@ class _ProviderEditDialogState extends State<_ProviderEditDialog> {
                   icon: const Icon(Icons.add_circle_outline),
                 ),
               ],
+            ),
+            const SizedBox(height: 2),
+            // 从上游获取模型
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _fetchModels,
+                icon: const Icon(Icons.cloud_download_outlined, size: 15),
+                label: const Text('从上游获取模型列表', style: TextStyle(fontSize: 12)),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
             ),
             if (!p.builtin) ...[
               const SizedBox(height: 12),

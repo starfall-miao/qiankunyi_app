@@ -1743,6 +1743,71 @@ class _BaziPageState extends State<BaziPage> {
   }
 
   /// 八字结果展示区
+
+  /// 四柱地支刑冲合害分析（年/月/日/时）
+  List<String> _analyzeDiZhiRelations(BaziResult r) {
+    final zhizhis = [
+      r.yearZhu.diZhiCN, r.monthZhu.diZhiCN, r.dayZhu.diZhiCN, r.hourZhu.diZhiCN
+    ];
+    final labels = ['年', '月', '日', '时'];
+    const chongMap = {'子':'午','丑':'未','寅':'申','卯':'酉','辰':'戌','巳':'亥'};
+    const heMap = {'子':'丑','寅':'亥','卯':'戌','辰':'酉','巳':'申','午':'未','丑':'子','亥':'寅','戌':'卯','酉':'辰','申':'巳','未':'午'};
+    const haiMap = {'子':'未','丑':'午','寅':'巳','卯':'辰','申':'亥','酉':'戌','未':'子','午':'丑','巳':'寅','辰':'卯','亥':'申','戌':'酉'};
+    const sanHeGroups = {'申子辰':'水局','亥卯未':'木局','寅午戌':'火局','巳酉丑':'金局'};
+
+    String dz(int i) => zhizhis[i];
+    final out = <String>[];
+    for (var i = 0; i < 4; i++) {
+      for (var j = i + 1; j < 4; j++) {
+        final a = dz(i), b = dz(j);
+        final pair = '${labels[i]}$a-${labels[j]}$b';
+        if (chongMap[a] == b) out.add('$pair 相冲');
+        if (heMap[a] == b) out.add('$pair 六合');
+        if (haiMap[a] == b) out.add('$pair 相害');
+      }
+    }
+    final uniqueDz = zhizhis.toSet().join('');
+    for (final e in sanHeGroups.entries) {
+      if (e.key.split('').every(uniqueDz.contains)) {
+        out.add('含${e.key}三合${e.value}');
+      }
+    }
+    const xingMap = {'寅巳申':'无恩之刑','丑戌未':'恃势之刑'};
+    for (final e in xingMap.entries) {
+      if (e.key.split('').every(uniqueDz.contains)) out.add('${e.key}${e.value}');
+    }
+    if (uniqueDz.contains('子') && uniqueDz.contains('卯')) out.add('子卯无礼之刑');
+    if (out.isEmpty) out.add('四柱地支无明显刑冲合害');
+    return out;
+  }
+
+  /// 地支关系卡片（摘要展示）
+  Widget _diZhiRelationCard(BaziResult r, Color p, Color t, Color b, bool dark) {
+    final rels = _analyzeDiZhiRelations(r);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: dark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: b.withAlpha(60)),
+      ),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        children: rels.map((s) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: t.withAlpha(8),
+            borderRadius: BorderRadius.circular(5),
+            border: Border.all(color: t.withAlpha(20)),
+          ),
+          child: Text(s, style: TextStyle(fontSize: 11, color: t.withAlpha(200))),
+        )).toList(),
+      ),
+    );
+  }
+
   Widget _baziResultSection(BuildContext context,
       BaziResult r, Color p, Color t, Color b, Color c, bool dark) {
     return SingleChildScrollView(
@@ -1875,7 +1940,12 @@ class _BaziPageState extends State<BaziPage> {
 
           // ── 大运 ──
           if (r.daYun.isNotEmpty) ...[
-            _sectionHeader(p, '大运'),
+            // ── 地支刑冲合害 ──
+          _sectionHeader(p, '地支刑冲合害'),
+          _diZhiRelationCard(r, p, t, b, dark),
+          const SizedBox(height: 12),
+
+          _sectionHeader(p, '大运'),
             // 桌面/窄屏可横向滚动：允许鼠标/触控板拖拽 + 可见滚动条可拖拽拇指，
             // 避免外层垂直滚动吞掉水平滚动手势导致"显示不全且无法左右滑动"。
             ScrollConfiguration(
