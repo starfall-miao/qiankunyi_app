@@ -304,6 +304,95 @@ class BaziScreenshotTemplate extends StatelessWidget {
             }).toList(),
           ),
         ],
+        // ── 五行统计 ──
+        if (r.wuXingCounts.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _sectionTitle('五行统计'),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: r.wuXingCounts.entries.map((e) {
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _sCard,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: _sBorder),
+                ),
+                child: Text(
+                  '${e.key} ${e.value}',
+                  style: const TextStyle(fontSize: 11, color: _sText),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+        // ── 空亡 ──
+        if (r.kongWang.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _sectionTitle('空亡（旬空）'),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: _sCard,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: _sBorder),
+            ),
+            child: Text(
+              '空亡：${r.kongWang.join("、")}',
+              style: const TextStyle(fontSize: 11, color: _sText),
+            ),
+          ),
+        ],
+        // ── 纳音（四柱） ──
+        if (_hasNaYin(r)) ...[
+          const SizedBox(height: 12),
+          _sectionTitle('纳音'),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              if (r.yearZhu.naYin != null) _tag('年 ${r.yearZhu.naYin}'),
+              if (r.monthZhu.naYin != null) _tag('月 ${r.monthZhu.naYin}'),
+              if (r.dayZhu.naYin != null) _tag('日 ${r.dayZhu.naYin}'),
+              if (r.hourZhu.naYin != null) _tag('时 ${r.hourZhu.naYin}'),
+            ],
+          ),
+        ],
+        // ── 十神 ──
+        if (r.shiShenMap.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _sectionTitle('十神（以日干为基准）'),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: r.shiShenMap.entries
+                .where((e) => e.key != '日主')
+                .take(16)
+                .map((e) {
+              final label = e.key.contains(':')
+                  ? '${e.key.split(':')[0]}:${e.key.split(':')[1]}'
+                  : e.key;
+              return _tag('$label → ${e.value}');
+            }).toList(),
+          ),
+        ],
+        // ── 藏干 ──
+        if (r.yearZhu.cangGan.isNotEmpty ||
+            r.monthZhu.cangGan.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _sectionTitle('藏干'),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _cangRow('年', r.yearZhu.cangGan),
+              _cangRow('月', r.monthZhu.cangGan),
+              _cangRow('日', r.dayZhu.cangGan),
+              _cangRow('时', r.hourZhu.cangGan),
+            ],
+          ),
+        ],
         // ── 大运 ──
         if (r.daYun.isNotEmpty) ...[
           const SizedBox(height: 12),
@@ -348,6 +437,37 @@ class BaziScreenshotTemplate extends StatelessWidget {
       ],
     );
   }
+}
+
+/// 四柱是否含纳音
+bool _hasNaYin(BaziResult r) =>
+    r.yearZhu.naYin != null ||
+    r.monthZhu.naYin != null ||
+    r.dayZhu.naYin != null ||
+    r.hourZhu.naYin != null;
+
+/// 截图小标签
+Widget _tag(String text) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+    decoration: BoxDecoration(
+      color: _sCard,
+      borderRadius: BorderRadius.circular(5),
+      border: Border.all(color: _sBorder),
+    ),
+    child: Text(text, style: const TextStyle(fontSize: 10, color: _sText)),
+  );
+}
+
+/// 藏干行：'年柱地支 藏干'
+Widget _cangRow(String label, List<String> cang) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 3),
+    child: Text(
+      '${label}：${cang.isEmpty ? "—" : cang.join("、")}',
+      style: const TextStyle(fontSize: 10.5, color: _sText),
+    ),
+  );
 }
 
 // ═══════════════════ 公共私有组件 ═══════════════════

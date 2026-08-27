@@ -144,14 +144,19 @@ class _GuaCiTabState extends State<_GuaCiTab> {
     super.dispose();
   }
 
-  /// 获取当前宫卦列表，搜索过滤
+  /// 获取当前宫卦列表；搜索时全范围（8 宫全部 64 卦）过滤
   List<GuaCi> get _filteredGua {
-    final gongData = baguaGong[_selectedGong] ?? [];
-    if (_searchQuery.isEmpty) return gongData;
-    return gongData.where((g) {
-      final cn = guaNameCN[g.name] ?? g.name.name;
-      return cn.contains(_searchQuery) || g.name.name.contains(_searchQuery);
-    }).toList();
+    if (_searchQuery.isEmpty) return baguaGong[_selectedGong] ?? [];
+    final result = <GuaCi>[];
+    for (final gong in baguaGong.values) {
+      for (final g in gong) {
+        final cn = guaNameCN[g.name] ?? g.name.name;
+        if (cn.contains(_searchQuery) || g.name.name.contains(_searchQuery)) {
+          result.add(g);
+        }
+      }
+    }
+    return result;
   }
 
   Color _gongColor(String gong) {
@@ -628,35 +633,7 @@ class _XiangYiTabState extends State<_XiangYiTab> {
 
     return Column(
       children: [
-        // ── 八卦选择（精简下拉） ──
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          child: Row(
-            children: [
-              Icon(Icons.explore, size: 16, color: p),
-              const SizedBox(width: 6),
-              Text('八卦：', style: TextStyle(fontSize: 13, color: t.withAlpha(200))),
-              DropdownButton<String>(
-                value: _selectedGua,
-                underline: const SizedBox(),
-                isDense: true,
-                items: guaNames.map((name) {
-                  final sym = _guaSymbols[name] ?? '';
-                  return DropdownMenuItem(
-                    value: name,
-                    child: Text('$sym $name', style: TextStyle(fontSize: 14, color: t)),
-                  );
-                }).toList(),
-                onChanged: (v) {
-                  if (v != null) setState(() { _selectedGua = v; _selectedCategory = null; });
-                },
-              ),
-            ],
-          ),
-        ),
-        const Divider(height: 1, indent: 8, endIndent: 8),
-
-        // ── 第二行：分类筛选（轻量标签，非选中模式） ──
+        // ── 分类快捷筛选（轻量标签） ──
         SizedBox(
           height: 40,
           child: ListView(
