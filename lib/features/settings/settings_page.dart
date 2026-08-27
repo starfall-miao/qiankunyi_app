@@ -16,6 +16,7 @@ import 'views/compass_page.dart';
 import '../onboarding/views/onboarding_page.dart';
 import '../users/views/user_profile_page.dart';
 import '../users/providers/user_provider.dart';
+import 'views/tutorial_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -40,7 +41,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final bgColor = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('设置')),
+      appBar: AppBar(title: const Text('百宝箱')),
       body: Container(
         color: bgColor,
         child: LayoutBuilder(
@@ -80,6 +81,23 @@ class _SettingsPageState extends State<SettingsPage> {
                       ],
                     ]),
                   ),
+                ),
+                const SizedBox(height: 16),
+
+                // 📖 易学入门教程（百宝箱主打功能）
+                _buildSectionHeader(theme, '📖 易学入门教程'),
+                const SizedBox(height: 8),
+                _buildCard(
+                  Column(children: [
+                    _buildSettingsRow(
+                      icon: Icons.auto_stories,
+                      title: '周易 · 六爻 · 梅花 · 八字教程',
+                      subtitle: '术数原理 · 手动排盘 · 五行六亲纳甲速查卡',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const TutorialPage()),
+                      ),
+                    ),
+                  ]),
                 ),
                 const SizedBox(height: 16),
 

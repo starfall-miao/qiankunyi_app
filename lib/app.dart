@@ -85,7 +85,7 @@ class _MainShellState extends State<MainShell> {
     NavigationDestination(icon: Icon(LucideIcons.bookmark), label: '卦例'),
     NavigationDestination(icon: Icon(LucideIcons.calendar), label: '日历'),
     NavigationDestination(icon: Icon(LucideIcons.book), label: '参考'),
-    NavigationDestination(icon: Icon(LucideIcons.settings), label: '设置'),
+    NavigationDestination(icon: Icon(LucideIcons.settings), label: '百宝箱'),
   ];
 
   static const _navRailDestinations = [
@@ -107,7 +107,7 @@ class _MainShellState extends State<MainShell> {
     ),
     NavigationRailDestination(
       icon: Icon(LucideIcons.settings),
-      label: Text('设置'),
+      label: Text('百宝箱'),
     ),
   ];
 
