@@ -24,6 +24,7 @@ import '../../paipan/views/gua_widget.dart';
 import '../../reference/data/bazi_reference_data.dart';
 import '../../reference/data/reference_data.dart';
 import '../../settings/settings_provider.dart';
+import '../../users/providers/user_provider.dart';
 import '../models/case_models.dart';
 import '../providers/case_provider.dart';
 
@@ -1852,6 +1853,12 @@ class _AiChatSectionState extends State<_AiChatSection> {
           '要求：先结合卦象/命盘信息完整解析原局（卦象含义、六亲/五行关系、'
           '旺衰生克等），再结合上述占问背景给出针对性分析与建议，最后给出明确结论。';
     }
+    // 注入用户画像（多用户本地画像，AI 解卦参考）
+    final up = context.read<UserProvider>();
+    final pic = up.aiPicContext;
+    if (pic.isNotEmpty) {
+      systemPrompt = '$systemPrompt\n\n【用户画像（供参考分析）】\n$pic';
+    }
     final prompt = _buildPromptForType();
     final messages = <Map<String, String>>[
       {'role': 'system', 'content': systemPrompt},
@@ -2037,6 +2044,12 @@ class _AiChatSectionState extends State<_AiChatSection> {
     ];
     if (askParts.isNotEmpty) {
       systemPrompt = '$systemPrompt\n\n（本次占问背景：${askParts.join("；")}）';
+    }
+    // 注入用户画像（追问同样参考）
+    final up = context.read<UserProvider>();
+    final pic = up.aiPicContext;
+    if (pic.isNotEmpty) {
+      systemPrompt = '$systemPrompt\n\n【用户画像（供参考分析）】\n$pic';
     }
     // 构建上下文：系统提示 + 历史消息 + 当前问题（错误消息不进入 AI 上下文）。
     // 上下文容量保护：按约 131k tokens（≈85k 中文字符）上限，超出时丢弃

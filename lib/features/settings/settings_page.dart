@@ -12,6 +12,7 @@ import 'settings_provider.dart';
 import 'views/about_page.dart';
 import 'views/compass_page.dart';
 import '../onboarding/views/onboarding_page.dart';
+import '../users/views/user_profile_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -77,6 +78,16 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildSectionHeader(theme, '🧭 小工具'),
                 const SizedBox(height: 8),
                 _buildCompassEntry(theme),
+                const SizedBox(height: 8),
+                // 用户画像入口
+                _buildSettingsRow(
+                  icon: Icons.face,
+                  title: '用户画像',
+                  subtitle: '多用户本地记录 · 密码保护 · AI 解卦参考',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const UserProfilePage()),
+                  ),
+                ),
                 const SizedBox(height: 16),
 
                 _buildSectionHeader(theme, '🤖 AI 解卦配置'),

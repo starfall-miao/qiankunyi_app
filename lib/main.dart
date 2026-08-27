@@ -9,6 +9,7 @@ import 'features/paipan/providers/paipan_provider.dart';
 import 'features/cases/providers/case_provider.dart';
 import 'features/settings/settings_provider.dart';
 import 'features/paipan/providers/bazi_provider.dart';
+import 'features/users/providers/user_provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -75,6 +76,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => CaseProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()..init()),
         ChangeNotifierProvider(create: (_) => BaziProvider()),
+        ChangeNotifierProvider(create: (_) => UserProvider()..init()),
       ],
       child: const QianKunYiApp(),
     ),
