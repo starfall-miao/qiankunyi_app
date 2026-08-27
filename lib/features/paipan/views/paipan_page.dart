@@ -1435,6 +1435,24 @@ class _BaziPageState extends State<BaziPage> {
     '水': Color(0xFF1565C0),
   };
 
+  // 天干五行
+  static const _tianGanWx = {
+    '甲': '木', '乙': '木', '丙': '火', '丁': '火', '戊': '土',
+    '己': '土', '庚': '金', '辛': '金', '壬': '水', '癸': '水',
+  };
+
+  // 地支五行
+  static const _diZhiWx = {
+    '子': '水', '丑': '土', '寅': '木', '卯': '木', '辰': '土', '巳': '火',
+    '午': '火', '未': '土', '申': '金', '酉': '金', '戌': '土', '亥': '水',
+  };
+
+  /// 干支字符 → 五行名
+  static String _ganZhiWx(String s) {
+    if (s.isEmpty) return '';
+    return _tianGanWx[s[0]] ?? _diZhiWx[s[0]] ?? '';
+  }
+
   // 旺衰标签色
   static const _wangShuaiColors = <String, Color>{
     '旺': Color(0xFF2E7D32),
@@ -1817,6 +1835,8 @@ class _BaziPageState extends State<BaziPage> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: r.daYun.map((dy) {
+                      final ganWx = _ganZhiWx(dy.tianGan);
+                      final ganColor = _wxColors[ganWx] ?? t;
                       return Container(
                         width: 76,
                         margin: const EdgeInsets.only(right: 6),
@@ -1824,7 +1844,7 @@ class _BaziPageState extends State<BaziPage> {
                         decoration: BoxDecoration(
                           color: dark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: b.withAlpha(60)),
+                          border: Border.all(color: ganColor.withAlpha(80)),
                         ),
                         child: Column(
                           children: [
@@ -1836,7 +1856,7 @@ class _BaziPageState extends State<BaziPage> {
                                 style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: t)),
+                                    color: ganColor)),
                             if (dy.naYin != null) ...[
                               const SizedBox(height: 2),
                               Text(dy.naYin!,
