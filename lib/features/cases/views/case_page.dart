@@ -1746,7 +1746,12 @@ class _AiChatSectionState extends State<_AiChatSection> {
   /// 与 _retryNote 配合在卡片上标注"连接中断，自动重试 n/3…"，防止
   /// 瞬时网络错误直接丢结果（用户反馈"信号灯超时时应该自动重试三次"）。
   int _streamRetry = 0;
-  static const int _maxStreamRetry = 20;
+  /// 无限自动重试：直到成功或用户点击"停止"打断（429限流/网络瞬断等）
+  static const int _maxStreamRetry = 9999;
+  /// 重试间隔（毫秒），避免高频请求加剧限流
+  static const int _retryIntervalMs = 500;
+  /// 用户是否请求中断（停止重试/停止生成）
+  bool _cancelRequested = false;
   /// 重试提示文案：非空时显示在"正在思考…"上方，用户可见当前重试状态。
   String _retryNote = '';
   /// 本次请求是否为追问（追问时首个 chunk 滚到底部让输入框保持可见，
@@ -2043,6 +2048,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
       _streamRetry = 0;
       _retryNote = '';
       _pendingPieces = '';
+      _cancelRequested = false;
     });
     try {
       // 关键步骤日志：开始请求（model、消息数；不打印 apiKey，避免明文泄漏）
@@ -2175,8 +2181,8 @@ class _AiChatSectionState extends State<_AiChatSection> {
           });
           return;
         }
-        // 自动重试：信号灯超时/网络瞬断等瞬时错误，最多重试 20 次。
-        // 每次失败在卡片上标注"连接中断，自动重试 n/20…"，防止直接丢结果。
+        // 自动重试：信号灯超时/网络瞬断等瞬时错误，无限重试（直到成功或用户停止）。
+        // 每次失败在卡片上标注"连接中断，自动重试中…（第 n 次）"。
         // 429 限流：按设置开关决定是否重试。
         final is429 = e is AiStreamException && e.statusCode == 429;
         if (is429 && !sp.aiRetryOn429) {
@@ -2193,16 +2199,23 @@ class _AiChatSectionState extends State<_AiChatSection> {
         if (_streamRetry < _maxStreamRetry) {
           _streamRetry++;
           setState(() {
-            _retryNote = '连接中断，自动重试 $_streamRetry/$_maxStreamRetry…';
+            _retryNote = '连接中断，自动重试中…（第 $_streamRetry 次）';
           });
           Logger.instance.warn('$logTag流式重试',
-              '第 $_streamRetry/$_maxStreamRetry 次 | 错误: $e');
-          _restartStreaming(
-            msg: cur,
-            messages: messages,
-            logTag: logTag,
-            errPrefix: errPrefix,
-          );
+              '第 $_streamRetry 次 | 错误: $e');
+          // 半秒后重试（可被打断：期间用户点"停止"则放弃）
+          Future.delayed(const Duration(milliseconds: _retryIntervalMs), () {
+            if (!mounted || _cancelRequested) {
+              _handleCancel();
+              return;
+            }
+            _restartStreaming(
+              msg: cur,
+              messages: messages,
+              logTag: logTag,
+              errPrefix: errPrefix,
+            );
+          });
           return;
         }
         Logger.instance.error('$logTag流式失败',
@@ -2480,13 +2493,13 @@ class _AiChatSectionState extends State<_AiChatSection> {
   }) async {
     final sp = context.read<SettingsProvider>();
     int retry = 0;
-    while (retry < 20) {
+    while (retry < _maxStreamRetry && !_cancelRequested) {
       retry++;
       if (retry > 1) {
         // async gap 之后：弹窗可能已关闭（dispose），先守卫再 setState
         if (!mounted) return;
         setState(() {
-          _retryNote = '连接中断，自动重试 $retry/20…';
+          _retryNote = '连接中断，自动重试中…（第 $retry 次）';
         });
       }
       try {
@@ -2515,28 +2528,25 @@ class _AiChatSectionState extends State<_AiChatSection> {
             _showToast('$errPrefix: ${result.errorMessage}');
             break;
           }
-          // 5xx / 429(开关开启) / 网络类错误：重试直到上限
-          if (retry >= 20) {
-            Logger.instance.error('$logTag回退失败',
-                'statusCode: $code 错误摘要: ${result.errorMessage}（已重试 $retry 次）');
-            _handleStreamFailure(msg, '$errPrefix: ${result.errorMessage}');
-            _showToast('$errPrefix: ${result.errorMessage}');
-          } else {
-            Logger.instance.warn('$logTag回退重试',
-                '第 $retry/20 次 | statusCode: $code');
-          }
+          // 5xx / 429(开关开启) / 网络类错误：无限重试直到成功或用户停止
+          Logger.instance.warn('$logTag回退重试',
+              '第 $retry 次 | statusCode: $code');
+          // 半秒间隔，避免高频请求加剧限流
+          await Future.delayed(const Duration(milliseconds: _retryIntervalMs));
         }
       } catch (e) {
-        if (retry >= 20) {
-          Logger.instance.error('$logTag回退失败',
-              '网络错误: $e（已重试 $retry 次）');
-          _handleStreamFailure(msg, '$errPrefix: 网络错误: $e');
-          _showToast('$errPrefix: 网络错误: $e');
-        } else {
-          Logger.instance.warn('$logTag回退重试',
-              '第 $retry/20 次 | 网络错误: $e');
-        }
+        Logger.instance.warn('$logTag回退重试',
+            '第 $retry 次 | 网络错误: $e');
+        await Future.delayed(const Duration(milliseconds: _retryIntervalMs));
       }
+    }
+    if (_cancelRequested) {
+      // 用户主动停止：清理占位并提示，不追加错误气泡
+      if (mounted) {
+        setState(() => _retryNote = '已停止重试');
+      }
+      Logger.instance.info('$logTag回退停止', '用户中断重试（已重试 $retry 次）');
+      _showToast('已停止重试');
     }
     // 成功/失败/异常都复位请求态；但仅当没有其它进行中的流式（如并发追问）
     // 时才把 _streaming 复位，避免回退完成清掉其它请求的进行中状态。
@@ -2692,6 +2702,45 @@ class _AiChatSectionState extends State<_AiChatSection> {
     }
   }
 
+  /// 用户点击"停止"：中断当前流式/重试请求
+  void _cancelAiRequest() {
+    if (!mounted) return;
+    _cancelRequested = true;
+    // 取消流式订阅
+    final sub = _streamSub;
+    _streamSub = null;
+    sub?.cancel();
+    // 若正在生成中（非重试），直接移除空占位并复位
+    if (_streamingMsg != null) {
+      final msg = _streamingMsg;
+      _streamingMsg = null;
+      final idx = _localMessages.indexOf(msg);
+      if (idx >= 0 && msg!.content.trim().isEmpty) {
+        setState(() {
+          _localMessages = [..._localMessages]..removeAt(idx);
+        });
+      }
+    }
+    setState(() {
+      _loading = false;
+      _streaming = false;
+      _retryNote = '已停止';
+    });
+    Logger.instance.info('AI解卦', '用户已停止请求');
+  }
+
+  /// 取消后清理（供 Future.delayed 重试检查用）
+  void _handleCancel() {
+    if (!mounted) return;
+    if (_streamSub == null) {
+      setState(() {
+        _loading = false;
+        _streaming = false;
+        _retryNote = '已停止';
+      });
+    }
+  }
+
   void _showToast(String msg) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2739,12 +2788,27 @@ class _AiChatSectionState extends State<_AiChatSection> {
       Text('🤖 AI 解卦',
           style: TextStyle(
               fontSize: 14, fontWeight: FontWeight.bold, color: t)),
-      if (_loading) ...[
+      if (_loading || _streaming) ...[
         const Spacer(),
-        const SizedBox(
-            width: 18,
-            height: 18,
-            child: CircularProgressIndicator(strokeWidth: 2)),
+        // 停止按钮：中断生成/重试
+        TextButton.icon(
+          onPressed: _cancelAiRequest,
+          icon: Icon(Icons.stop_circle_outlined, size: 16, color: Colors.red.shade300),
+          label: Text('停止',
+              style: TextStyle(fontSize: 12, color: Colors.red.shade300)),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+        if (_loading) ...[
+          const SizedBox(width: 8),
+          const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2)),
+        ],
       ],
     ]);
   }
