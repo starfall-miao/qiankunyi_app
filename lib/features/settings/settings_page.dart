@@ -55,7 +55,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 Consumer<UserProvider>(
                   builder: (ctx, up, _) => _buildCard(
                     Column(children: [
-                      _buildSettingRow(
+                      _buildSettingsRow(
                         icon: Icons.face,
                         title: '当前用户',
                         subtitle: up.current != null
