@@ -24,6 +24,8 @@ import '../models/gua_model.dart';
 import '../models/yao_model.dart';
 import '../models/bazi_models.dart';
 import 'gua_widget.dart';
+import 'xiaoliuren_page.dart';
+import 'daliuren_page.dart';
 
 // 卦名中文映射统一使用 case_models.dart 中的 guaNameCN
 
@@ -89,7 +91,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
             SliverAppBar(
               floating: true,
               snap: true,
-              title: Text('排盘 · ${_tabIndex == 0 ? "六爻" : _tabIndex == 1 ? "梅花" : "八字"}',
+              title: Text('排盘 · ${_tabIndex == 0 ? "六爻" : _tabIndex == 1 ? "梅花" : _tabIndex == 2 ? "八字" : _tabIndex == 3 ? "小六壬" : "大六壬"}',
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               actions: [
                 IconButton(
@@ -118,11 +120,16 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
             SliverToBoxAdapter(
               child: Container(
                 decoration: BoxDecoration(color: c, border: Border(bottom: BorderSide(color: b))),
+                child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
                 child: Row(children: [
-                  _tabBtn('六爻（铜钱）', 0, p, isDark),
-                  _tabBtn('梅花易数', 1, p, isDark),
+                  _tabBtn('六爻', 0, p, isDark),
+                  _tabBtn('梅花', 1, p, isDark),
                   _tabBtn('八字', 2, p, isDark),
+                  _tabBtn('小六壬', 3, p, isDark),
+                  _tabBtn('大六壬', 4, p, isDark),
                 ]),
+              ),
               ),
             ),
         ],
@@ -134,7 +141,11 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                 ? _liuyaoContent(context, pr, p, t, b, c, isDark)
                 : _tabIndex == 1
                     ? _meihuaContent(context, pr, p, t, b, c, isDark)
-                    : const BaziPage();
+                    : _tabIndex == 2
+                        ? const BaziPage()
+                        : _tabIndex == 3
+                            ? const XiaoLiuRenPage()
+                            : const DaLiuRenPage();
             return SingleChildScrollView(
               padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 12),
               child: Center(
@@ -168,14 +179,16 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
   Widget _tabBtn(String label, int idx, Color p, bool dark) {
     final sel = _tabIndex == idx;
     final txtColor = dark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
-    return Expanded(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       child: GestureDetector(
         onTap: () {
           setState(() => _tabIndex = idx);
-          _log.info('切换选项卡: ${idx == 0 ? "六爻" : "梅花"}');
+          const names = ['六爻', '梅花', '八字', '小六壬', '大六壬'];
+          _log.info('切换选项卡: ${names.length > idx ? names[idx] : ""}');
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
           color: sel ? p.withAlpha(20) : Colors.transparent,
           child: Text(label,
             textAlign: TextAlign.center,
