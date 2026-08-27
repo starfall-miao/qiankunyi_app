@@ -681,20 +681,32 @@ class _SettingsPageState extends State<SettingsPage> {
                     );
                   }),
                   const Divider(),
-                  // 常见供应商快速添加
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16, top: 4, bottom: 4),
-                    child: Text('快速添加', style: TextStyle(fontSize: 12, color: t.colorScheme.onSurface.withAlpha(150))),
-                  ),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
+                  // 常见供应商快速添加（默认折叠）
+                  ExpansionTile(
+                    dense: true,
+                    tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+                    childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    title: Text('快速添加常见提供商',
+                        style: TextStyle(fontSize: 13, color: t.colorScheme.onSurface.withAlpha(180))),
+                    subtitle: Text('点击展开一键添加', style: TextStyle(fontSize: 11, color: t.colorScheme.onSurface.withAlpha(120))),
+                    leading: const Icon(Icons.library_add_outlined, size: 18),
                     children: [
-                      _commonProviderChip('智谱 GLM', 'https://open.bigmodel.cn/api/paas/v4', 'glm-4.7-flash', ['glm-4.7-flash', 'glm-4.7', 'glm-5'], sp, dialogCtx),
-                      _commonProviderChip('OpenAI', 'https://api.openai.com/v1', 'gpt-4o', ['gpt-4o', 'gpt-4o-mini', 'gpt-4', 'gpt-3.5-turbo'], sp, dialogCtx),
-                      _commonProviderChip('DeepSeek', 'https://api.deepseek.com/v1', 'deepseek-chat', ['deepseek-chat', 'deepseek-reasoner'], sp, dialogCtx),
-                      _commonProviderChip('通义千问', 'https://dashscope.aliyuncs.com/compatible-mode/v1', 'qwen-turbo', ['qwen-turbo', 'qwen-plus', 'qwen-max'], sp, dialogCtx),
-                      _commonProviderChip('opencode zen', 'https://opencode.ai/zen/v1', 'mimo-v2.5-free', ['mimo-v2.5-free', 'north-mini-code-free', 'nemotron-3-ultra-free', 'big-pickle'], sp, dialogCtx),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          _commonProviderChip('智谱 GLM', 'https://open.bigmodel.cn/api/paas/v4', 'glm-4.7-flash', ['glm-4.7-flash', 'glm-4.7', 'glm-5'], sp, dialogCtx),
+                          _commonProviderChip('OpenAI', 'https://api.openai.com/v1', 'gpt-4o', ['gpt-4o', 'gpt-4o-mini', 'gpt-4', 'gpt-3.5-turbo'], sp, dialogCtx),
+                          _commonProviderChip('DeepSeek', 'https://api.deepseek.com/v1', 'deepseek-chat', ['deepseek-chat', 'deepseek-reasoner'], sp, dialogCtx),
+                          _commonProviderChip('通义千问', 'https://dashscope.aliyuncs.com/compatible-mode/v1', 'qwen-turbo', ['qwen-turbo', 'qwen-plus', 'qwen-max'], sp, dialogCtx),
+                          _commonProviderChip('月之暗面 Kimi', 'https://api.moonshot.cn/v1', 'moonshot-v1-8k', ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k'], sp, dialogCtx),
+                          _commonProviderChip('豆包/火山方舟', 'https://ark.cn-beijing.volces.com/api/v3', 'doubao-pro-32k', ['doubao-pro-32k', 'doubao-lite-32k'], sp, dialogCtx),
+                          _commonProviderChip('硅基流动', 'https://api.siliconflow.cn/v1', 'Qwen/Qwen2.5-7B-Instruct', ['Qwen/Qwen2.5-7B-Instruct', 'deepseek-ai/DeepSeek-V3'], sp, dialogCtx),
+                          _commonProviderChip('Anthropic Claude', 'https://api.anthropic.com/v1', 'claude-3-5-sonnet', ['claude-3-5-sonnet', 'claude-3-haiku'], sp, dialogCtx),
+                          _commonProviderChip('opencode zen', 'https://opencode.ai/zen/v1', 'mimo-v2.5-free', ['mimo-v2.5-free', 'north-mini-code-free', 'nemotron-3-ultra-free', 'big-pickle'], sp, dialogCtx),
+                          _commonProviderChip('商汤日日新', 'https://token.sensenova.cn/v1', 'glm-5.2', ['glm-5.2', 'glm-5.1', 'glm-4.7-flash'], sp, dialogCtx),
+                        ],
+                      ),
                     ],
                   ),
                   const Divider(),
