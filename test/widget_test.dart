@@ -37,7 +37,7 @@ void main() {
     expect(find.text('卦例'), findsWidgets);
     expect(find.text('日历'), findsWidgets);
     expect(find.text('参考'), findsWidgets);
-    expect(find.text('设置'), findsWidgets);
+    expect(find.text('百宝箱'), findsWidgets);
     // 底部导航栏存在
     expect(find.byType(NavigationBar), findsOneWidget);
   });
