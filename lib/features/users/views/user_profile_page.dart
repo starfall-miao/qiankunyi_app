@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../calendar/views/calendar_picker_dialog.dart';
 import '../providers/user_provider.dart';
 import '../models/user_profile.dart';
 
@@ -47,7 +48,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 ),
                 title: Text(usr.nickname, style: const TextStyle(fontSize: 14)),
                 subtitle: Text(
-                  usr.passwordHash != null ? '🔒 已设密码' : (usr.hasBazi ? '☯ 已提交八字' : '未填写八字'),
+                  usr.hasBazi ? '☯ 已提交八字' : '未填写八字',
                   style: const TextStyle(fontSize: 11),
                 ),
                 trailing: up.current?.id == usr.id
@@ -70,27 +71,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
           const SizedBox(height: 20),
 
           if (u != null) ...[
-            _sectionTitle(scheme, '🔐 密码'),
-            Card(
-              child: Column(children: [
-                ListTile(
-                  dense: true,
-                  leading: const Icon(Icons.key, size: 18),
-                  title: const Text('设置 / 修改密码', style: TextStyle(fontSize: 13)),
-                  trailing: const Icon(Icons.chevron_right, size: 18),
-                  onTap: () => _passwordDialog(up, u),
-                ),
-                if (u.passwordHash != null)
-                  ListTile(
-                    dense: true,
-                    leading: const Icon(Icons.delete_sweep, size: 18),
-                    title: const Text('移除密码', style: TextStyle(fontSize: 13)),
-                    onTap: () => _removePasswordDialog(up, u),
-                  ),
-              ]),
-            ),
-            const SizedBox(height: 20),
-
             _sectionTitle(scheme, '☯️ 八字画像'),
             Card(
               child: Column(children: [
@@ -189,93 +169,22 @@ class _UserProfilePageState extends State<UserProfilePage> {
   // ── 添加用户 ──
   void _addUserDialog(UserProvider up) {
     final name = TextEditingController();
-    final pwd = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('添加用户'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: name,
-              decoration: const InputDecoration(labelText: '昵称', isDense: true)),
-          const SizedBox(height: 10),
-          TextField(controller: pwd,
-              decoration: const InputDecoration(labelText: '密码（可选，留空则无密码）', isDense: true),
-              obscureText: true),
-        ]),
+        content: TextField(controller: name,
+            decoration: const InputDecoration(labelText: '昵称', isDense: true)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
           FilledButton(
             onPressed: () {
               if (name.text.trim().isEmpty) return;
-              up.addUser(name.text.trim(), password: pwd.text);
+              up.addUser(name.text.trim());
               Navigator.pop(ctx);
               setState(() {});
             },
             child: const Text('添加'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── 密码设置 ──
-  void _passwordDialog(UserProvider up, UserProfile u) {
-    final old = TextEditingController();
-    final next = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('设置密码'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          if (u.passwordHash != null) ...[
-            TextField(controller: old,
-                decoration: const InputDecoration(labelText: '旧密码', isDense: true),
-                obscureText: true),
-            const SizedBox(height: 8),
-          ],
-          TextField(controller: next,
-              decoration: const InputDecoration(labelText: '新密码（留空移除密码）', isDense: true),
-              obscureText: true),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          FilledButton(
-            onPressed: () {
-              final ok = up.changePassword(old.text, next.text);
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(ok ? '密码已更新' : '旧密码不正确')),
-              );
-              setState(() {});
-            },
-            child: const Text('保存'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _removePasswordDialog(UserProvider up, UserProfile u) {
-    final pwd = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('移除密码'),
-        content: TextField(controller: pwd,
-            decoration: const InputDecoration(labelText: '输入当前密码', isDense: true),
-            obscureText: true),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          FilledButton(
-            onPressed: () {
-              final ok = up.changePassword(pwd.text, '');
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(ok ? '密码已移除' : '密码不正确')),
-              );
-              setState(() {});
-            },
-            child: const Text('移除'),
           ),
         ],
       ),
@@ -293,13 +202,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
   // ── 出生信息（选择日期 → 计算画像） ──
   Future<void> _birthDialog(UserProvider up, UserProfile u) async {
-    DateTime init = u.birth ?? DateTime(1990, 1, 1);
-    final picked = await showDatePicker(
+    // 使用与八字排盘页同款的日历选择器
+    final picked = await showDialog<DateTime>(
       context: context,
-      initialDate: init,
-      firstDate: DateTime(1920),
-      lastDate: DateTime.now(),
-      helpText: '选择出生日期',
+      builder: (_) => const CalendarPickerDialog(),
     );
     if (picked == null || !mounted) return;
     bool male = u.isMale;
@@ -330,10 +236,18 @@ class _UserProfilePageState extends State<UserProfilePage> {
             Wrap(
               spacing: 4,
               children: List.generate(12, (i) {
-                final hours = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+                const hours = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+                const ranges = ['23-01', '01-03', '03-05', '05-07', '07-09', '09-11',
+                                '11-13', '13-15', '15-17', '17-19', '19-21', '21-23'];
                 final sel = hour == i;
                 return ChoiceChip(
-                  label: Text(hours[i], style: TextStyle(fontSize: 11, color: sel ? Colors.white : null)),
+                  label: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(hours[i], style: TextStyle(fontSize: 11, color: sel ? Colors.white : null)),
+                      Text(ranges[i], style: TextStyle(fontSize: 8, color: sel ? Colors.white70 : Colors.grey)),
+                    ],
+                  ),
                   selected: sel,
                   selectedColor: Theme.of(context).colorScheme.primary,
                   onSelected: (_) => setS(() => hour = i),

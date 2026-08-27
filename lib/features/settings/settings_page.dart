@@ -15,6 +15,7 @@ import 'views/about_page.dart';
 import 'views/compass_page.dart';
 import '../onboarding/views/onboarding_page.dart';
 import '../users/views/user_profile_page.dart';
+import '../users/providers/user_provider.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -48,6 +49,40 @@ class _SettingsPageState extends State<SettingsPage> {
             final list = ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               children: [
+                // 👤 用户画像（置顶）
+                _buildSectionHeader(theme, '👤 用户画像'),
+                const SizedBox(height: 8),
+                Consumer<UserProvider>(
+                  builder: (ctx, up, _) => _buildCard(
+                    Column(children: [
+                      _buildSettingRow(
+                        icon: Icons.face,
+                        title: '当前用户',
+                        subtitle: up.current != null
+                            ? '${up.current!.nickname} · 共 ${up.users.length} 个用户'
+                            : '未创建用户，点此创建',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const UserProfilePage()),
+                        ),
+                      ),
+                      if (up.current != null) ...[
+                        const Divider(height: 12),
+                        _buildSettingRow(
+                          icon: Icons.badge_outlined,
+                          title: 'AI 参考画像',
+                          subtitle: up.current!.aiReferenceEnabled
+                              ? '${up.current!.baziSummary.isNotEmpty ? "已提交八字 · " : ""}解卦时参考'
+                              : '未开启（解卦时不参考画像）',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const UserProfilePage()),
+                          ),
+                        ),
+                      ],
+                    ]),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
                 _buildSectionHeader(theme, '🎨 主题与配色'),
                 const SizedBox(height: 8),
                 _buildThemeModeCard(theme, isDark),
@@ -80,16 +115,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildSectionHeader(theme, '🧭 小工具'),
                 const SizedBox(height: 8),
                 _buildCompassEntry(theme),
-                const SizedBox(height: 8),
-                // 用户画像入口
-                _buildSettingsRow(
-                  icon: Icons.face,
-                  title: '用户画像',
-                  subtitle: '多用户本地记录 · 密码保护 · AI 解卦参考',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const UserProfilePage()),
-                  ),
-                ),
                 const SizedBox(height: 16),
 
                 _buildSectionHeader(theme, '🤖 AI 解卦配置'),
