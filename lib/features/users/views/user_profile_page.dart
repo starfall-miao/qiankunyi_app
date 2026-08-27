@@ -42,7 +42,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 leading: CircleAvatar(
                   radius: 16,
                   backgroundColor: scheme.primaryContainer,
-                  child: Text(usr.nickname.characters.first,
+                  child: Text(usr.nickname.isEmpty ? '?' : usr.nickname.substring(0, 1),
                       style: TextStyle(fontSize: 14, color: scheme.onPrimaryContainer)),
                 ),
                 title: Text(usr.nickname, style: const TextStyle(fontSize: 14)),

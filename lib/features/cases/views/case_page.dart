@@ -606,7 +606,7 @@ class _CasePageState extends State<CasePage> {
                     children: [
                       if (c.askObject != null && c.askObject!.isNotEmpty)
                         Text('占问对象：${c.askObject}',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: p)),
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary)),
                       if (c.askEvent != null && c.askEvent!.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text('占问事件：${c.askEvent}',
@@ -2778,10 +2778,10 @@ class _AiChatSectionState extends State<_AiChatSection> {
     sub?.cancel();
     // 若正在生成中（非重试），直接移除空占位并复位
     if (_streamingMsg != null) {
-      final msg = _streamingMsg;
+      final msg = _streamingMsg!;
       _streamingMsg = null;
       final idx = _localMessages.indexOf(msg);
-      if (idx >= 0 && msg!.content.trim().isEmpty) {
+      if (idx >= 0 && msg.content.trim().isEmpty) {
         setState(() {
           _localMessages = [..._localMessages]..removeAt(idx);
         });

@@ -462,12 +462,13 @@ Widget _tag(String text) {
   );
 }
 
-/// 藏干行：'年柱地支 藏干'
-Widget _cangRow(String label, List<String> cang) {
+/// 藏干行：'年柱地支 藏干'（cangGan: 本气/中气/余气 → 干）
+Widget _cangRow(String label, Map<String, String> cang) {
+  final parts = cang.values.where((v) => v.isNotEmpty).toList();
   return Padding(
     padding: const EdgeInsets.only(bottom: 3),
     child: Text(
-      '${label}：${cang.isEmpty ? "—" : cang.join("、")}',
+      '${label}：${parts.isEmpty ? "—" : parts.join("、")}',
       style: const TextStyle(fontSize: 10.5, color: _sText),
     ),
   );

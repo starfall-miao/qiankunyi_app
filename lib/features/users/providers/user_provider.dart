@@ -4,8 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../core/utils/logger.dart';
-import '../../paipan/engines/bazi_engine.dart';
+import '../../../core/utils/logger.dart';
 import '../../paipan/providers/bazi_provider.dart';
 import '../models/user_profile.dart';
 
@@ -161,7 +160,7 @@ class UserProvider extends ChangeNotifier {
     required DateTime birth,
     required bool isMale,
     required int hourIndex,
-    bool submit,
+    bool submit = true,
   }) async {
     final u = _current;
     if (u == null) return;
@@ -196,7 +195,7 @@ class UserProvider extends ChangeNotifier {
         r.yearZhu.ganZhi, r.monthZhu.ganZhi, r.dayZhu.ganZhi, r.hourZhu.ganZhi
       ];
       for (final gz in zhuGZ) {
-        for (final ch in gz.characters) {
+        for (final ch in gz.split('')) {
           final w = ganWx[ch];
           if (w != null) counts[w] = counts[w]! + 1;
         }
