@@ -81,32 +81,32 @@ class _MainShellState extends State<MainShell> {
 
   // 导航栏配置（Lucide 简约有活力图标）
   static const _navDestinations = [
-    NavigationDestination(icon: Icon(Lucide.compass), label: '排盘'),
-    NavigationDestination(icon: Icon(Lucide.bookmark), label: '卦例'),
-    NavigationDestination(icon: Icon(Lucide.calendar), label: '日历'),
-    NavigationDestination(icon: Icon(Lucide.book), label: '参考'),
-    NavigationDestination(icon: Icon(Lucide.settings), label: '百宝箱'),
+    NavigationDestination(icon: Icon(LucideIcons.compass), label: '排盘'),
+    NavigationDestination(icon: Icon(LucideIcons.bookmark), label: '卦例'),
+    NavigationDestination(icon: Icon(LucideIcons.calendar), label: '日历'),
+    NavigationDestination(icon: Icon(LucideIcons.book), label: '参考'),
+    NavigationDestination(icon: Icon(LucideIcons.settings), label: '百宝箱'),
   ];
 
   static const _navRailDestinations = [
     NavigationRailDestination(
-      icon: Icon(Lucide.compass),
+      icon: Icon(LucideIcons.compass),
       label: Text('排盘'),
     ),
     NavigationRailDestination(
-      icon: Icon(Lucide.bookmark),
+      icon: Icon(LucideIcons.bookmark),
       label: Text('卦例'),
     ),
     NavigationRailDestination(
-      icon: Icon(Lucide.calendar),
+      icon: Icon(LucideIcons.calendar),
       label: Text('日历'),
     ),
     NavigationRailDestination(
-      icon: Icon(Lucide.book),
+      icon: Icon(LucideIcons.book),
       label: Text('参考'),
     ),
     NavigationRailDestination(
-      icon: Icon(Lucide.settings),
+      icon: Icon(LucideIcons.settings),
       label: Text('百宝箱'),
     ),
   ];
