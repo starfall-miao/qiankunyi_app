@@ -199,6 +199,13 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // 输入区（与八字 _buildInputCard 样式统一）
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
         // 方法选择
         Wrap(
           spacing: 8,
@@ -293,6 +300,10 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
             ),
           ),
         ),
+              ],  // Card 内 Column children
+            ),  // Card 内 Column
+          ),  // Padding
+        ),  // Card
         const SizedBox(height: 12),
 
         // 排盘结果
@@ -631,6 +642,13 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // 输入区（与八字 _buildInputCard 样式统一）
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
         Wrap(
           spacing: 8,
           children: List.generate(3, (i) {
@@ -705,6 +723,10 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
             ),
           ),
         ),
+              ],  // Card 内 Column children
+            ),  // Card 内 Column
+          ),  // Padding
+        ),  // Card
         const SizedBox(height: 12),
 
         FadeTransition(
