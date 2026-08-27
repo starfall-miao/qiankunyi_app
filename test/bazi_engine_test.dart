@@ -115,4 +115,17 @@ void main() {
       expect(male.daYun[1].ganZhi, isNot(equals(female.daYun[1].ganZhi)));
     });
   });
+}  group('八字引擎 - 大运纳音', () {
+    test('大运纳音均为2字且非空', () {
+      final r = BaiZiEngine.calc(
+        birth: DateTime(2024, 1, 1, 12, 0),
+        isMale: true,
+        hourIndex: 6,
+      );
+      for (final dy in r.daYun) {
+        expect(dy.naYin, isNotNull, reason: '大运 ${dy.ganZhi} 应有纳音');
+        expect(dy.naYin!, hasLength(3), reason: '纳音应为3字（如"海中金"）');
+      }
+    });
+  });
 }
