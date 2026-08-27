@@ -2397,13 +2397,6 @@ class _DaYunTrendChart extends StatelessWidget {
   });
 
   static const _wxOrder = ['木', '火', '土', '金', '水'];
-  static const _wxColors = {
-    '木': Color(0xFF2E7D32),
-    '火': Color(0xFFD32F2F),
-    '土': Color(0xFFEF6C00),
-    '金': Color(0xFFF9A825),
-    '水': Color(0xFF1565C0),
-  };
 
   String _ganWx(String gan) {
     const map = {
