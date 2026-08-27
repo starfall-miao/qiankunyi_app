@@ -9,6 +9,7 @@ import 'package:qiankunyi_app/features/paipan/providers/paipan_provider.dart';
 import 'package:qiankunyi_app/features/cases/providers/case_provider.dart';
 import 'package:qiankunyi_app/features/settings/settings_provider.dart';
 import 'package:qiankunyi_app/features/paipan/providers/bazi_provider.dart';
+import 'package:qiankunyi_app/features/users/providers/user_provider.dart';
 
 void main() {
   testWidgets('App launches with main navigation',
@@ -24,6 +25,7 @@ void main() {
           ChangeNotifierProvider(create: (_) => CaseProvider()),
           ChangeNotifierProvider(create: (_) => SettingsProvider()..init()),
           ChangeNotifierProvider(create: (_) => BaziProvider()),
+          ChangeNotifierProvider(create: (_) => UserProvider()..init()),
         ],
         child: const QianKunYiApp(),
       ),
