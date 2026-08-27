@@ -36,7 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # 简约有活力的图标库（Lucide）
-  lucide_icons: ^0.257.0
+  lucide_flutter: ^1.33.0
 
   # Database
   drift: ^2.23.1

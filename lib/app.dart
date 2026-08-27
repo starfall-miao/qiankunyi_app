@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_flutter/lucide_flutter.dart';
 import 'package:provider/provider.dart';
 
 import 'core/theme/app_theme.dart';
@@ -81,32 +81,32 @@ class _MainShellState extends State<MainShell> {
 
   // 导航栏配置（Lucide 简约有活力图标）
   static const _navDestinations = [
-    NavigationDestination(icon: Icon(LucideIcons.compass), label: '排盘'),
-    NavigationDestination(icon: Icon(LucideIcons.bookmark), label: '卦例'),
-    NavigationDestination(icon: Icon(LucideIcons.calendar), label: '日历'),
-    NavigationDestination(icon: Icon(LucideIcons.book), label: '参考'),
-    NavigationDestination(icon: Icon(LucideIcons.settings), label: '百宝箱'),
+    NavigationDestination(icon: Icon(Lucide.compass), label: '排盘'),
+    NavigationDestination(icon: Icon(Lucide.bookmark), label: '卦例'),
+    NavigationDestination(icon: Icon(Lucide.calendar), label: '日历'),
+    NavigationDestination(icon: Icon(Lucide.book), label: '参考'),
+    NavigationDestination(icon: Icon(Lucide.settings), label: '百宝箱'),
   ];
 
   static const _navRailDestinations = [
     NavigationRailDestination(
-      icon: Icon(LucideIcons.compass),
+      icon: Icon(Lucide.compass),
       label: Text('排盘'),
     ),
     NavigationRailDestination(
-      icon: Icon(LucideIcons.bookmark),
+      icon: Icon(Lucide.bookmark),
       label: Text('卦例'),
     ),
     NavigationRailDestination(
-      icon: Icon(LucideIcons.calendar),
+      icon: Icon(Lucide.calendar),
       label: Text('日历'),
     ),
     NavigationRailDestination(
-      icon: Icon(LucideIcons.book),
+      icon: Icon(Lucide.book),
       label: Text('参考'),
     ),
     NavigationRailDestination(
-      icon: Icon(LucideIcons.settings),
+      icon: Icon(Lucide.settings),
       label: Text('百宝箱'),
     ),
   ];
