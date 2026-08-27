@@ -706,6 +706,19 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
           const Divider(height: 1),
+          // 429 限流自动重试
+          Consumer<SettingsProvider>(
+            builder: (ctx, sp, _) => _buildSettingRow(
+              icon: Icons.refresh,
+              title: '429 限流自动重试',
+              subtitle: '遇到限流(429)自动重试，最多20次',
+              trailing: Switch(
+                value: sp.aiRetryOn429,
+                onChanged: (v) => sp.aiRetryOn429 = v,
+              ),
+            ),
+          ),
+          const Divider(height: 1),
           // 提供商选择
           Consumer<SettingsProvider>(
             builder: (ctx, sp, _) => _buildSettingsRow(

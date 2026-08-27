@@ -155,6 +155,8 @@ class SettingsProvider extends ChangeNotifier {
   String _aiCustomModel = '';
   /// 自定义 AI 系统提示词（留空使用内置模板）
   String _aiSystemPrompt = '';
+  /// 429 限流自动重试开关（默认开启）
+  bool _aiRetryOn429 = true;
   bool _aiEnabled = false;
   int _aiPresetIndex = 0; // 当前选中的提供商在 aiProviders 中的索引，-1 表示自定义
 
@@ -172,6 +174,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get aiEnabled => _aiEnabled;
   String get aiCustomModel => _aiCustomModel;
   String get aiSystemPrompt => _aiSystemPrompt;
+  bool get aiRetryOn429 => _aiRetryOn429;
   int get aiPresetIndex => _aiPresetIndex;
 
   /// 自定义提供商列表（持久化，用户可增删）
@@ -230,6 +233,7 @@ class SettingsProvider extends ChangeNotifier {
     _aiModel = _prefs!.getString('ai_model') ?? aiProviders.first.model;
     _aiCustomModel = _prefs!.getString('ai_custom_model') ?? '';
     _aiSystemPrompt = _prefs!.getString('ai_system_prompt') ?? '';
+    _aiRetryOn429 = _prefs!.getBool('ai_retry_on_429') ?? true;
     _aiPresetIndex = _prefs!.getInt('ai_preset_index') ?? 0;
     // 迁移：旧的 opencode 预设名 → 新 zen（deepseek-v4-flash-free 已失效）
     if (_aiModel == 'deepseek-v4-flash-free') {
@@ -403,6 +407,12 @@ class SettingsProvider extends ChangeNotifier {
     _aiSystemPrompt = v;
     _prefs?.setString('ai_system_prompt', v);
     notifyListeners();
+  }
+  set aiRetryOn429(bool v) {
+    _aiRetryOn429 = v;
+    _prefs?.setBool('ai_retry_on_429', v);
+    notifyListeners();
+    Logger.instance.info('429限流自动重试: ${v ? "开启" : "关闭"}');
   }
   set aiEnabled(bool v) {
     _aiEnabled = v;

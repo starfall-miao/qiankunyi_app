@@ -2175,8 +2175,21 @@ class _AiChatSectionState extends State<_AiChatSection> {
           });
           return;
         }
-        // 自动重试：信号灯超时/网络瞬断等瞬时错误，最多重试 3 次。
-        // 每次失败在卡片上标注"连接中断，自动重试 n/3…"，防止直接丢结果。
+        // 自动重试：信号灯超时/网络瞬断等瞬时错误，最多重试 20 次。
+        // 每次失败在卡片上标注"连接中断，自动重试 n/20…"，防止直接丢结果。
+        // 429 限流：按设置开关决定是否重试。
+        final is429 = e is AiStreamException && e.statusCode == 429;
+        if (is429 && !sp.aiRetryOn429) {
+          Logger.instance.error('$logTag流式失败',
+              '429限流（自动重试已关闭）: $e');
+          _fallbackToNonStreaming(
+            msg: cur,
+            messages: messages,
+            logTag: logTag,
+            errPrefix: errPrefix,
+          );
+          return;
+        }
         if (_streamRetry < _maxStreamRetry) {
           _streamRetry++;
           setState(() {
@@ -2491,35 +2504,37 @@ class _AiChatSectionState extends State<_AiChatSection> {
           await _persistAiMessages(logTag);
           break;
         } else {
-          // 非网络错误（如 401/限流）不必重试，直接展示错误
+          // 错误处理：429 限流（开关开启时重试）、其他 4xx 直接失败、5xx/网络重试
           final code = result.statusCode ?? 0;
-          if (code >= 400 && code < 500) {
+          final is429Retry = code == 429 && sp.aiRetryOn429;
+          if (!is429Retry && code >= 400 && code < 500) {
+            // 其他 4xx（如 401 鉴权）：不必重试，直接展示错误
             Logger.instance.error('$logTag回退失败',
                 'statusCode: $code 错误摘要: ${result.errorMessage}');
             _handleStreamFailure(msg, '$errPrefix: ${result.errorMessage}');
             _showToast('$errPrefix: ${result.errorMessage}');
             break;
           }
-          // 5xx/网络类错误：重试后仍失败再展示
-          if (retry >= 3) {
+          // 5xx / 429(开关开启) / 网络类错误：重试直到上限
+          if (retry >= 20) {
             Logger.instance.error('$logTag回退失败',
                 'statusCode: $code 错误摘要: ${result.errorMessage}（已重试 $retry 次）');
             _handleStreamFailure(msg, '$errPrefix: ${result.errorMessage}');
             _showToast('$errPrefix: ${result.errorMessage}');
           } else {
             Logger.instance.warn('$logTag回退重试',
-                '第 $retry/3 次 | statusCode: $code');
+                '第 $retry/20 次 | statusCode: $code');
           }
         }
       } catch (e) {
-        if (retry >= 3) {
+        if (retry >= 20) {
           Logger.instance.error('$logTag回退失败',
               '网络错误: $e（已重试 $retry 次）');
           _handleStreamFailure(msg, '$errPrefix: 网络错误: $e');
           _showToast('$errPrefix: 网络错误: $e');
         } else {
           Logger.instance.warn('$logTag回退重试',
-              '第 $retry/3 次 | 网络错误: $e');
+              '第 $retry/20 次 | 网络错误: $e');
         }
       }
     }

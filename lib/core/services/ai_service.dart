@@ -52,10 +52,13 @@ class AiStreamPiece {
 /// 根据端点获取合适的 User-Agent
 String _userAgent(String endpoint) {
   if (endpoint.contains('opencode.ai')) {
-    return 'OpenCode/1.0';
+    return 'opencode/1.18.18';
   }
   return 'Mozilla/5.0 (compatible; QianKunYi/1.0)';
 }
+
+/// 是否为 opencode 端点（需额外 Referer 头）
+bool _isOpencode(String endpoint) => endpoint.contains('opencode.ai');
 
 /// 单例 AI 服务
 class AiService {
@@ -107,6 +110,7 @@ class AiService {
           'Authorization': 'Bearer $apiKey',
           'Content-Type': 'application/json',
           'User-Agent': _userAgent(endpoint),
+          if (_isOpencode(endpoint)) 'Referer': 'https://opencode.ai',
         },
         body: jsonEncode(body),
       ).timeout(const Duration(seconds: 120));
@@ -209,6 +213,7 @@ class AiService {
       req.headers['Content-Type'] = 'application/json';
       req.headers['Accept'] = 'text/event-stream';
       req.headers['User-Agent'] = _userAgent(endpoint);
+      if (_isOpencode(endpoint)) req.headers['Referer'] = 'https://opencode.ai';
       req.body = jsonEncode(body);
 
       final res = await client.send(req);
