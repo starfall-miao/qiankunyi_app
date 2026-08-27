@@ -115,7 +115,9 @@ void main() {
       expect(male.daYun[1].ganZhi, isNot(equals(female.daYun[1].ganZhi)));
     });
   });
-}  group('八字引擎 - 大运纳音', () {
+}
+
+  group('八字引擎 - 大运纳音', () {
     test('大运纳音均为2字且非空', () {
       final r = BaiZiEngine.calc(
         birth: DateTime(2024, 1, 1, 12, 0),
