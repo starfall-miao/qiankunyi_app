@@ -67,7 +67,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                       if (up.current != null) ...[
                         const Divider(height: 12),
-                        _buildSettingRow(
+                        _buildSettingsRow(
                           icon: Icons.badge_outlined,
                           title: 'AI 参考画像',
                           subtitle: up.current!.aiReferenceEnabled
