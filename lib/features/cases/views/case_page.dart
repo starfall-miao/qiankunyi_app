@@ -2944,15 +2944,29 @@ class _AiChatSectionState extends State<_AiChatSection> {
                     Text('勾选要包含的对话（含卦象信息）',
                         style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                     const SizedBox(height: 8),
-                    // 不可见的截图渲染
-                    RepaintBoundary(
-                      key: key,
-                      child: _AiChatScreenshotTemplate(
-                        caseModel: cm,
-                        messages: [
-                          for (var i = 0; i < _localMessages.length; i++)
-                            if (selected.contains(i)) _localMessages[i],
-                        ],
+                    // 截图预览（固定高度，可上下滑动）
+                    Container(
+                      height: 240,
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F0EB),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.vertical,
+                          child: RepaintBoundary(
+                            key: key,
+                            child: _AiChatScreenshotTemplate(
+                              caseModel: cm,
+                              messages: [
+                                for (var i = 0; i < _localMessages.length; i++)
+                                  if (selected.contains(i)) _localMessages[i],
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                     // 对话勾选列表
