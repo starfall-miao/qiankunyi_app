@@ -1,5 +1,6 @@
 // 落·乾坤 - 小六壬排盘页
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../cases/providers/case_provider.dart';
 import '../../cases/models/case_models.dart';
