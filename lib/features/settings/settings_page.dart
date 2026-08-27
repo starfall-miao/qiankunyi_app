@@ -265,7 +265,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildColorSchemeSelector(ThemeData theme, bool isDark) {
-    final tp = context.read<ThemeProvider>();
+    final tp = context.watch<ThemeProvider>();
     final current = tp.colorSchemeType;
 
     return _buildCard(
@@ -395,7 +395,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
           const Divider(height: 16),
-          _buildSwitchRow('晚子时', '23:00-00:59 时柱判定（开发中）', sp.wanZiShi, (v) {
+          _buildSwitchRow('晚子时', '23:00-00:59 时柱归次日子时', sp.wanZiShi, (v) {
             sp.wanZiShi = v;
           }),
           const Divider(height: 16),
@@ -415,15 +415,15 @@ class _SettingsPageState extends State<SettingsPage> {
     return _buildCard(
       Column(
         children: [
-          _buildSwitchRow('天干', '', sp.display.showTianGan, (v) {
+          _buildSwitchRow('天干', '四柱天干显示', sp.display.showTianGan, (v) {
             sp.toggleDisplay('showTianGan');
           }),
           const Divider(height: 4),
-          _buildSwitchRow('纳音', '（引擎暂未填充纳音数据）', sp.display.showNaYin, (v) {
+          _buildSwitchRow('纳音', '六十甲子纳音', sp.display.showNaYin, (v) {
             sp.toggleDisplay('showNaYin');
           }),
           const Divider(height: 4),
-          _buildSwitchRow('神煞', '（引擎暂未填充神煞数据）', sp.display.showShenSha, (v) {
+          _buildSwitchRow('神煞', '吉凶神煞', sp.display.showShenSha, (v) {
             sp.toggleDisplay('showShenSha');
           }),
           const Divider(height: 4),
@@ -822,7 +822,12 @@ class _SettingsPageState extends State<SettingsPage> {
           Consumer<SettingsProvider>(
             builder: (ctx, sp, _) {
               final prompt = sp.aiSystemPrompt;
-              if (prompt.isEmpty) return const SizedBox.shrink();
+              // 默认也显示：未自定义时展示默认模板说明
+              final displayText = prompt.isEmpty
+                  ? '（未自定义）默认使用内置模板：让 AI 扮演六爻/梅花/八字解卦专家，'
+                      '结合卦象/命盘、占问对象与事件、用户画像进行针对性分析并给出建议。\n'
+                      '点击下方"编辑提示词模板"可自定义。'
+                  : (prompt.length > 120 ? '${prompt.substring(0, 120)}…' : prompt);
               return InkWell(
                 onTap: () => _editPromptTemplate(context, sp),
                 child: Container(
@@ -837,11 +842,11 @@ class _SettingsPageState extends State<SettingsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('当前提示词（点击编辑）',
+                      Text('提示词预览（点击编辑）',
                           style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.primary)),
                       const SizedBox(height: 4),
                       Text(
-                        prompt.length > 120 ? '${prompt.substring(0, 120)}…' : prompt,
+                        displayText,
                         style: TextStyle(fontSize: 11, height: 1.4, color: Theme.of(context).colorScheme.onSurface.withAlpha(180)),
                       ),
                     ],
@@ -1337,9 +1342,13 @@ class _ProviderEditDialogState extends State<_ProviderEditDialog> {
               models: _models.isNotEmpty ? _models : widget.preset.models,
             );
             if (widget.preset.builtin) {
-              // 内置提供商：仅非免费时允许更新 key，模型列表可增删
+              // 内置提供商：允许增删模型（保存到覆盖列表），非免费可更新 key
+              widget.sp.setProviderModels(widget.preset.name, _models);
               if (!widget.preset.free && key.isNotEmpty) {
                 widget.sp.aiApiKey = key;
+              }
+              if (_models.isNotEmpty && widget.sp.aiModel.isEmpty) {
+                widget.sp.aiCustomModel = _models.first;
               }
             } else {
               widget.sp.updateCustomProvider(widget.index, updated);

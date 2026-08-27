@@ -185,8 +185,41 @@ class SettingsProvider extends ChangeNotifier {
   List<AiProviderPreset> get customProviders =>
       List.unmodifiable(_customProviders);
 
-  /// 全部可选提供商 = 内置预设 + 自定义
-  List<AiProviderPreset> get aiProviders => [...aiPresets, ..._customProviders];
+  /// 内置提供商的模型列表覆盖（key=provider 名称 → 用户自定义模型列表）。
+  /// 内置预设为 const 不可改，用户增删模型后记录在此覆盖列表，运行时生效。
+  final Map<String, List<String>> _modelOverrides = {};
+
+  /// 全部可选提供商 = 内置预设（应用模型覆盖） + 自定义
+  List<AiProviderPreset> get aiProviders => [
+        for (final p in aiPresets)
+          if (_modelOverrides.containsKey(p.name))
+            AiProviderPreset(
+              name: p.name,
+              endpoint: p.endpoint,
+              apiKey: p.apiKey,
+              model: _modelOverrides[p.name]!.isNotEmpty
+                  ? _modelOverrides[p.name]!.first
+                  : p.model,
+              models: _modelOverrides[p.name]!,
+              free: p.free,
+              builtin: p.builtin,
+            )
+          else
+            p,
+        ..._customProviders,
+      ];
+
+  /// 覆盖某内置提供商的模型列表（空列表则移除覆盖，恢复默认）
+  void setProviderModels(String name, List<String> models) {
+    if (models.isEmpty || models.every((m) => m.trim().isEmpty)) {
+      _modelOverrides.remove(name);
+    } else {
+      _modelOverrides[name] = models.where((m) => m.trim().isNotEmpty).toList();
+    }
+    _prefs?.setString('ai_model_overrides',
+        jsonEncode(_modelOverrides.map((k, v) => MapEntry(k, v))));
+    notifyListeners();
+  }
 
   /// 当前使用的提供商名称
   String get aiProviderName {
@@ -230,6 +263,19 @@ class SettingsProvider extends ChangeNotifier {
       } catch (_) {
         // 损坏的 JSON 忽略，不阻塞启动
       }
+    }
+    // 加载内置提供商的模型覆盖
+    final rawOverrides = _prefs!.getString('ai_model_overrides');
+    if (rawOverrides != null && rawOverrides.isNotEmpty) {
+      try {
+        final map = jsonDecode(rawOverrides) as Map<String, dynamic>;
+        _modelOverrides.clear();
+        map.forEach((k, v) {
+          if (v is List) {
+            _modelOverrides[k] = v.map((e) => e.toString()).toList();
+          }
+        });
+      } catch (_) {}
     }
     _aiEndpoint = _prefs!.getString('ai_endpoint') ?? aiProviders.first.endpoint;
     _aiApiKey = _prefs!.getString('ai_apiKey') ?? aiProviders.first.apiKey;

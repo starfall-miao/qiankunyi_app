@@ -56,9 +56,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 onTap: () {
                   if (up.selectUser(usr.id)) {
                     setState(() {});
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('已切换到 ${usr.nickname}')),
-                    );
                   }
                 },
               ),
