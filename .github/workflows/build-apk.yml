@@ -193,6 +193,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 拉取完整历史，用于生成版本变更日志
 
       - name: 生成版本标签
         id: tag
@@ -229,6 +231,8 @@ jobs:
 
       - name: 构建 Release 日志
         run: |
+          # 找出上一个版本 tag（无则从首个提交开始）
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
           cat > /tmp/release_body.md << 'RELEASENOTES'
           ## 落·乾坤 Beta 版本
 
@@ -249,6 +253,19 @@ jobs:
           - 桌面版为 ZIP 压缩包，解压即可运行
           RELEASENOTES
 
+          # 追加版本变更日志（对比上一个 tag）
+          echo "" >> /tmp/release_body.md
+          echo "### 🆕 本次更新内容" >> /tmp/release_body.md
+          if [ -n "$PREV_TAG" ]; then
+            git log $PREV_TAG..HEAD --pretty=format:'- %s' --no-merges | sed 's/&/\&/g' | sed 's/</\&lt;/g' >> /tmp/release_body.md
+          else
+            echo "- 首个版本" >> /tmp/release_body.md
+          fi
+          echo "" >> /tmp/release_body.md
+          echo "" >> /tmp/release_body.md
+          echo "---" >> /tmp/release_body.md
+          echo "_完整提交列表：\`${{ github.sha }}\`_" >> /tmp/release_body.md
+
       - name: 创建 Release
         uses: softprops/action-gh-release@v2
         with:
@@ -260,3 +277,5 @@ jobs:
             release/*.apk
             release/desktop/*.zip
           fail_on_unmatched_files: false
+          # 上传大文件时避免 Headers Timeout（此前 app-release.apk 上传失败）
+          upload_timeout: 30*60*1000
