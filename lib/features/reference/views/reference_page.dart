@@ -617,7 +617,7 @@ class _XiangYiTab extends StatefulWidget {
 }
 
 class _XiangYiTabState extends State<_XiangYiTab> {
-  String _selectedGua = '乾';
+  final String _selectedGua = '乾';
   String? _selectedCategory;
 
   static const _guaSymbols = {'乾': '☰', '兑': '☱', '离': '☲', '震': '☳',

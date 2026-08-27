@@ -204,7 +204,7 @@ class UserProvider extends ChangeNotifier {
           .where((e) => e.value > 0)
           .map((e) => '${e.key}${e.value}')
           .join('、');
-      summary = '日主${dayGan}（属$wx）；五行分布：${countsStr.isEmpty ? "均衡" : countsStr}；'
+      summary = '日主$dayGan（属$wx）；五行分布：${countsStr.isEmpty ? "均衡" : countsStr}；'
           '四柱${r.yearZhu.ganZhi} ${r.monthZhu.ganZhi} ${r.dayZhu.ganZhi} ${r.hourZhu.ganZhi}';
     } catch (e) {
       Logger.instance.warn('用户画像', '八字计算失败: $e');

@@ -468,7 +468,7 @@ Widget _cangRow(String label, Map<String, String> cang) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 3),
     child: Text(
-      '${label}：${parts.isEmpty ? "—" : parts.join("、")}',
+      '$label：${parts.isEmpty ? "—" : parts.join("、")}',
       style: const TextStyle(fontSize: 10.5, color: _sText),
     ),
   );
