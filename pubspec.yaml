@@ -35,6 +35,9 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # 简约有活力的图标库（Lucide）
+  lucide_icons: ^0.257.0
+
   # Database
   drift: ^2.23.1
   sqlite3_flutter_libs: ^0.5.28
