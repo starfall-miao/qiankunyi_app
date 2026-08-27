@@ -1872,6 +1872,13 @@ class _BaziPageState extends State<BaziPage> {
               ),
             ),
             const SizedBox(height: 12),
+            // 大运五行走势图
+            _DaYunTrendChart(
+              daYun: r.daYun,
+              plotColor: p,
+              textColor: t,
+            ),
+            const SizedBox(height: 12),
           ],
 
           // ── 流年 ──
@@ -2374,4 +2381,166 @@ class _BaziPageState extends State<BaziPage> {
       ),
     );
   }
+}
+
+/// 大运五行走势图（CustomPaint 折线图）
+/// X 轴：8 步大运；Y 轴：天干五行（木1 火2 土3 金4 水5）
+class _DaYunTrendChart extends StatelessWidget {
+  final List<DaYun> daYun;
+  final Color plotColor;
+  final Color textColor;
+
+  const _DaYunTrendChart({
+    required this.daYun,
+    required this.plotColor,
+    required this.textColor,
+  });
+
+  static const _wxOrder = ['木', '火', '土', '金', '水'];
+  static const _wxColors = {
+    '木': Color(0xFF2E7D32),
+    '火': Color(0xFFD32F2F),
+    '土': Color(0xFFEF6C00),
+    '金': Color(0xFFF9A825),
+    '水': Color(0xFF1565C0),
+  };
+
+  String _ganWx(String gan) {
+    const map = {
+      '甲': '木', '乙': '木', '丙': '火', '丁': '火', '戊': '土',
+      '己': '土', '庚': '金', '辛': '金', '壬': '水', '癸': '水',
+    };
+    return map[gan] ?? '土';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (daYun.isEmpty) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1A1A2E)
+            : const Color(0xFFF9F6F2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('五行走势',
+              style: TextStyle(fontSize: 11, color: textColor.withAlpha(180))),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 90,
+            width: double.infinity,
+            child: CustomPaint(
+              painter: _TrendPainter(
+                values: daYun.map((dy) {
+                  final wx = _ganWx(dy.tianGan);
+                  return _wxOrder.indexOf(wx);
+                }).toList(),
+                wxs: daYun.map((dy) => _ganWx(dy.tianGan)).toList(),
+                ages: daYun.map((dy) => dy.startAge).toList(),
+                lineColor: plotColor,
+                textColor: textColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 趋势折线图绘制器
+class _TrendPainter extends CustomPainter {
+  final List<int> values;      // 五行索引 0-4
+  final List<String> wxs;      // 五行名
+  final List<int> ages;        // 起运年龄
+  final Color lineColor;
+  final Color textColor;
+
+  _TrendPainter({
+    required this.values,
+    required this.wxs,
+    required this.ages,
+    required this.lineColor,
+    required this.textColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.length < 2) return;
+    const wxColors = {
+      '木': Color(0xFF2E7D32),
+      '火': Color(0xFFD32F2F),
+      '土': Color(0xFFEF6C00),
+      '金': Color(0xFFF9A825),
+      '水': Color(0xFF1565C0),
+    };
+
+    const padding = 20.0;
+    final chartW = size.width - padding * 2;
+    final chartH = size.height - padding * 2;
+    final stepX = chartW / (values.length - 1);
+
+    // 折线路径
+    final path = Path();
+    final points = <Offset>[];
+    for (int i = 0; i < values.length; i++) {
+      final x = padding + i * stepX;
+      final y = padding + chartH - (values[i] / 4.0) * chartH;
+      points.add(Offset(x, y));
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+
+    // 绘制填充区域（柔化）
+    final fill = Path.from(path)
+      ..lineTo(points.last.dx, padding + chartH)
+      ..lineTo(points.first.dx, padding + chartH)
+      ..close();
+    canvas.drawPath(
+      fill,
+      Paint()..color = lineColor.withAlpha(25),
+    );
+
+    // 折线
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = lineColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // 数据点 + 五行色
+    final dotPaint = Paint();
+    for (int i = 0; i < points.length; i++) {
+      final wx = wxs[i];
+      dotPaint.color = wxColors[wx] ?? lineColor;
+      canvas.drawCircle(points[i], 3.5, dotPaint);
+    }
+
+    // X 轴年龄标签
+    final textStyle = TextStyle(fontSize: 8, color: textColor.withAlpha(160));
+    for (int i = 0; i < ages.length; i++) {
+      final tp = TextPainter(
+        text: TextSpan(text: '${ages[i]}', style: textStyle),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(
+        canvas,
+        Offset(points[i].dx - tp.width / 2, padding + chartH + 4),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _TrendPainter oldDelegate) =>
+      oldDelegate.values != values || oldDelegate.lineColor != lineColor;
 }
