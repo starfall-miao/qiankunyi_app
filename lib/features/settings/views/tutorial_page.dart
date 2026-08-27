@@ -7,7 +7,6 @@ class TutorialPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return DefaultTabController(
       length: 5,
       child: Scaffold(
