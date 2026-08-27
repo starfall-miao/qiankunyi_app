@@ -1818,7 +1818,7 @@ class _BaziPageState extends State<BaziPage> {
                   child: Row(
                     children: r.daYun.map((dy) {
                       return Container(
-                        width: 68,
+                        width: 76,
                         margin: const EdgeInsets.only(right: 6),
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                         decoration: BoxDecoration(
@@ -1837,6 +1837,12 @@ class _BaziPageState extends State<BaziPage> {
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                     color: t)),
+                            if (dy.naYin != null) ...[
+                              const SizedBox(height: 2),
+                              Text(dy.naYin!,
+                                  style: TextStyle(
+                                      fontSize: 9, color: t.withAlpha(130))),
+                            ],
                           ],
                         ),
                       );

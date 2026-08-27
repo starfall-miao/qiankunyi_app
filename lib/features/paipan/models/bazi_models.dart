@@ -42,12 +42,15 @@ class DaYun {
   final String tianGan;
   /// 大运地支
   final String diZhi;
+  /// 大运纳音，如 "海中金"
+  final String? naYin;
 
   const DaYun({
     required this.startAge,
     required this.ganZhi,
     required this.tianGan,
     required this.diZhi,
+    this.naYin,
   });
 }
 

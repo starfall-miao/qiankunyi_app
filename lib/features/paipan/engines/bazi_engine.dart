@@ -86,11 +86,14 @@ List<DaYun> _calcDaYun(
     final gan = _tianGanCN[ganIdx];
     final zhi = _diZhiCN[zhiIdx];
     final startAge = qiYunAge + i * 10;
+    // 大运纳音（六十甲子纳音）
+    final naYin = getNaYin(ganIdx, zhiIdx)?.naYin;
     result.add(DaYun(
       startAge: startAge,
       ganZhi: '$gan$zhi',
       tianGan: gan,
       diZhi: zhi,
+      naYin: naYin,
     ));
   }
   return result;
