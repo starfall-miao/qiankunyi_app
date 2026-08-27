@@ -2486,7 +2486,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
         // async gap 之后：弹窗可能已关闭（dispose），先守卫再 setState
         if (!mounted) return;
         setState(() {
-          _retryNote = '连接中断，自动重试 $retry/3…';
+          _retryNote = '连接中断，自动重试 $retry/20…';
         });
       }
       try {
@@ -2871,6 +2871,11 @@ class _AiChatSectionState extends State<_AiChatSection> {
           style: TextStyle(fontSize: 13, height: 1.6, color: t));
     }
     if (m.content.trim().isEmpty) {
+      // 仍在加载/流式/重试中：显示"正在思考/重试"而非"（空回复）"
+      // （重试期间 _streamingMsg 可能短暂为 null，但请求仍在进行）
+      if (_loading || _streaming) {
+        return _buildThinkingLive(p, t);
+      }
       // 旧数据可能残留空 content 的 assistant 消息：友好占位
       return Text('（空回复）',
           style: TextStyle(
