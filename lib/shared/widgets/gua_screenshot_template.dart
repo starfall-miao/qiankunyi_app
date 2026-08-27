@@ -415,6 +415,9 @@ class BaziScreenshotTemplate extends StatelessWidget {
               );
             }).toList(),
           ),
+          // ── 大运五行走势（色块条） ──
+          const SizedBox(height: 8),
+          _daYunWxBar(r.daYun),
         ],
         // ── 流年 ──
         if (r.liuNian != null && r.liuNian!.isNotEmpty) ...[
@@ -467,6 +470,52 @@ Widget _cangRow(String label, List<String> cang) {
       '${label}：${cang.isEmpty ? "—" : cang.join("、")}',
       style: const TextStyle(fontSize: 10.5, color: _sText),
     ),
+  );
+}
+
+/// 天干→五行
+const _ganWxMap = {
+  '甲': '木', '乙': '木', '丙': '火', '丁': '火', '戊': '土',
+  '己': '土', '庚': '金', '辛': '金', '壬': '水', '癸': '水',
+};
+
+/// 五行→色
+const _wxColorMap = {
+  '木': Color(0xFF2E7D32),
+  '火': Color(0xFFD32F2F),
+  '土': Color(0xFFEF6C00),
+  '金': Color(0xFFF9A825),
+  '水': Color(0xFF1565C0),
+};
+
+/// 大运五行走势色块条：每步大运一个五行色竖条 + 下方标注干支
+Widget _daYunWxBar(List<DaYun> daYun) {
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.end,
+    children: daYun.map((dy) {
+      final wx = _ganWxMap[dy.tianGan] ?? '土';
+      final color = _wxColorMap[wx] ?? _sSub;
+      return Expanded(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 36,
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 1),
+              decoration: BoxDecoration(
+                color: color.withAlpha(200),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(dy.ganZhi,
+                style: const TextStyle(fontSize: 8, color: _sText),
+                maxLines: 1, overflow: TextOverflow.ellipsis),
+          ],
+        ),
+      );
+    }).toList(),
   );
 }
 

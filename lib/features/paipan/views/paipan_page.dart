@@ -1581,6 +1581,31 @@ class _BaziPageState extends State<BaziPage> {
                       ]),
                     ),
                   ),
+                  const SizedBox(height: 6),
+                  // 使用当前时间起卦
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () {
+                        final now = DateTime.now();
+                        setState(() {
+                          _birth = DateTime(now.year, now.month, now.day);
+                          // 当前小时映射到时辰索引（23/0→子，1-2→丑…）
+                          final h = now.hour;
+                          _hourIndex =
+                              (h == 23 || h == 0) ? 0 : ((h + 1) ~/ 2) % 12;
+                        });
+                        _log.info('八字排盘', '使用当前时间: ${now.year}-${now.month}-${now.day} ${now.hour}时');
+                      },
+                      icon: const Icon(Icons.schedule, size: 16),
+                      label: const Text('使用当前时间', style: TextStyle(fontSize: 13)),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 12),
 
                   // 时辰选择
