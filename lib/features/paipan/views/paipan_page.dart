@@ -506,6 +506,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                 if (lr.monthGanZhi != null) '月 ${lr.monthGanZhi}',
                 if (lr.dayGanZhi != null) '日 ${lr.dayGanZhi}',
                 if (lr.kongWang != null) '空 旬空:${lr.kongWang!.join(" ")}',
+                if (lr.hiddenFuShen.isNotEmpty) '藏爻 ${lr.hiddenFuShen.join(" ")}',
                 '派 ${lr.school == LiuyaoSchool.jingFangJianBan ? "京房简版" : "京房正宗"}',
               ],
               benGua: lr.benGua,

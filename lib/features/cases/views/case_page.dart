@@ -729,6 +729,8 @@ class _CasePageState extends State<CasePage> {
                                     '日 ${result.dayGanZhi}',
                                   if (result.kongWang != null)
                                     '空 旬空:${result.kongWang!.join(" ")}',
+                                  if (result.hiddenFuShen.isNotEmpty)
+                                    '藏爻 ${result.hiddenFuShen.join(" ")}',
                                   '派 ${result.school == LiuyaoSchool.jingFangJianBan ? "京房简版" : "京房正宗"}',
                                 ],
                                 benGua: result.benGua,
