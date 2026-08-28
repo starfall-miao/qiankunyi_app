@@ -1,5 +1,8 @@
 // 落·乾坤 - 大六壬排盘页（基础版）
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import '../../../shared/widgets/save_image_dialog.dart';
 
 /// 十二天将（贵人顺序：吉/凶 + 象义）
 const daliurenGenerals = [
@@ -88,6 +91,7 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
   int _month = 1;
   int _hour = 0;
   DaLiuRenResult? _result;
+  final _shotKey = GlobalKey();
 
   static const _hours = ['子时', '丑时', '寅时', '卯时', '辰时', '巳时',
     '午时', '未时', '申时', '酉时', '戌时', '亥时'];
@@ -162,7 +166,9 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
         ),
         const SizedBox(height: 12),
         if (_result != null) ...[
-          Card(
+          RepaintBoundary(
+            key: _shotKey,
+            child: Card(
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -211,9 +217,45 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
               ]),
             ),
           ),
+          ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _saveImage,
+              icon: const Icon(Icons.image_outlined, size: 18),
+              label: const Text('保存图片'),
+            ),
         ],
       ]),
     );
+  }
+
+  /// 保存结果图片
+  Future<void> _saveImage() async {
+    try {
+      final boundary =
+          _shotKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+      final pngBytes = byteData.buffer.asUint8List();
+      if (!mounted) return;
+      final savedPath = await saveImageWithDialog(
+        context: context,
+        pngBytes: pngBytes,
+        defaultFileName: buildImageFileName('大六壬_三传'),
+      );
+      if (savedPath != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('图片已保存: $savedPath')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存图片失败: $e')),
+        );
+      }
+    }
   }
 
   Widget _chuan(String label, String zhi, Color p, Color t, Color bg, Color b) {

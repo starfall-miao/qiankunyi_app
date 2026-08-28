@@ -1,6 +1,9 @@
 // 落·乾坤 - 小六壬排盘页
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
+import '../../../shared/widgets/save_image_dialog.dart';
 
 import '../../cases/providers/case_provider.dart';
 import '../../cases/models/case_models.dart';
@@ -22,6 +25,7 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
   final _n2 = TextEditingController(text: '5');
   final _n3 = TextEditingController(text: '7');
   XiaoLiuRenResult? _result;
+  final _shotKey = GlobalKey();
 
   static const _months = ['正月', '二月', '三月', '四月', '五月', '六月',
     '七月', '八月', '九月', '十月', '冬月', '腊月'];
@@ -74,6 +78,36 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('已保存到卦例库')),
     );
+  }
+
+  /// 保存结果图片
+  Future<void> _saveImage() async {
+    try {
+      final boundary =
+          _shotKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+      final pngBytes = byteData.buffer.asUint8List();
+      if (!mounted) return;
+      final savedPath = await saveImageWithDialog(
+        context: context,
+        pngBytes: pngBytes,
+        defaultFileName: buildImageFileName(
+            '小六壬_${_result?.resultPalm.name ?? "结果"}'),
+      );
+      if (savedPath != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('图片已保存: $savedPath')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存图片失败: $e')),
+        );
+      }
+    }
   }
 
   String _jsonEncode(XiaoLiuRenResult r) {
@@ -160,13 +194,28 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
 
           // 结果
           if (_result != null) ...[
-            _resultCard(_result!, p, t, b, isDark),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: _save,
-              icon: const Icon(Icons.bookmark_add_outlined, size: 18),
-              label: const Text('保存卦例'),
+            RepaintBoundary(
+              key: _shotKey,
+              child: _resultCard(_result!, p, t, b, isDark),
             ),
+            const SizedBox(height: 8),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _save,
+                  icon: const Icon(Icons.bookmark_add_outlined, size: 18),
+                  label: const Text('保存卦例'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _saveImage,
+                  icon: const Icon(Icons.image_outlined, size: 18),
+                  label: const Text('保存图片'),
+                ),
+              ),
+            ]),
           ],
         ],
       ),
