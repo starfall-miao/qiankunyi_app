@@ -475,4 +475,38 @@ class SettingsProvider extends ChangeNotifier {
     _prefs?.setBool('onboarding_done', v);
     notifyListeners();
   }
+
+  /// 恢复默认设置（清空持久化，重置内存字段；不影响卦例/用户画像）
+  Future<void> resetToDefault() async {
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    _prefs = prefs;
+    // 清空所有已持久化的设置 key
+    const keys = [
+      'paipan_fontSize', 'paipan_riPoRule', 'paipan_wanZiShi', 'paipan_chenMuTuYao',
+      'display_settings', 'ai_endpoint', 'ai_apiKey', 'ai_model', 'ai_custom_model',
+      'ai_system_prompt', 'ai_retry_on_429', 'ai_preset_index', 'ai_enabled',
+      'ai_custom_providers', 'ai_model_overrides',
+    ];
+    for (final k in keys) {
+      await prefs.remove(k);
+    }
+    // 重置内存字段
+    _fontSize = 16;
+    _riPoRule = RiPoAnDongRule.youQing;
+    _wanZiShi = false;
+    _chenMuTuYao = false;
+    _display = DisplaySettings();
+    _aiEndpoint = aiPresets[0].endpoint;
+    _aiApiKey = aiPresets[0].apiKey;
+    _aiModel = aiPresets[0].model;
+    _aiCustomModel = '';
+    _aiSystemPrompt = '';
+    _aiRetryOn429 = true;
+    _aiEnabled = false;
+    _aiPresetIndex = 0;
+    _modelOverrides.clear();
+    _customProviders.clear();
+    notifyListeners();
+    Logger.instance.info('SettingsProvider', '已恢复默认设置');
+  }
 }

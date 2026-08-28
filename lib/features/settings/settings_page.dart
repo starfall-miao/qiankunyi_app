@@ -18,6 +18,7 @@ import '../onboarding/views/onboarding_page.dart';
 import '../users/views/user_profile_page.dart';
 import '../users/providers/user_provider.dart';
 import 'views/tutorial_page.dart';
+import 'views/data_management_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -129,6 +130,20 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildSectionHeader(theme, '调试与日志', icon: LucideIcons.terminal),
                 const SizedBox(height: 8),
                 _buildDebugSettings(theme),
+                const SizedBox(height: 8),
+                // 数据管理入口
+                _buildCard(
+                  Column(children: [
+                    _buildSettingsRow(
+                      icon: LucideIcons.database,
+                      title: '数据管理',
+                      subtitle: '卦例统计/清空 · 设置恢复默认',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const DataManagementPage()),
+                      ),
+                    ),
+                  ]),
+                ),
                 const SizedBox(height: 16),
 
                 _buildSectionHeader(theme, '小工具', icon: LucideIcons.wrench),
