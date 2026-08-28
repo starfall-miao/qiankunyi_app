@@ -68,7 +68,7 @@ class UserProfile {
     bool? isMale,
     int? hourIndex,
     String? baziSummary,
-    String? notes,
+    List<String>? notes,
     bool? aiReferenceEnabled,
   }) {
     return UserProfile(

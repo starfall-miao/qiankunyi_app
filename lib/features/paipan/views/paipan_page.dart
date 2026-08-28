@@ -184,6 +184,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     final sel = _tabIndex == idx;
     final txtColor = dark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
     final bg = dark ? const Color(0xFF2C2C2C) : Colors.white;
+    final b = dark ? const Color(0xFF444444) : const Color(0xFFE0D5C8);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: GestureDetector(
