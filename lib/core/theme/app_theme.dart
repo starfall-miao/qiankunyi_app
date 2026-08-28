@@ -142,6 +142,15 @@ class AppTheme {
         thickness: 1,
         color: Color(0xFFE0D8CC),
       ),
+      // 三端滚动条：桌面常显细滚动条，移动自动
+      scrollbarTheme: ScrollbarThemeData(
+        thumbVisibility: WidgetStateProperty.all(true),
+        thickness: WidgetStateProperty.all(6),
+        radius: const Radius.circular(8),
+        thumbColor: WidgetStateProperty.resolveWith(
+            (s) => primary.withAlpha(s.contains(WidgetState.hovered) ? 180 : 120)),
+        interactive: true,
+      ),
       navigationBarTheme: NavigationBarThemeData(
         elevation: 0,
         backgroundColor: useAcrylic ? Colors.white.withAlpha(a) : Colors.white,

@@ -1,6 +1,7 @@
 // 落·乾坤 - 应用入口
 
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_flutter/lucide_flutter.dart';
 import 'package:provider/provider.dart';
@@ -27,6 +28,8 @@ class QianKunYiApp extends StatelessWidget {
         return MaterialApp(
           title: '落·乾坤',
           debugShowCheckedModeBanner: false,
+          // 三端滚动适配：桌面端支持鼠标/触控板拖拽，显示滚动条
+          scrollBehavior: const AppScrollBehavior(),
           theme: AppTheme.lightTheme(tp.colorSchemeType,
               useAcrylic: tp.acrylicEffect, acrylicOpacity: tp.acrylicOpacity),
           darkTheme: AppTheme.darkTheme(tp.colorSchemeType,
@@ -178,4 +181,20 @@ class _MainShellState extends State<MainShell> {
       ),
     );
   }
+}
+
+/// 全局滚动行为（三端适配）：
+/// - 桌面端允许鼠标 / 触控板 / 手写笔拖拽滚动（默认 Material 不支持鼠标拖拽）
+/// - 桌面端滚动条常显（thumbVisibility），移动端保持自动
+class AppScrollBehavior extends MaterialScrollBehavior {
+  const AppScrollBehavior();
+
+  /// 桌面端允许鼠标 / 触控板 / 手写笔拖拽滚动（默认 Material 不支持鼠标拖拽）
+  @override
+  Set<PointerDeviceKind> get dragDevices => const {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.trackpad,
+      };
 }
