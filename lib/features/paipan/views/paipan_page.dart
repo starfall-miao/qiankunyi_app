@@ -413,6 +413,29 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
               ], // RepaintBoundary child column end
             ),
           ),
+          // ── 藏爻（伏神） ──
+          if (pr.liuyaoResult!.hiddenFuShen.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: t.withAlpha(10),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: b.withAlpha(60)),
+              ),
+              child: Row(children: [
+                Icon(Icons.hide_source_outlined, size: 14, color: p.withAlpha(180)),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    '藏爻（伏神）：${pr.liuyaoResult!.hiddenFuShen.join('　')}',
+                    style: TextStyle(fontSize: 12, color: t.withAlpha(190)),
+                  ),
+                ),
+              ]),
+            ),
+          ],
           const SizedBox(height: 12),
           // ── 操作按钮（2×2 四方格）──
           Column(

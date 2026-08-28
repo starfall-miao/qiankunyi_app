@@ -382,6 +382,9 @@ class LiuYaoEngine {
     // 六亲排布
     _applyLiuQin(yaos, guaGongWuXing[gong]!);
 
+    // 藏爻/伏神：本卦缺失的六亲，自本宫首卦（八纯卦）借入
+    final hiddenFuShen = _calcFuShen(yaos, gong, guaGongWuXing[gong]!);
+
     // ───── 月令/日令/空亡（基于 tyme4dart） ─────
     final solarDay = tyme.SolarDay.fromYmd(dt.year, dt.month, dt.day);
     final monthZhi = monthZhiSimple(dt.month); // 月建地支
@@ -469,6 +472,7 @@ class LiuYaoEngine {
       monthGanZhi: monthGanZhi,
       dayGanZhi: dayGanZhi,
       kongWang: kongWangList,
+      hiddenFuShen: hiddenFuShen,
     );
   }
 
@@ -481,6 +485,59 @@ class LiuYaoEngine {
       }
     }
     return mask;
+  }
+
+  /// 八纯卦（本宫首卦）六爻地支（京房纳甲，自初爻起）
+  static const _palaceShouGuaDz = <GuaGong, List<DiZhi>>{
+    GuaGong.qian: [DiZhi.zi, DiZhi.yin, DiZhi.chen, DiZhi.wu, DiZhi.shen, DiZhi.xu],
+    GuaGong.dui: [DiZhi.si, DiZhi.mao, DiZhi.chou, DiZhi.hai, DiZhi.you, DiZhi.wei],
+    GuaGong.li: [DiZhi.mao, DiZhi.chou, DiZhi.hai, DiZhi.you, DiZhi.wei, DiZhi.si],
+    GuaGong.zhen: [DiZhi.zi, DiZhi.yin, DiZhi.chen, DiZhi.wu, DiZhi.shen, DiZhi.xu],
+    GuaGong.xun: [DiZhi.chou, DiZhi.hai, DiZhi.you, DiZhi.wei, DiZhi.si, DiZhi.mao],
+    GuaGong.kan: [DiZhi.yin, DiZhi.chen, DiZhi.wu, DiZhi.shen, DiZhi.xu, DiZhi.zi],
+    GuaGong.gen: [DiZhi.chen, DiZhi.wu, DiZhi.shen, DiZhi.xu, DiZhi.zi, DiZhi.yin],
+    GuaGong.kun: [DiZhi.wei, DiZhi.si, DiZhi.mao, DiZhi.chou, DiZhi.hai, DiZhi.you],
+  };
+
+  static const _liuQinCN = {
+    LiuQin.parent: '父母', LiuQin.brother: '兄弟', LiuQin.officer: '官鬼',
+    LiuQin.wife: '妻财', LiuQin.child: '子孙',
+  };
+  static const _wuXingCN = {
+    WuXing.jin: '金', WuXing.mu: '木', WuXing.shui: '水',
+    WuXing.huo: '火', WuXing.tu: '土',
+  };
+  static const _diZhiCN2 = {
+    DiZhi.zi: '子', DiZhi.chou: '丑', DiZhi.yin: '寅', DiZhi.mao: '卯',
+    DiZhi.chen: '辰', DiZhi.si: '巳', DiZhi.wu: '午', DiZhi.wei: '未',
+    DiZhi.shen: '申', DiZhi.you: '酉', DiZhi.xu: '戌', DiZhi.hai: '亥',
+  };
+
+  /// 计算藏爻（伏神）：本卦缺失的六亲，自本宫首卦借入
+  static List<String> _calcFuShen(
+      List<YaoModel> yaos, GuaGong gong, WuXing gongWx) {
+    // 本卦已有的六亲
+    final present = <LiuQin>{};
+    for (final y in yaos) {
+      if (y.liuQin != LiuQin.none) present.add(y.liuQin);
+    }
+    final allLiuQin = [LiuQin.parent, LiuQin.brother, LiuQin.officer, LiuQin.wife, LiuQin.child];
+    final missing = allLiuQin.where((l) => !present.contains(l)).toList();
+    if (missing.isEmpty) return const [];
+
+    final shouDz = _palaceShouGuaDz[gong] ?? const [];
+    final result = <String>[];
+    for (final lq in missing) {
+      // 在本宫首卦中找该六亲
+      for (final dz in shouDz) {
+        final dzWx = _diZhiWuXing[dz]!;
+        if (_calcLiuQin(gongWx, dzWx) == lq) {
+          result.add('${_liuQinCN[lq]} ${_diZhiCN2[dz]}${_wuXingCN[dzWx]}');
+          break;
+        }
+      }
+    }
+    return result;
   }
 
   /// 六亲排布

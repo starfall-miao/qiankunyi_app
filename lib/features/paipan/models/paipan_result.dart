@@ -20,6 +20,7 @@ class PaipanResult {
   final List<String> shenSha;  // 神煞列表
   final List<String>? kongWang; // 旬空（空亡的地支名列表）
   final String? naYin;         // 纳音
+  final List<String> hiddenFuShen; // 藏爻/伏神（本卦缺失的六亲，自本宫首卦借入，如"官鬼 巳火"）
 
   PaipanResult({
     required this.benGua,
@@ -34,6 +35,7 @@ class PaipanResult {
     this.shenSha = const [],
     this.kongWang,
     this.naYin,
+    this.hiddenFuShen = const [],
   });
 
   Map<String, dynamic> toJson() => {
@@ -49,6 +51,7 @@ class PaipanResult {
     'shenSha': shenSha,
     'kongWang': kongWang,
     'naYin': naYin,
+    'hiddenFuShen': hiddenFuShen,
   };
 
   factory PaipanResult.fromJson(Map<String, dynamic> j) => PaipanResult(
