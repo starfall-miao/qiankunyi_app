@@ -1,7 +1,5 @@
 // 落·乾坤 - 聚光灯引导组件
 // 以聚光灯效果逐步高亮界面控件，引导用户完成核心流程
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 /// 引导步骤：高亮一个目标控件并显示说明
@@ -49,7 +47,6 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> {
   Widget build(BuildContext context) {
     final step = widget.steps[_index];
     final rect = _targetRect;
-    final size = MediaQuery.of(context).size;
     final scheme = Theme.of(context).colorScheme;
 
     return Stack(
