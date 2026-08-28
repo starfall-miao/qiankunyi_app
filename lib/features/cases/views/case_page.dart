@@ -3481,6 +3481,36 @@ class _AiChatScreenshotTemplate extends StatelessWidget {
   static const _sub = Color(0xFF9A8A78);
   static const _gold = Color(0xFFB08A3E);
 
+  /// 解析排盘数据，生成卦例详情摘要（保留卦例基本内容）
+  String get _caseDetailText {
+    try {
+      if (caseModel.caseType == CaseType.bazi) {
+        final r = BaziResult.fromJson(
+            jsonDecode(caseModel.paipanData) as Map<String, dynamic>);
+        return '四柱：${r.yearZhu.ganZhi} ${r.monthZhu.ganZhi} ${r.dayZhu.ganZhi} ${r.hourZhu.ganZhi}'
+            '　五行：${r.wuXingCounts.entries.map((e) => "${e.key}${e.value}").join('、')}'
+            '${r.kongWang.isNotEmpty ? "　空亡：${r.kongWang.join('、')}" : ""}';
+      }
+      // 六爻 / 梅花
+      final r = PaipanResult.fromJson(
+          jsonDecode(caseModel.paipanData) as Map<String, dynamic>);
+      final buf = <String>[
+        '本卦：${guaNameCN[r.benGua.name] ?? r.benGua.name.name}',
+        if (r.bianGua != null)
+          '变卦：${guaNameCN[r.bianGua!.name] ?? r.bianGua!.name.name}',
+        if (r.huGua != null)
+          '互卦：${guaNameCN[r.huGua!.name] ?? r.huGua!.name.name}',
+        if (r.kongWang != null && r.kongWang!.isNotEmpty)
+          '空亡：${r.kongWang!.join('、')}',
+        if (r.hiddenFuShen.isNotEmpty) '藏爻：${r.hiddenFuShen.join('、')}',
+        if (r.dayGanZhi != null) '日辰：${r.dayGanZhi}',
+      ];
+      return buf.join('　');
+    } catch (_) {
+      return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // 卦信息
@@ -3523,6 +3553,20 @@ class _AiChatScreenshotTemplate extends StatelessWidget {
               style: const TextStyle(fontSize: 10.5, color: _sub),
             ),
           ),
+          // 卦例详情（排盘基本内容）
+          if (_caseDetailText.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0EDE8),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(_caseDetailText,
+                  style: const TextStyle(fontSize: 10.5, height: 1.5, color: _text)),
+            ),
+          ],
           const SizedBox(height: 10),
           // 对话
           ...messages.map((m) {
