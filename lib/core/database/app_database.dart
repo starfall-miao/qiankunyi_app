@@ -7,6 +7,8 @@ import 'package:path_provider/path_provider.dart';
 
 import '../utils/constants.dart';
 
+part 'app_database.g.dart';
+
 /// 卦例表
 class CaseTable extends Table {
   IntColumn get id => integer()();
