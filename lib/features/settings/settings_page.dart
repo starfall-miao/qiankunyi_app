@@ -162,15 +162,23 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 8),
                 // 使用引导（重新查看）
                 _buildSettingsRow(
-                  icon: Icons.menu_book,
+                  icon: LucideIcons.book,
                   title: '使用引导',
-                  subtitle: '重新查看首次启动引导',
+                  subtitle: '介绍页 + 聚光灯实操引导',
                   onTap: () {
                     final nav = Navigator.of(context);
                     nav.push(
                       MaterialPageRoute(
                         builder: (_) => OnboardingPage(
-                          onDone: () => nav.pop(),
+                          onDone: () {
+                            nav.pop();
+                            // 返回主界面后触发聚光灯实操引导
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (context.mounted) {
+                                context.read<SettingsProvider>().requestSpotlightGuide();
+                              }
+                            });
+                          },
                         ),
                       ),
                     );

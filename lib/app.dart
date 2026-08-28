@@ -125,11 +125,25 @@ class _MainShellState extends State<MainShell> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final sp = context.read<SettingsProvider>();
-      if (sp.onboardingDone && !_spotlightInitialized && !_spotlightVisible) {
+      if ((sp.onboardingDone && !_spotlightInitialized) ||
+          sp.showSpotlightGuide) {
         _spotlightInitialized = true;
-        _spotlightVisible = true;
+        if (sp.showSpotlightGuide) sp.consumeSpotlightGuide();
+        setState(() => _spotlightVisible = true);
       }
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 响应设置页"实操引导"请求
+    final sp = context.watch<SettingsProvider>();
+    if (sp.showSpotlightGuide && mounted) {
+      _spotlightInitialized = true;
+      sp.consumeSpotlightGuide();
+      setState(() => _spotlightVisible = true);
+    }
   }
 
   void _finishSpotlight() {

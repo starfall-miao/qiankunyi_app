@@ -295,6 +295,8 @@ class _GuaCiTabState extends State<_GuaCiTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // 卦形图示（六爻阴阳横线，自下而上）
+                _buildGuaShape(theme, gc.name),
                 _infoRow(theme, '卦辞', gc.ci),
                 if (gc.xiang.isNotEmpty) _infoRow(theme, '象辞', gc.xiang),
                 if (gc.yiXiang.isNotEmpty) _infoRow(theme, '意象', gc.yiXiang),
@@ -317,6 +319,44 @@ class _GuaCiTabState extends State<_GuaCiTab> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  /// 卦形图示：六爻阴阳横线（自下而上），直观呈现卦象
+  Widget _buildGuaShape(ThemeData theme, GuaName name) {
+    final patterns = _guaYaoPatterns[name];
+    if (patterns == null) return const SizedBox.shrink();
+    final color = theme.colorScheme.primary;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withAlpha(10),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withAlpha(40)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (int i = patterns.length - 1; i >= 0; i--) ...[
+            Container(
+              height: 6,
+              width: 64,
+              margin: const EdgeInsets.symmetric(vertical: 2),
+              decoration: BoxDecoration(
+                color: patterns[i]
+                    ? color
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(3),
+                border: Border.all(
+                  color: color.withAlpha(180),
+                  width: patterns[i] ? 1 : 1.5,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
