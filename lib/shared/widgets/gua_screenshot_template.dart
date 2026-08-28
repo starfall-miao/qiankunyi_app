@@ -397,20 +397,33 @@ class BaziScreenshotTemplate extends StatelessWidget {
         if (r.daYun.isNotEmpty) ...[
           const SizedBox(height: 12),
           _sectionTitle('大运'),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: r.daYun.map((dy) {
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _sCard,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: _sBorder),
-                ),
-                child: Text(
-                  '${dy.startAge}岁 ${dy.ganZhi}',
-                  style: const TextStyle(fontSize: 11, color: _sText),
+              return Expanded(
+                child: Container(
+                  margin: const EdgeInsets.only(right: 3),
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+                  decoration: BoxDecoration(
+                    color: _sCard,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: _sBorder),
+                  ),
+                  child: Column(children: [
+                    Text('${dy.startAge}岁',
+                        style: const TextStyle(fontSize: 8.5, color: _sSub)),
+                    const SizedBox(height: 2),
+                    Text(dy.ganZhi,
+                        style: const TextStyle(
+                            fontSize: 11, fontWeight: FontWeight.bold, color: _sText),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                    if (dy.naYin != null) ...[
+                      const SizedBox(height: 2),
+                      Text(dy.naYin!,
+                          style: const TextStyle(fontSize: 8, color: _sSub),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ],
+                  ]),
                 ),
               );
             }).toList(),
