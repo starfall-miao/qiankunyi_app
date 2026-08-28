@@ -1,14 +1,14 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:drift/drift.dart' show Value;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/utils/logger.dart';
 import '../models/case_models.dart';
 
-/// 卦例管理 Provider — 基于 Drift(SQLite) 持久化，并支持旧版 SharedPreferences 数据迁移
+/// 卦例管理 Provider — 基于 Drift(SQLite) 持久化（raw SQL），
+/// 并支持旧版 SharedPreferences 数据自动迁移。
 class CaseProvider extends ChangeNotifier {
   List<CaseModel> _cases = [];
   bool _isLoading = false;
@@ -52,9 +52,10 @@ class CaseProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
 
       // 1) 尝试从 SQLite 读取
-      final rows = await _db!.select(_db!.caseTable).get();
+      final rows =
+          await _db!.customSelect('SELECT * FROM case_table ORDER BY createdAt DESC').get();
       if (rows.isNotEmpty) {
-        _cases = rows.map((r) => _fromRow(r)).toList();
+        _cases = rows.map((r) => _fromRow(r.data)).toList();
       } else {
         // 2) 迁移旧数据（仅一次）
         final legacy = prefs.getString(_legacyKey);
@@ -80,38 +81,43 @@ class CaseProvider extends ChangeNotifier {
   }
 
   Future<void> _insertRow(CaseModel c) async {
-    await _db!.into(_db!.caseTable).insert(CaseCompanionType.insert(
-      id: Value(c.id ?? DateTime.now().millisecondsSinceEpoch),
-      title: c.title,
-      guaName: c.guaName,
-      guaGong: c.guaGong,
-      method: c.method,
-      paipanData: c.paipanData,
-      notes: Value(c.notes),
-      duanYu: Value(c.duanYu),
-      askObject: Value(c.askObject),
-      askEvent: Value(c.askEvent),
-      tags: jsonEncode(c.tags),
-      aiMessages: jsonEncode(c.aiMessages.map((m) => m.toJson()).toList()),
-      caseType: c.caseType.name,
-      createdAt: c.createdAt,
-      updatedAt: c.updatedAt,
-    ));
+    await _db!.customStatement(
+      'INSERT INTO case_table (id, title, guaName, guaGong, method, paipanData, '
+      'notes, duanYu, askObject, askEvent, tags, aiMessages, caseType, createdAt, updatedAt) '
+      'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+      [
+        c.id ?? DateTime.now().millisecondsSinceEpoch,
+        c.title,
+        c.guaName,
+        c.guaGong,
+        c.method,
+        c.paipanData,
+        c.notes,
+        c.duanYu,
+        c.askObject,
+        c.askEvent,
+        jsonEncode(c.tags),
+        jsonEncode(c.aiMessages.map((m) => m.toJson()).toList()),
+        c.caseType.name,
+        c.createdAt.toIso8601String(),
+        c.updatedAt.toIso8601String(),
+      ],
+    );
   }
 
-  /// Drift 行 → CaseModel
-  CaseModel _fromRow(CaseRow row) {
-    List<String> parseTags(String s) {
+  /// SQLite 行数据 → CaseModel
+  CaseModel _fromRow(Map<String, Object?> d) {
+    List<String> parseTags(Object? s) {
       try {
-        return (jsonDecode(s) as List).cast<String>();
+        return (jsonDecode(s as String) as List).cast<String>();
       } catch (_) {
         return [];
       }
     }
 
-    List<AiMessage> parseMessages(String s) {
+    List<AiMessage> parseMessages(Object? s) {
       try {
-        return (jsonDecode(s) as List)
+        return (jsonDecode(s as String) as List)
             .map((e) => AiMessage.fromJson(e as Map<String, dynamic>))
             .toList();
       } catch (_) {
@@ -119,23 +125,33 @@ class CaseProvider extends ChangeNotifier {
       }
     }
 
+    DateTime? parseDate(Object? s) {
+      if (s == null) return null;
+      try {
+        return DateTime.parse(s.toString());
+      } catch (_) {
+        return null;
+      }
+    }
+
     return CaseModel(
-      id: row.id,
-      title: row.title,
-      guaName: row.guaName,
-      guaGong: row.guaGong,
-      method: row.method,
-      paipanData: row.paipanData,
-      notes: row.notes,
-      duanYu: row.duanYu,
-      askObject: row.askObject,
-      askEvent: row.askEvent,
-      tags: parseTags(row.tags),
-      aiMessages: parseMessages(row.aiMessages),
+      id: d['id'] as int?,
+      title: d['title']?.toString() ?? '',
+      guaName: d['guaName']?.toString() ?? '',
+      guaGong: d['guaGong']?.toString() ?? '',
+      method: d['method']?.toString() ?? '',
+      paipanData: d['paipanData']?.toString() ?? '',
+      notes: d['notes']?.toString(),
+      duanYu: d['duanYu']?.toString(),
+      askObject: d['askObject']?.toString(),
+      askEvent: d['askEvent']?.toString(),
+      tags: parseTags(d['tags']),
+      aiMessages: parseMessages(d['aiMessages']),
       caseType: CaseType.values.firstWhere(
-          (e) => e.name == row.caseType, orElse: () => CaseType.liuyao),
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
+          (e) => e.name == d['caseType']?.toString(),
+          orElse: () => CaseType.liuyao),
+      createdAt: parseDate(d['createdAt']) ?? DateTime.now(),
+      updatedAt: parseDate(d['updatedAt']) ?? DateTime.now(),
     );
   }
 
@@ -156,7 +172,7 @@ class CaseProvider extends ChangeNotifier {
     _cases.removeWhere((c) => c.id == id);
     try {
       _db ??= AppDatabase();
-      await (_db!.delete(_db!.caseTable)..where((t) => t.id.equals(id))).go();
+      await _db!.customStatement('DELETE FROM case_table WHERE id = ?', [id]);
     } catch (e) {
       debugPrint('删除卦例失败: $e');
     }
@@ -188,24 +204,27 @@ class CaseProvider extends ChangeNotifier {
       _cases[index] = merged;
       try {
         _db ??= AppDatabase();
-        await (_db!.update(_db!.caseTable)
-              ..where((t) => t.id.equals(merged.id!)))
-            .write(CaseCompanionType(
-          title: Value(merged.title),
-          guaName: Value(merged.guaName),
-          guaGong: Value(merged.guaGong),
-          method: Value(merged.method),
-          paipanData: Value(merged.paipanData),
-          notes: Value(merged.notes),
-          duanYu: Value(merged.duanYu),
-          askObject: Value(merged.askObject),
-          askEvent: Value(merged.askEvent),
-          tags: Value(jsonEncode(merged.tags)),
-          aiMessages: Value(
-              jsonEncode(merged.aiMessages.map((m) => m.toJson()).toList())),
-          caseType: Value(merged.caseType.name),
-          updatedAt: Value(merged.updatedAt),
-        ));
+        await _db!.customStatement(
+          'UPDATE case_table SET title=?, guaName=?, guaGong=?, method=?, '
+          'paipanData=?, notes=?, duanYu=?, askObject=?, askEvent=?, tags=?, '
+          'aiMessages=?, caseType=?, updatedAt=? WHERE id=?',
+          [
+            merged.title,
+            merged.guaName,
+            merged.guaGong,
+            merged.method,
+            merged.paipanData,
+            merged.notes,
+            merged.duanYu,
+            merged.askObject,
+            merged.askEvent,
+            jsonEncode(merged.tags),
+            jsonEncode(merged.aiMessages.map((m) => m.toJson()).toList()),
+            merged.caseType.name,
+            merged.updatedAt.toIso8601String(),
+            merged.id,
+          ],
+        );
       } catch (e) {
         debugPrint('更新卦例失败: $e');
       }
