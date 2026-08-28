@@ -1,5 +1,6 @@
 // 落·乾坤 - 百宝箱：易学入门教程
 import 'package:flutter/material.dart';
+import '../../reference/data/liuyao_reference_data.dart';
 
 /// 入门教程页：周易 / 六爻 / 梅花 / 八字 + 速查卡片
 class TutorialPage extends StatelessWidget {
@@ -329,6 +330,31 @@ class _LiuYaoTab extends StatelessWidget {
       const _S('纳甲装卦（乾宫）示例'),
       const _P('乾为天：内卦（初二三爻）纳 甲子、甲寅、甲辰；外卦（四五上爻）纳 壬午、壬申、壬戌。'
           '其余各宫依八宫纳甲规律类推。'),
+      // ── 六神详解（合并自参考资料） ──
+      const _H('🐉 六神详解'),
+      ...liuShenList.map((s) => Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Color(int.parse(s.colorHex.replaceFirst('#', '0xFF'))).withAlpha(14),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+              color: Color(int.parse(s.colorHex.replaceFirst('#', '0xFF'))).withAlpha(60)),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Text(s.name,
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Color(int.parse(s.colorHex.replaceFirst('#', '0xFF'))))),
+            const SizedBox(width: 8),
+            Text('${s.wuXing} · ${s.season}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          ]),
+          const SizedBox(height: 3),
+          Text(s.meaning, style: const TextStyle(fontSize: 12, height: 1.5)),
+        ]),
+      )),
     ]);
   }
 }
@@ -366,6 +392,14 @@ class _MeiHuaTab extends StatelessWidget {
         '用克体': '凶，受制，事情不利',
         '比和': '吉，同气相求，顺利',
       }),
+      // ── 梅花外应补充（合并自参考资料） ──
+      const _H('🌸 梅花外应与取象'),
+      const _P('梅花易数重"观物取象"：听到、看到、想到的人事物都可为外应。'
+          '如见红色主火（离）、见水主坎、见东方主木（震巽）。'
+          '断卦时把外应纳入体用，往往能直指要害。'),
+      const _Tip('取象口诀：观其象、察其数、辨其色、听其声、感其气。'
+          '象数理占融为一体，方为梅花真谛。',
+          icon: Icons.tips_and_updates_outlined, color: Color(0xFF2E7D32)),
     ]);
   }
 }
@@ -400,6 +434,19 @@ class _BaZiTab extends StatelessWidget {
       const _S('五行相生相克'),
       const _P('相生：木→火→土→金→水→木（循环相生）。\n'
           '相克：木→土→水→火→金→木（循环相克）。'),
+      // ── 八字基础补充（合并自参考资料） ──
+      const _H('📖 八字基础'),
+      const _P('• 年柱以立春为界，月柱以十二节气分月，日柱查万年历，时柱由日干按五鼠遁定。\n'
+          '• 看旺衰：日主得令（月令同气）、得地（地支通根）、得势（同党多）则旺，反之弱。\n'
+          '• 十神以日干为基准，阴阳同为正神、异为偏神，是论命的重要框架。'),
+      const _S('十二地支五行'),
+      const _KVTable({
+        '子亥': '水', '寅卯': '木', '巳午': '火',
+        '申酉': '金', '辰戌丑未': '土',
+      }),
+      const _S('十神生克'),
+      const _P('印生身（比劫），比劫生食伤，食伤生财，财生官杀，官杀克身；'
+          '同者相帮，异者相耗。顺逆流转，环环相扣。'),
     ]);
   }
 }
