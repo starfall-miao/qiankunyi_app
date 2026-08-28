@@ -121,6 +121,13 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
             '本版提供简化起课，完整天地盘、十二天将排布后续完善。',
             style: TextStyle(fontSize: 12, height: 1.6, color: t.withAlpha(160))),
         const SizedBox(height: 12),
+        // 输入区 Card（与六爻梅花一致）
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
         // 月份选择（ChoiceChip）
         Text('月份（定月将）', style: TextStyle(fontSize: 12, color: t.withAlpha(150))),
         const SizedBox(height: 6),
@@ -161,6 +168,10 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
             );
           }),
         ),
+              ],  // Card 内 Column children
+            ),  // Column
+          ),  // Padding
+        ),  // Card
         const SizedBox(height: 12),
         ElevatedButton.icon(
           onPressed: _calc,
@@ -173,7 +184,10 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
           RepaintBoundary(
             key: _shotKey,
             child: Card(
-            child: Padding(
+              child: InkWell(
+                onTap: () => _showDetail(),
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
               padding: const EdgeInsets.all(14),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('月将：${daliurenYueJiang[_result!.yueJiang]}（${_result!.method}）',
@@ -222,6 +236,7 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
             ),
           ),
           ),
+        ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: _saveImage,
@@ -258,13 +273,47 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
     );
   }
 
+  /// 结果详解弹窗
+  void _showDetail() {
+    final r = _result;
+    if (r == null) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('大六壬 结果详解'),
+        content: SingleChildScrollView(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('月将：${daliurenYueJiang[r.yueJiang]}（${r.method}）',
+                style: const TextStyle(fontSize: 13)),
+            const SizedBox(height: 8),
+            Text('三传：初传${r.chuChuan} → 中传${r.zhongChuan} → 末传${r.moChuan}',
+                style: const TextStyle(fontSize: 13)),
+            const SizedBox(height: 10),
+            const Text('十二天将', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            for (final g in daliurenGenerals)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text('${g.$1}（${g.$2}）：${g.$3}',
+                    style: const TextStyle(fontSize: 12, height: 1.5)),
+              ),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('关闭')),
+        ],
+      ),
+    );
+  }
+
   String _jsonEncode(DaLiuRenResult r) {
     final m = r.toJson();
     return m.entries.map((e) => '"${e.key}":${jsonEncode(e.value)}').join(',');
   }
 
   /// 保存结果图片
-  Future<void> _saveImage() async {    try {
+  Future<void> _saveImage() async {
+    try {
       final boundary =
           _shotKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 3.0);

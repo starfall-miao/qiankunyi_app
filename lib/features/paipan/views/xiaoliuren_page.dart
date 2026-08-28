@@ -128,6 +128,13 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // 输入区 Card（与六爻梅花一致）
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
           // 起课方式
           Wrap(
             spacing: 8,
@@ -189,7 +196,10 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
             label: const Text('排盘'),
             style: ElevatedButton.styleFrom(backgroundColor: p, foregroundColor: Colors.white),
           ),
-
+              ],  // Card 内 Column children
+            ),  // Column
+          ),  // Padding
+        ),  // Card
           const SizedBox(height: 12),
 
           // 结果
@@ -240,7 +250,10 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
     final color = _palmColor(palm.goodBad);
     final bg = dark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2);
     return Card(
-      child: Padding(
+      child: InkWell(
+        onTap: () => _showPalmDetail(r),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
@@ -297,6 +310,40 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
             ),
           ],
         ]),
+        ),
+      ),
+    );
+  }
+
+  /// 掌诀详情弹窗
+  void _showPalmDetail(XiaoLiuRenResult r) {
+    final palm = r.resultPalm;
+    final color = _palmColor(palm.goodBad);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('${palm.name}（${palm.goodBad}）',
+            style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+        content: SingleChildScrollView(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('五行：${palm.element} · 方位：${palm.direction}',
+                style: const TextStyle(fontSize: 13)),
+            const SizedBox(height: 8),
+            Text('象义', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(palm.meaning, style: const TextStyle(fontSize: 13, height: 1.6)),
+            const SizedBox(height: 10),
+            Text('断语', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(palm.advice, style: const TextStyle(fontSize: 13, height: 1.6)),
+            const SizedBox(height: 10),
+            Text('起课：${r.month}月${r.day}日 ${['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][r.hour]}时 · ${r.method}',
+                style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('关闭')),
+        ],
       ),
     );
   }
