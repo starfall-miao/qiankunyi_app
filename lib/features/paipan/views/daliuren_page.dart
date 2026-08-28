@@ -1,11 +1,20 @@
 // 落·乾坤 - 大六壬排盘页（基础版）
 import 'package:flutter/material.dart';
 
-/// 十二天将（贵人顺序）
+/// 十二天将（贵人顺序：吉/凶 + 象义）
 const daliurenGenerals = [
-  ('贵人', '吉'), ('螣蛇', '凶'), ('朱雀', '凶'), ('六合', '吉'),
-  ('勾陈', '凶'), ('青龙', '吉'), ('天空', '凶'), ('白虎', '凶'),
-  ('太常', '吉'), ('玄武', '凶'), ('太阴', '吉'), ('天后', '吉'),
+  ('贵人', '吉', '至尊之象，主贵人相助、尊贵吉祥'),
+  ('螣蛇', '凶', '虚惊怪异，主惊扰、缠绕、怪异之事'),
+  ('朱雀', '凶', '口舌文书，主言辞、信讯、是非'),
+  ('六合', '吉', '和合喜庆，主婚姻、合作、顺利'),
+  ('勾陈', '凶', '田土争讼，主纠缠、迟滞、争斗'),
+  ('青龙', '吉', '喜庆财帛，主喜庆、得财、吉庆'),
+  ('天空', '凶', '虚诈空亡，主欺骗、落空、虚伪'),
+  ('白虎', '凶', '凶丧血光，主凶险、疾病、丧事'),
+  ('太常', '吉', '酒食宴享，主宴乐、衣服、喜庆'),
+  ('玄武', '凶', '盗贼暗昧，主失窃、暗中、暖昧'),
+  ('太阴', '吉', '阴私妇人，主暗中相助、女贵'),
+  ('天后', '吉', '恩泽庇佑，主恩泽、庇护、柔和'),
 ];
 
 /// 十二地支（地盘/月将用）
@@ -170,8 +179,35 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
                   _chuan('末传', _result!.moChuan, p, t, bg, b),
                 ]),
                 const SizedBox(height: 8),
-                Text('十二天将：${daliurenGenerals.map((e) => e.$1).join('、')}',
-                    style: TextStyle(fontSize: 11, color: t.withAlpha(140))),
+                Text('十二天将详解', style: TextStyle(fontSize: 13, color: t.withAlpha(150))),
+                const SizedBox(height: 6),
+                // 天将网格（名称+吉凶+含义）
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: daliurenGenerals.map((g) {
+                    final isGood = g.$2 == '吉';
+                    final gc = isGood ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
+                    return Container(
+                      width: (340 - 24) / 2,
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: gc.withAlpha(12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: gc.withAlpha(40)),
+                      ),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Row(children: [
+                          Text(g.$1, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: gc)),
+                          const SizedBox(width: 6),
+                          Text(g.$2, style: TextStyle(fontSize: 10, color: gc)),
+                        ]),
+                        const SizedBox(height: 2),
+                        Text(g.$3, style: TextStyle(fontSize: 10, height: 1.4, color: t.withAlpha(160))),
+                      ]),
+                    );
+                  }).toList(),
+                ),
               ]),
             ),
           ),

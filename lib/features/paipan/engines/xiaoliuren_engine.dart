@@ -12,18 +12,39 @@ class XiaoLiuRenName {
   final String element; // 五行
   final String goodBad; // 吉/凶/平
   final String meaning; // 象义
+  final String direction; // 所属方位
+  final String advice;   // 断语/建议
   const XiaoLiuRenName(
-      this.index, this.name, this.element, this.goodBad, this.meaning);
+      this.index, this.name, this.element, this.goodBad, this.meaning,
+      {this.direction = '', this.advice = ''});
 }
 
 /// 六个掌诀（从大安起顺数）
 const xiaoliurenPalms = [
-  XiaoLiuRenName(0, '大安', '木', '吉', '身不动时，属木青龙，谋事主一、五、七。有身安、平安之意。'),
-  XiaoLiuRenName(1, '留连', '水', '凶', '卒未归时，属水玄武，谋事主二、八、十。有拖延、滞留之意。'),
-  XiaoLiuRenName(2, '速喜', '火', '吉', '人便至时，属火朱雀，谋事主三、六、九。有迅速、喜事之意。'),
-  XiaoLiuRenName(3, '赤口', '金', '凶', '官事凶时，属金白虎，谋事主四、七、十。有口舌、是非之意。'),
-  XiaoLiuRenName(4, '小吉', '木', '吉', '人来喜时，属木六合，谋事主一、五、七。有和合、顺利之意。'),
-  XiaoLiuRenName(5, '空亡', '土', '凶', '音信稀时，属土勾陈，谋事主三、六、九。有落空、无结果之意。'),
+  XiaoLiuRenName(0, '大安', '木', '吉',
+      '身不动时，属木青龙，谋事主一、五、七。有身安、平安之意。',
+      direction: '东方',
+      advice: '身安事顺，求谋皆宜；出行平安，失物东方可见；病轻可愈，诉讼可解。宜静不宜动，诸事平稳。'),
+  XiaoLiuRenName(1, '留连', '水', '凶',
+      '卒未归时，属水玄武，谋事主二、八、十。有拖延、滞留之意。',
+      direction: '南方',
+      advice: '事有拖延，谋事难成；出行不吉，失物南方寻；病主拖延，婚姻迟滞。凡事反复，急求不得，宜耐心等待。'),
+  XiaoLiuRenName(2, '速喜', '火', '吉',
+      '人便至时，属火朱雀，谋事主三、六、九。有迅速、喜事之意。',
+      direction: '南方',
+      advice: '喜事将至，谋事速成；出行顺利，失物南方速寻；病可速愈，诉讼有理。凡事迅速，宜趁热打铁。'),
+  XiaoLiuRenName(3, '赤口', '金', '凶',
+      '官事凶时，属金白虎，谋事主四、七、十。有口舌、是非之意。',
+      direction: '西方',
+      advice: '口舌是非，官讼不利；出行有惊，失物西方寻；病主凶险，注意刀伤口舌。凡事谨慎，防小人，忌争强。'),
+  XiaoLiuRenName(4, '小吉', '木', '吉',
+      '人来喜时，属木六合，谋事主一、五、七。有和合、顺利之意。',
+      direction: '东南方',
+      advice: '和合顺遂，谋事有成；行人将至，失物东南寻；病可速愈，婚姻和合。凡事皆吉，贵人相助。'),
+  XiaoLiuRenName(5, '空亡', '土', '凶',
+      '音信稀时，属土勾陈，谋事主三、六、九。有落空、无结果之意。',
+      direction: '西北方',
+      advice: '谋事落空，所求无果；行人未至，失物难寻；病恐难愈，诉讼多虚。凡事空耗，不宜强求，转圜再议。'),
 ];
 
 /// 小六壬排盘结果

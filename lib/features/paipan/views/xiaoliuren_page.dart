@@ -212,6 +212,7 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
             _miniPalm('时', palm, p, t, bg, b),
           ]),
           const SizedBox(height: 10),
+          // 象义
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(10),
@@ -223,6 +224,29 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
             child: Text(palm.meaning,
                 style: TextStyle(fontSize: 13, height: 1.6, color: t.withAlpha(200))),
           ),
+          if (palm.direction.isNotEmpty || palm.advice.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            // 方位
+            Row(children: [
+              Icon(Icons.explore_outlined, size: 14, color: color),
+              const SizedBox(width: 6),
+              Text('方位：${palm.direction} · 五行：${palm.element}',
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: t.withAlpha(190))),
+            ]),
+            const SizedBox(height: 6),
+            // 断语
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: t.withAlpha(8),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: b.withAlpha(60)),
+              ),
+              child: Text('断语：${palm.advice}',
+                  style: TextStyle(fontSize: 12.5, height: 1.6, color: t.withAlpha(190))),
+            ),
+          ],
         ]),
       ),
     );
