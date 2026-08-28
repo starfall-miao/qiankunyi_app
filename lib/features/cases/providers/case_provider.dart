@@ -1,14 +1,18 @@
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../core/database/app_database.dart';
 import '../../../core/utils/logger.dart';
 import '../models/case_models.dart';
 
-/// 卦例管理 Provider — 支持 shared_preferences 持久化
+/// 卦例管理 Provider — 基于 Drift(SQLite) 持久化，并支持旧版 SharedPreferences 数据迁移
 class CaseProvider extends ChangeNotifier {
   List<CaseModel> _cases = [];
   bool _isLoading = false;
   String _searchQuery = '';
+  AppDatabase? _db;
 
   List<CaseModel> get cases {
     if (_searchQuery.isEmpty) return List.unmodifiable(_cases);
@@ -16,6 +20,7 @@ class CaseProvider extends ChangeNotifier {
       c.title.contains(_searchQuery) ||
       c.guaName.contains(_searchQuery) ||
       (c.notes?.contains(_searchQuery) ?? false) ||
+      (c.askEvent?.contains(_searchQuery) ?? false) ||
       c.tags.any((t) => t.contains(_searchQuery))
     ).toList();
   }
@@ -25,65 +30,144 @@ class CaseProvider extends ChangeNotifier {
   String get searchQuery => _searchQuery;
   int get count => _cases.length;
 
-  static const _storageKey = 'qiankunyi_cases';
+  /// 旧版 SharedPreferences 存储 key（迁移用）
+  static const _legacyKey = 'qiankunyi_cases';
+  static const _migratedKey = 'qiankunyi_cases_migrated_v2';
 
   void setSearchQuery(String q) {
     _searchQuery = q;
     notifyListeners();
   }
 
-  /// 初始化——从 shared_preferences 加载
+  /// 初始化数据库连接（可注入 AppDatabase 便于测试）
+  void attachDatabase(AppDatabase db) => _db = db;
+
+  /// 从 SQLite 加载；首次启动若检测到旧 SharedPreferences 数据则迁移
   Future<void> loadCases() async {
     _isLoading = true;
     notifyListeners();
-
     try {
+      _db ??= AppDatabase();
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_storageKey);
-      if (raw != null && raw.isNotEmpty) {
-        final list = jsonDecode(raw) as List;
-        _cases = list.map((e) => CaseModel.fromMap(e as Map<String, dynamic>)).toList();
-      }
-    } catch (e) {
-      debugPrint('加载卦例失败: $e');
-    }
 
+      // 1) 尝试从 SQLite 读取
+      final rows = await _db!.select(_db!.caseTable).get();
+      if (rows.isNotEmpty) {
+        _cases = rows.map(_fromRow).toList();
+      } else {
+        // 2) 迁移旧数据（仅一次）
+        final legacy = prefs.getString(_legacyKey);
+        if (legacy != null && legacy.isNotEmpty) {
+          final list = jsonDecode(legacy) as List;
+          final migrated =
+              list.map((e) => CaseModel.fromMap(e as Map<String, dynamic>)).toList();
+          for (final c in migrated) {
+            await _insertRow(c);
+          }
+          _cases = migrated;
+          await prefs.remove(_legacyKey);
+          await prefs.setBool(_migratedKey, true);
+          Logger.instance.info('CaseProvider', '已从旧版迁移 ${migrated.length} 条卦例到 SQLite');
+        }
+      }
+    } catch (e, st) {
+      debugPrint('加载卦例失败: $e\n$st');
+      Logger.instance.error('CaseProvider', '加载失败: $e');
+    }
     _isLoading = false;
     notifyListeners();
   }
 
-  Future<void> _persist() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = jsonEncode(_cases.map((c) => c.toMap()).toList());
-      await prefs.setString(_storageKey, raw);
-    } catch (e) {
-      debugPrint('保存卦例失败: $e');
+  Future<void> _insertRow(CaseModel c) async {
+    await _db!.into(_db!.caseTable).insert(CaseCompanion.insert(
+      id: Value(c.id ?? DateTime.now().millisecondsSinceEpoch),
+      title: c.title,
+      guaName: c.guaName,
+      guaGong: c.guaGong,
+      method: c.method,
+      paipanData: c.paipanData,
+      notes: Value(c.notes),
+      duanYu: Value(c.duanYu),
+      askObject: Value(c.askObject),
+      askEvent: Value(c.askEvent),
+      tags: jsonEncode(c.tags),
+      aiMessages: jsonEncode(c.aiMessages.map((m) => m.toJson()).toList()),
+      caseType: c.caseType.name,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+    ));
+  }
+
+  /// Drift 行 → CaseModel
+  CaseModel _fromRow(CaseRow row) {
+    List<String> parseTags(String s) {
+      try {
+        return (jsonDecode(s) as List).cast<String>();
+      } catch (_) {
+        return [];
+      }
     }
+
+    List<AiMessage> parseMessages(String s) {
+      try {
+        return (jsonDecode(s) as List)
+            .map((e) => AiMessage.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } catch (_) {
+        return [];
+      }
+    }
+
+    return CaseModel(
+      id: row.id,
+      title: row.title,
+      guaName: row.guaName,
+      guaGong: row.guaGong,
+      method: row.method,
+      paipanData: row.paipanData,
+      notes: row.notes,
+      duanYu: row.duanYu,
+      askObject: row.askObject,
+      askEvent: row.askEvent,
+      tags: parseTags(row.tags),
+      aiMessages: parseMessages(row.aiMessages),
+      caseType: CaseType.values.firstWhere(
+          (e) => e.name == row.caseType, orElse: () => CaseType.liuyao),
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    );
   }
 
   /// 添加卦例
   Future<void> addCase(CaseModel caseModel) async {
     _cases.insert(0, caseModel);
-    await _persist();
+    try {
+      _db ??= AppDatabase();
+      await _insertRow(caseModel);
+    } catch (e) {
+      debugPrint('添加卦例失败: $e');
+    }
     notifyListeners();
   }
 
   /// 删除卦例
   Future<void> deleteCase(int id) async {
     _cases.removeWhere((c) => c.id == id);
-    await _persist();
+    try {
+      _db ??= AppDatabase();
+      await (_db!.delete(_db!.caseTable)..where((t) => t.id.equals(id))).go();
+    } catch (e) {
+      debugPrint('删除卦例失败: $e');
+    }
     notifyListeners();
   }
 
-  /// 更新卦例（找不到 id 时记录错误日志，不再静默失败）
-  /// 注意：调用方可能持有打开编辑弹窗时的旧快照（不含 AI 对话历史），
-  /// 此处基于最新 [_cases] 中的对象合并，防止旧快照覆盖 AI 对话历史。
+  /// 更新卦例（保留最新 AI 对话历史，防止旧快照覆盖）
   Future<void> updateCase(CaseModel updated) async {
     final index = _cases.indexWhere((c) => c.id == updated.id);
     if (index >= 0) {
       final latest = _cases[index];
-      _cases[index] = latest.copyWith(
+      final merged = latest.copyWith(
         title: updated.title,
         guaName: updated.guaName,
         guaGong: updated.guaGong,
@@ -91,24 +175,46 @@ class CaseProvider extends ChangeNotifier {
         paipanData: updated.paipanData,
         notes: updated.notes,
         duanYu: updated.duanYu,
+        askObject: updated.askObject,
+        askEvent: updated.askEvent,
         tags: updated.tags,
         caseType: updated.caseType,
-        // 保留最新 AI 对话历史（调用方旧快照可能不含消息）
         aiMessages: updated.aiMessages.isNotEmpty
             ? updated.aiMessages
             : latest.aiMessages,
         updatedAt: DateTime.now(),
       );
-      await _persist();
+      _cases[index] = merged;
+      try {
+        _db ??= AppDatabase();
+        await (_db!.update(_db!.caseTable)
+              ..where((t) => t.id.equals(merged.id!)))
+            .write(CaseCompanion(
+          title: Value(merged.title),
+          guaName: Value(merged.guaName),
+          guaGong: Value(merged.guaGong),
+          method: Value(merged.method),
+          paipanData: Value(merged.paipanData),
+          notes: Value(merged.notes),
+          duanYu: Value(merged.duanYu),
+          askObject: Value(merged.askObject),
+          askEvent: Value(merged.askEvent),
+          tags: Value(jsonEncode(merged.tags)),
+          aiMessages: Value(
+              jsonEncode(merged.aiMessages.map((m) => m.toJson()).toList())),
+          caseType: Value(merged.caseType.name),
+          updatedAt: Value(merged.updatedAt),
+        ));
+      } catch (e) {
+        debugPrint('更新卦例失败: $e');
+      }
       notifyListeners();
     } else {
       Logger.instance.error('CaseProvider', 'updateCase 未找到卦例 id: ${updated.id}');
     }
   }
 
-  /// 更新卦例的 AI 对话历史。
-  /// 基于最新 [_cases] 中的对象合并（而非调用方传入的旧对象），
-  /// 避免连续两次 updateCase 并发写 SharedPreferences 时互相覆盖丢失消息。
+  /// 更新卦例的 AI 对话历史
   Future<void> updateAiMessages(int id, List<AiMessage> aiMessages) async {
     final index = _cases.indexWhere((c) => c.id == id);
     if (index >= 0) {
@@ -116,7 +222,7 @@ class CaseProvider extends ChangeNotifier {
         aiMessages: aiMessages,
         updatedAt: DateTime.now(),
       );
-      await _persist();
+      await updateCase(_cases[index]);
       notifyListeners();
     } else {
       Logger.instance.error('CaseProvider', 'updateAiMessages 未找到卦例 id: $id');
