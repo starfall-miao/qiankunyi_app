@@ -80,11 +80,54 @@ class _MainShellState extends State<MainShell> {
   bool _spotlightInitialized = false;
 
   List<SpotlightStep> get _spotlightSteps => [
-        SpotlightStep(targetKey: _navKeys[0], title: '排盘', desc: '六爻/梅花/八字/小六壬/大六壬，五大术数排盘入口。'),
-        SpotlightStep(targetKey: _navKeys[1], title: '卦例', desc: '保存与管理你的卦例，支持 AI 解卦与占问记录。'),
-        SpotlightStep(targetKey: _navKeys[2], title: '日历', desc: '万年历与宜忌，日常查询好帮手。'),
-        SpotlightStep(targetKey: _navKeys[3], title: '参考', desc: '六十四卦、纳音、星宿、象意字典等海量易学资料。'),
-        SpotlightStep(targetKey: _navKeys[4], title: '百宝箱', desc: '教程、用户画像、AI 配置、数据管理等设置入口。'),
+        // ── 流程式引导（约 15 步，画面随引导切换 Tab）──
+        SpotlightStep(title: '欢迎使用落·乾坤', tabIndex: 0,
+            desc: '易学助手：六爻、梅花、八字、小六壬、大六壬五大排盘，AI 解卦，海量资料。'
+                '跟着引导走一遍核心流程吧！'),
+        SpotlightStep(targetKey: _navKeys[0], title: '1. 排盘 Tab', tabIndex: 0,
+            desc: '这是"排盘"入口。点击下方 Tab 切换术数：\n'
+                '· 六爻：铜钱摇卦（如"这单生意能成吗"）\n'
+                '· 梅花：数字/时间起卦\n'
+                '· 八字：输入出生信息排四柱'),
+        SpotlightStep(title: '2. 选择起卦方式', tabIndex: 0,
+            desc: '排盘页顶部可选起卦方式：\n'
+                '· 手工摇卦 / 机器摇卦 / 时间起卦 / 数字起卦\n'
+                '例子：选"数字起卦"，输入 3 个数字（如 3、5、7）点排盘。'),
+        SpotlightStep(title: '3. 查看卦象', tabIndex: 0,
+            desc: '排盘结果展示本卦/变卦/互卦、世应、六亲、空亡、藏爻等。\n'
+                '点按卦象可看详解，点"保存卦例"存入卦例库。'),
+        SpotlightStep(targetKey: _navKeys[1], title: '4. 卦例 Tab', tabIndex: 1,
+            desc: '这是"卦例"入口，保存的卦例都在这里。\n'
+                '点击卦例可查看详情、编辑占问对象/事件、AI 解卦、导出/导入。'),
+        SpotlightStep(title: '5. AI 解卦', tabIndex: 1,
+            desc: '在卦例详情点"开始 AI 解卦"，AI 会结合卦象、占问对象与用户画像分析。\n'
+                '例子：对刚摇的卦问"近期财运如何"，AI 会给出解读与建议。'),
+        SpotlightStep(title: '6. 保存对话图片', tabIndex: 1,
+            desc: 'AI 解卦结果可"保存为图片"（勾选对话，含卦例基本内容），方便分享。'),
+        SpotlightStep(targetKey: _navKeys[2], title: '7. 日历 Tab', tabIndex: 2,
+            desc: '这是"日历"入口：万年历、宜忌、农历节气，日常查询很方便。'),
+        SpotlightStep(targetKey: _navKeys[3], title: '8. 参考 Tab', tabIndex: 3,
+            desc: '这是"参考"入口：六十四卦、纳音、星宿、象意字典、神煞等海量资料。\n'
+                '搜索框可快速找卦，如输入"泰"。'),
+        SpotlightStep(targetKey: _navKeys[4], title: '9. 百宝箱 Tab', tabIndex: 4,
+            desc: '这是"百宝箱"（设置）入口：\n'
+                '· 用户画像：多用户，八字画像供 AI 参考\n'
+                '· 易学教程：周易/六爻/梅花/八字/速查卡\n'
+                '· AI 配置、数据管理等'),
+        SpotlightStep(title: '10. 用户画像', tabIndex: 4,
+            desc: '在百宝箱最上方"用户画像"：创建用户、填写八字自动生成画像，'
+                'AI 解卦时会参考画像（可关闭）。'),
+        SpotlightStep(title: '11. AI 提供商', tabIndex: 4,
+            desc: '在"AI 解卦配置"选提供商（智谱/商汤/OpenAI 等），'
+                '可添加自定义、从上游获取模型、自定义提示词。'),
+        SpotlightStep(title: '12. 数据管理', tabIndex: 4,
+            desc: '"数据管理"可查看卦例统计、清空卦例、恢复默认设置，'
+                '数据本地保存，隐私安全。'),
+        SpotlightStep(title: '13. 保存图片', tabIndex: 0,
+            desc: '所有排盘结果都支持"保存图片"（PNG），生成美观的排盘图分享。'),
+        SpotlightStep(title: '完成！祝你易学顺利', tabIndex: 0,
+            desc: '已了解核心流程：排盘 → 卦例 → AI 解卦 → 日历 → 参考 → 百宝箱。\n'
+                '更多功能可在"百宝箱 → 使用引导"随时重看。'),
       ];
 
   final _pages = const [
@@ -223,6 +266,15 @@ class _MainShellState extends State<MainShell> {
           steps: _spotlightSteps,
           onFinish: _finishSpotlight,
           onSkip: _finishSpotlight,
+          onStepChanged: (i) {
+            // 画面随引导步骤切换对应 Tab
+            final tab = i >= 0 && i < _spotlightSteps.length
+                ? _spotlightSteps[i].tabIndex
+                : null;
+            if (tab != null && tab != _currentIndex) {
+              setState(() => _currentIndex = tab);
+            }
+          },
         ),
         ],
       ),

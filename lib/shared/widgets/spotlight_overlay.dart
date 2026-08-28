@@ -4,13 +4,15 @@ import 'package:flutter/material.dart';
 
 /// 引导步骤：高亮一个目标控件并显示说明
 class SpotlightStep {
-  final GlobalKey targetKey; // 目标控件 key
+  final GlobalKey? targetKey; // 目标控件 key（可为空，仅切换画面）
   final String title;        // 步骤标题
-  final String desc;         // 说明文字
+  final String desc;         // 说明文字（含例子）
+  final int? tabIndex;       // 引导时切换到的主框架 Tab（画面随引导变）
   const SpotlightStep({
-    required this.targetKey,
+    this.targetKey,
     required this.title,
     required this.desc,
+    this.tabIndex,
   });
 }
 
@@ -19,11 +21,13 @@ class SpotlightOverlay extends StatefulWidget {
   final List<SpotlightStep> steps;
   final VoidCallback onFinish;
   final VoidCallback onSkip;
+  final void Function(int stepIndex)? onStepChanged;
   const SpotlightOverlay({
     super.key,
     required this.steps,
     required this.onFinish,
     required this.onSkip,
+    this.onStepChanged,
   });
 
   @override
@@ -35,7 +39,9 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> {
 
   /// 当前步骤目标控件在全局坐标中的矩形
   Rect? get _targetRect {
-    final ctx = widget.steps[_index].targetKey.currentContext;
+    final key = widget.steps[_index].targetKey;
+    if (key == null) return null;
+    final ctx = key.currentContext;
     if (ctx == null) return null;
     final box = ctx.findRenderObject() as RenderBox?;
     if (box == null || !box.hasSize || !box.attached) return null;
@@ -99,7 +105,11 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> {
                       const SizedBox(width: 4),
                       FilledButton(
                         onPressed: _index < widget.steps.length - 1
-                            ? () => setState(() => _index++)
+                            ? () {
+                                setState(() => _index++);
+                                // 通知外部切换画面（tabIndex）
+                                widget.onStepChanged?.call(_index);
+                              }
                             : widget.onFinish,
                         child: Text(_index < widget.steps.length - 1 ? '下一步' : '完成'),
                       ),
