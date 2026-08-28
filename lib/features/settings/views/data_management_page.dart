@@ -104,11 +104,11 @@ class _DataManagementPageState extends State<DataManagementPage> {
         ],
       ),
     );
-    if (ok == true && context.mounted) {
+    if (ok == true && mounted) {
       for (final c in List.of(cp.allCases)) {
         await cp.deleteCase(c.id!);
       }
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已清空全部卦例')));
       }
     }
@@ -129,9 +129,9 @@ class _DataManagementPageState extends State<DataManagementPage> {
         ],
       ),
     );
-    if (ok == true && context.mounted) {
+    if (ok == true && mounted) {
       await sp.resetToDefault();
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已恢复默认设置')));
       }
     }
