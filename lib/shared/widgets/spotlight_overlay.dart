@@ -57,7 +57,7 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> {
             child: CustomPaint(
               painter: _SpotlightPainter(
                 hole: rect,
-                baseColor: Colors.black.withOpacity(0.62),
+                baseColor: Colors.black.withValues(alpha: 0.62),
                 borderColor: scheme.primary,
               ),
             ),
