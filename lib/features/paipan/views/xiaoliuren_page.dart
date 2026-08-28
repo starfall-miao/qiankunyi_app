@@ -111,14 +111,32 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
           ),
           const SizedBox(height: 12),
 
-          // 月日时输入
+          // 月日时输入（ChoiceChip 风格，与六爻梅花一致）
           if (_method == 0) ...[
+            Text('月份', style: TextStyle(fontSize: 12, color: t.withAlpha(150))),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: List.generate(12, (i) {
+                final sel = _month == i + 1;
+                return ChoiceChip(
+                  label: Text(_months[i], style: TextStyle(fontSize: 11, color: sel ? p : t)),
+                  selected: sel,
+                  onSelected: (_) => setState(() => _month = i + 1),
+                  selectedColor: p.withAlpha(40),
+                  backgroundColor: bg,
+                  side: BorderSide(color: sel ? p : b, width: 1),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  visualDensity: VisualDensity.compact,
+                );
+              }),
+            ),
+            const SizedBox(height: 10),
             Row(children: [
-              Expanded(child: _select('月', _month, _months, (v) => setState(() => _month = v + 1))),
+              Expanded(child: _select('日期', _day, List.generate(30, (i) => '${i + 1}日'), (v) => setState(() => _day = v + 1))),
               const SizedBox(width: 8),
-              Expanded(child: _select('日', _day, List.generate(30, (i) => '${i + 1}日'), (v) => setState(() => _day = v + 1))),
-              const SizedBox(width: 8),
-              Expanded(child: _select('时', _hour, _hours, (v) => setState(() => _hour = v))),
+              Expanded(child: _select('时辰', _hour, _hours, (v) => setState(() => _hour = v))),
             ]),
           ] else if (_method == 2) ...[
             Row(children: [

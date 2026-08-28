@@ -115,19 +115,23 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                 ]),
               ),
             ),
-          // Tab 行
+          // Tab 行（分段式胶囊按钮，统一五个术数切换样式）
           if (!tp.immersiveMode)
             SliverToBoxAdapter(
               child: Container(
-                decoration: BoxDecoration(color: c, border: Border(bottom: BorderSide(color: b))),
+                decoration: BoxDecoration(
+                  color: c,
+                  border: Border(bottom: BorderSide(color: b.withAlpha(80))),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(children: [
-                  _tabBtn('六爻', 0, p, isDark),
-                  _tabBtn('梅花', 1, p, isDark),
-                  _tabBtn('八字', 2, p, isDark),
-                  _tabBtn('小六壬', 3, p, isDark),
-                  _tabBtn('大六壬', 4, p, isDark),
+                  scrollDirection: Axis.horizontal,
+                  child: Row(children: [
+                    _tabBtn('六爻', 0, p, isDark),
+                    _tabBtn('梅花', 1, p, isDark),
+                    _tabBtn('八字', 2, p, isDark),
+                    _tabBtn('小六壬', 3, p, isDark),
+                    _tabBtn('大六壬', 4, p, isDark),
                 ]),
               ),
               ),
@@ -179,23 +183,32 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
   Widget _tabBtn(String label, int idx, Color p, bool dark) {
     final sel = _tabIndex == idx;
     final txtColor = dark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
+    final bg = dark ? const Color(0xFF2C2C2C) : Colors.white;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: GestureDetector(
         onTap: () {
           setState(() => _tabIndex = idx);
           const names = ['六爻', '梅花', '八字', '小六壬', '大六壬'];
           _log.info('切换选项卡: ${names.length > idx ? names[idx] : ""}');
         },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-          color: sel ? p.withAlpha(20) : Colors.transparent,
-          child: Text(label,
-            textAlign: TextAlign.center,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 18),
+          decoration: BoxDecoration(
+            color: sel ? p : bg,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: sel ? p : b.withAlpha(60), width: sel ? 1.5 : 1),
+            boxShadow: sel
+                ? [BoxShadow(color: p.withAlpha(40), blurRadius: 6, offset: const Offset(0, 2))]
+                : null,
+          ),
+          child: Text(
+            label,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: sel ? FontWeight.bold : FontWeight.normal,
-              color: sel ? p : txtColor.withAlpha(160),
+              color: sel ? Colors.white : txtColor.withAlpha(170),
             ),
           ),
         ),

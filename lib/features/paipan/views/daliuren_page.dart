@@ -104,11 +104,46 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
             '本版提供简化起课，完整天地盘、十二天将排布后续完善。',
             style: TextStyle(fontSize: 12, height: 1.6, color: t.withAlpha(160))),
         const SizedBox(height: 12),
-        Row(children: [
-          Expanded(child: _select('月', _month, 12, '月', (v) => setState(() => _month = v + 1))),
-          const SizedBox(width: 8),
-          Expanded(child: _select('时', _hour, _hours.length, '时', (v) => setState(() => _hour = v))),
-        ]),
+        // 月份选择（ChoiceChip）
+        Text('月份（定月将）', style: TextStyle(fontSize: 12, color: t.withAlpha(150))),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: List.generate(12, (i) {
+            final sel = _month == i + 1;
+            return ChoiceChip(
+              label: Text('${i + 1}月', style: TextStyle(fontSize: 11, color: sel ? p : t)),
+              selected: sel,
+              onSelected: (_) => setState(() => _month = i + 1),
+              selectedColor: p.withAlpha(40),
+              backgroundColor: bg,
+              side: BorderSide(color: sel ? p : b, width: 1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              visualDensity: VisualDensity.compact,
+            );
+          }),
+        ),
+        const SizedBox(height: 10),
+        Text('时辰', style: TextStyle(fontSize: 12, color: t.withAlpha(150))),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: List.generate(12, (i) {
+            final sel = _hour == i;
+            return ChoiceChip(
+              label: Text(_hours[i], style: TextStyle(fontSize: 11, color: sel ? p : t)),
+              selected: sel,
+              onSelected: (_) => setState(() => _hour = i),
+              selectedColor: p.withAlpha(40),
+              backgroundColor: bg,
+              side: BorderSide(color: sel ? p : b, width: 1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              visualDensity: VisualDensity.compact,
+            );
+          }),
+        ),
         const SizedBox(height: 12),
         ElevatedButton.icon(
           onPressed: _calc,
@@ -158,18 +193,3 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
       ),
     );
   }
-
-  Widget _select(String label, int value, int count, String suffix, ValueChanged<int> onSel) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontSize: 12)),
-      DropdownButton<int>(
-        value: value,
-        isExpanded: true,
-        items: List.generate(count, (i) =>
-            DropdownMenuItem(value: i,
-                child: Text(suffix == '时' ? _hours[i] : '${i + 1}$suffix', style: const TextStyle(fontSize: 13)))),
-        onChanged: (v) => v != null ? onSel(v) : null,
-      ),
-    ]);
-  }
-}
