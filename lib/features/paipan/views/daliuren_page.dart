@@ -1,7 +1,11 @@
 // 落·乾坤 - 大六壬排盘页（基础版）
+import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:provider/provider.dart';
+import '../../cases/providers/case_provider.dart';
+import '../../cases/models/case_models.dart';
 import '../../../shared/widgets/save_image_dialog.dart';
 
 /// 十二天将（贵人顺序：吉/凶 + 象义）
@@ -224,14 +228,43 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
               icon: const Icon(Icons.image_outlined, size: 18),
               label: const Text('保存图片'),
             ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _saveCase,
+              icon: const Icon(Icons.bookmark_add_outlined, size: 18),
+              label: const Text('保存卦例'),
+            ),
         ],
       ]),
     );
   }
 
+  /// 保存卦例到卦例库
+  void _saveCase() {
+    final r = _result;
+    if (r == null) return;
+    final cm = CaseModel(
+      id: DateTime.now().millisecondsSinceEpoch,
+      title: '大六壬 · ${r.chuChuan}传',
+      guaName: '大六壬',
+      guaGong: r.chuChuan,
+      method: '大六壬（${r.method}）',
+      paipanData: '{"daLiuRen":${_jsonEncode(r)}}',
+      caseType: CaseType.liuyao,
+    );
+    context.read<CaseProvider>().addCase(cm);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('已保存到卦例库')),
+    );
+  }
+
+  String _jsonEncode(DaLiuRenResult r) {
+    final m = r.toJson();
+    return m.entries.map((e) => '"${e.key}":${jsonEncode(e.value)}').join(',');
+  }
+
   /// 保存结果图片
-  Future<void> _saveImage() async {
-    try {
+  Future<void> _saveImage() async {    try {
       final boundary =
           _shotKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 3.0);
