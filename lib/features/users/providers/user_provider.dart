@@ -29,7 +29,7 @@ class UserProvider extends ChangeNotifier {
     final buf = <String>[
       '画像用户：${u.nickname}',
       if (u.hasBazi && u.baziSummary.isNotEmpty) '八字画像：${u.baziSummary}',
-      if (u.notes.isNotEmpty) '画像备注：${u.notes}',
+      if (u.notes.isNotEmpty) '画像备注：${u.notes.join('；')}',
     ];
     return buf.join('\n');
   }

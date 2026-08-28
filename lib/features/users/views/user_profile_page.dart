@@ -119,7 +119,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 dense: true,
                 leading: const Icon(Icons.edit_note, size: 18),
                 title: const Text('填写性格/近况/关注点', style: TextStyle(fontSize: 13)),
-                subtitle: Text(u.notes.isEmpty ? '未填写' : u.notes,
+                subtitle: Text(u.notes.isEmpty ? '未填写' : u.notes.join('；'),
                     maxLines: 2, overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 11, color: scheme.onSurface.withAlpha(120))),
                 onTap: () => _notesDialog(up, u),
@@ -277,31 +277,80 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
-  // ── 画像备注 ──
+  // ── 画像备注（条目管理，可增删） ──
   void _notesDialog(UserProvider up, UserProfile u) {
-    final ctl = TextEditingController(text: u.notes);
+    final items = List<String>.from(u.notes);
+    final ctl = TextEditingController();
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('画像备注'),
-        content: TextField(
-          controller: ctl,
-          maxLines: 5,
-          decoration: const InputDecoration(
-            hintText: '例如：性格偏内向，近期关注事业和感情，属猪…',
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: const Text('画像备注'),
+          content: SizedBox(
+            width: 320,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 已有条目（可删除）
+                if (items.isNotEmpty)
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: items.map((it) => InputChip(
+                      label: Text(it, style: const TextStyle(fontSize: 12)),
+                      visualDensity: VisualDensity.compact,
+                      onDeleted: () => setS(() => items.remove(it)),
+                    )).toList(),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Text('暂无备注，点下方添加', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                  ),
+                const SizedBox(height: 8),
+                // 添加条目
+                Row(children: [
+                  Expanded(
+                    child: TextField(
+                      controller: ctl,
+                      decoration: const InputDecoration(
+                        labelText: '添加备注条目',
+                        hintText: '如：属猪 / 性格内向 / 关注事业',
+                        isDense: true,
+                      ),
+                      onSubmitted: (v) {
+                        if (v.trim().isNotEmpty) {
+                          setS(() { items.add(v.trim()); ctl.clear(); });
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  IconButton(
+                    onPressed: () {
+                      if (ctl.text.trim().isNotEmpty) {
+                        setS(() { items.add(ctl.text.trim()); ctl.clear(); });
+                      }
+                    },
+                    icon: const Icon(Icons.add_circle_outline),
+                  ),
+                ]),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            FilledButton(
+              onPressed: () {
+                up.updateUser(u.copyWith(notes: items));
+                Navigator.pop(ctx);
+                setState(() {});
+              },
+              child: const Text('保存'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          FilledButton(
-            onPressed: () {
-              up.updateUser(u.copyWith(notes: ctl.text.trim()));
-              Navigator.pop(ctx);
-              setState(() {});
-            },
-            child: const Text('保存'),
-          ),
-        ],
       ),
     );
   }

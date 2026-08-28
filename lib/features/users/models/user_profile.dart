@@ -13,7 +13,7 @@ class UserProfile {
   /// 八字画像摘要（由排盘引擎生成，如"日主甲木，喜水木"）
   String baziSummary;
   /// 用户补充的画像备注（兴趣/性格/近况等，由用户维护）
-  String notes;
+  List<String> notes;
   /// 是否在 AI 解卦时参考画像
   bool aiReferenceEnabled;
   DateTime? createdAt;
@@ -27,7 +27,7 @@ class UserProfile {
     this.isMale = true,
     this.hourIndex,
     this.baziSummary = '',
-    this.notes = '',
+    this.notes = const [],
     this.aiReferenceEnabled = false,
     this.createdAt,
   });
@@ -55,7 +55,7 @@ class UserProfile {
         isMale: json['isMale'] as bool? ?? true,
         hourIndex: json['hourIndex'] as int?,
         baziSummary: json['baziSummary'] as String? ?? '',
-        notes: json['notes'] as String? ?? '',
+        notes: (json['notes'] as List?)?.map((e) => e.toString()).toList() ?? const [],
         aiReferenceEnabled: json['aiReferenceEnabled'] as bool? ?? false,
         createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
       );
