@@ -16,6 +16,7 @@ import 'features/settings/settings_page.dart';
 import 'features/settings/settings_provider.dart';
 import 'features/calendar/views/calendar_page.dart';
 import 'features/onboarding/views/onboarding_page.dart';
+import 'shared/widgets/spotlight_overlay.dart';
 
 /// 落·乾坤 应用入口 Widget
 class QianKunYiApp extends StatelessWidget {
@@ -73,6 +74,18 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
+  // 聚光灯引导：5 个导航项的目标 key + 步骤文案
+  final _navKeys = List.generate(5, (_) => GlobalKey());
+  bool _spotlightVisible = false;
+  bool _spotlightInitialized = false;
+
+  List<SpotlightStep> get _spotlightSteps => [
+        SpotlightStep(targetKey: _navKeys[0], title: '排盘', desc: '六爻/梅花/八字/小六壬/大六壬，五大术数排盘入口。'),
+        SpotlightStep(targetKey: _navKeys[1], title: '卦例', desc: '保存与管理你的卦例，支持 AI 解卦与占问记录。'),
+        SpotlightStep(targetKey: _navKeys[2], title: '日历', desc: '万年历与宜忌，日常查询好帮手。'),
+        SpotlightStep(targetKey: _navKeys[3], title: '参考', desc: '六十四卦、纳音、星宿、象意字典等海量易学资料。'),
+        SpotlightStep(targetKey: _navKeys[4], title: '百宝箱', desc: '教程、用户画像、AI 配置、数据管理等设置入口。'),
+      ];
 
   final _pages = const [
     PaipanPage(),
@@ -83,36 +96,45 @@ class _MainShellState extends State<MainShell> {
   ];
 
   // 导航栏配置（Lucide 简约有活力图标）
-  static const _navDestinations = [
-    NavigationDestination(icon: Icon(LucideIcons.compass), label: '排盘'),
-    NavigationDestination(icon: Icon(LucideIcons.bookmark), label: '卦例'),
-    NavigationDestination(icon: Icon(LucideIcons.calendar), label: '日历'),
-    NavigationDestination(icon: Icon(LucideIcons.book), label: '参考'),
-    NavigationDestination(icon: Icon(LucideIcons.settings), label: '百宝箱'),
+  static const _icons = [
+    LucideIcons.compass, LucideIcons.bookmark, LucideIcons.calendar,
+    LucideIcons.book, LucideIcons.settings,
   ];
+  static const _labels = ['排盘', '卦例', '日历', '参考', '百宝箱'];
 
-  static const _navRailDestinations = [
-    NavigationRailDestination(
-      icon: Icon(LucideIcons.compass),
-      label: Text('排盘'),
-    ),
-    NavigationRailDestination(
-      icon: Icon(LucideIcons.bookmark),
-      label: Text('卦例'),
-    ),
-    NavigationRailDestination(
-      icon: Icon(LucideIcons.calendar),
-      label: Text('日历'),
-    ),
-    NavigationRailDestination(
-      icon: Icon(LucideIcons.book),
-      label: Text('参考'),
-    ),
-    NavigationRailDestination(
-      icon: Icon(LucideIcons.settings),
-      label: Text('百宝箱'),
-    ),
-  ];
+  List<NavigationDestination> get _destinations => [
+        for (var i = 0; i < 5; i++)
+          NavigationDestination(
+            icon: KeyedSubtree(key: _navKeys[i], child: Icon(_icons[i])),
+            label: _labels[i],
+          ),
+      ];
+
+  List<NavigationRailDestination> get _railDestinations => [
+        for (var i = 0; i < 5; i++)
+          NavigationRailDestination(
+            icon: KeyedSubtree(key: _navKeys[i], child: Icon(_icons[i])),
+            label: Text(_labels[i]),
+          ),
+      ];
+
+  @override
+  void initState() {
+    super.initState();
+    // 首次进入主界面后触发聚光灯实操引导（一次性）
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final sp = context.read<SettingsProvider>();
+      if (sp.onboardingDone && !_spotlightInitialized && !_spotlightVisible) {
+        _spotlightInitialized = true;
+        _spotlightVisible = true;
+      }
+    });
+  }
+
+  void _finishSpotlight() {
+    setState(() => _spotlightVisible = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +155,9 @@ class _MainShellState extends State<MainShell> {
         }
         return KeyEventResult.ignored;
       },
-      child: Scaffold(
+      child: Stack(
+        children: [
+          Scaffold(
         body: Row(
         children: [
           // 桌面端：左侧导航栏（NavigationRail）
@@ -160,7 +184,7 @@ class _MainShellState extends State<MainShell> {
                   ],
                 ),
               ),
-              destinations: _navRailDestinations,
+              destinations: _railDestinations,
             ),
           // 内容区
           Expanded(
@@ -175,9 +199,18 @@ class _MainShellState extends State<MainShell> {
           ? NavigationBar(
               selectedIndex: _currentIndex,
               onDestinationSelected: (i) => setState(() => _currentIndex = i),
-              destinations: _navDestinations,
+              destinations: _destinations,
             )
           : null,
+        ),
+      // 聚光灯引导
+      if (_spotlightVisible)
+        SpotlightOverlay(
+          steps: _spotlightSteps,
+          onFinish: _finishSpotlight,
+          onSkip: _finishSpotlight,
+        ),
+        ],
       ),
     );
   }
