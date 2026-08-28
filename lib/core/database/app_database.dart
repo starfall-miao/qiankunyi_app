@@ -9,6 +9,12 @@ import '../utils/constants.dart';
 
 part 'app_database.g.dart';
 
+/// 卦例数据行（Drift 生成类型别名，供外部库使用）
+typedef CaseRow = CaseTableRow;
+
+/// 卦例插入/更新助手（Drift 生成 companion 别名，供外部库使用）
+typedef CaseCompanionType = CaseCompanion;
+
 /// 卦例表
 class CaseTable extends Table {
   IntColumn get id => integer()();

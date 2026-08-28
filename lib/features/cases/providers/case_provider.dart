@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/database/app_database.dart';
@@ -53,7 +54,7 @@ class CaseProvider extends ChangeNotifier {
       // 1) 尝试从 SQLite 读取
       final rows = await _db!.select(_db!.caseTable).get();
       if (rows.isNotEmpty) {
-        _cases = rows.map(_fromRow).toList();
+        _cases = rows.map((r) => _fromRow(r)).toList();
       } else {
         // 2) 迁移旧数据（仅一次）
         final legacy = prefs.getString(_legacyKey);
@@ -79,7 +80,7 @@ class CaseProvider extends ChangeNotifier {
   }
 
   Future<void> _insertRow(CaseModel c) async {
-    await _db!.into(_db!.caseTable).insert(CaseCompanion.insert(
+    await _db!.into(_db!.caseTable).insert(CaseCompanionType.insert(
       id: Value(c.id ?? DateTime.now().millisecondsSinceEpoch),
       title: c.title,
       guaName: c.guaName,
@@ -189,7 +190,7 @@ class CaseProvider extends ChangeNotifier {
         _db ??= AppDatabase();
         await (_db!.update(_db!.caseTable)
               ..where((t) => t.id.equals(merged.id!)))
-            .write(CaseCompanion(
+            .write(CaseCompanionType(
           title: Value(merged.title),
           guaName: Value(merged.guaName),
           guaGong: Value(merged.guaGong),
