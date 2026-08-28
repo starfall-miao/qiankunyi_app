@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:lucide_flutter/lucide_flutter.dart';
 
 import '../../core/theme/theme_provider.dart';
 import '../../core/theme/app_theme.dart';
@@ -51,7 +52,7 @@ class _SettingsPageState extends State<SettingsPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               children: [
                 // 👤 用户画像（置顶）
-                _buildSectionHeader(theme, '👤 用户画像'),
+                _buildSectionHeader(theme, '用户画像', icon: LucideIcons.users),
                 const SizedBox(height: 8),
                 Consumer<UserProvider>(
                   builder: (ctx, up, _) => _buildCard(
@@ -85,7 +86,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 16),
 
                 // 📖 易学入门教程（百宝箱主打功能）
-                _buildSectionHeader(theme, '📖 易学入门教程'),
+                _buildSectionHeader(theme, '易学入门教程', icon: LucideIcons.book),
                 const SizedBox(height: 8),
                 _buildCard(
                   Column(children: [
@@ -101,7 +102,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(height: 16),
 
-                _buildSectionHeader(theme, '🎨 主题与配色'),
+                _buildSectionHeader(theme, '主题与配色', icon: LucideIcons.palette),
                 const SizedBox(height: 8),
                 _buildThemeModeCard(theme, isDark),
                 const SizedBox(height: 8),
@@ -110,37 +111,37 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildAcrylicToggle(theme),
                 const SizedBox(height: 16),
 
-                _buildSectionHeader(theme, '🔤 字体与显示'),
+                _buildSectionHeader(theme, '字体与显示', icon: LucideIcons.type),
                 const SizedBox(height: 8),
                 _buildFontSettings(theme),
                 const SizedBox(height: 16),
 
-                _buildSectionHeader(theme, '⚙️ 排盘规则'),
+                _buildSectionHeader(theme, '排盘规则', icon: LucideIcons.sliders),
                 const SizedBox(height: 8),
                 _buildRuleSettings(theme),
                 const SizedBox(height: 16),
 
-                _buildSectionHeader(theme, '👁️ 显示要素'),
+                _buildSectionHeader(theme, '显示要素', icon: LucideIcons.eye),
                 const SizedBox(height: 8),
                 _buildDisplaySettings(theme),
                 const SizedBox(height: 16),
 
-                _buildSectionHeader(theme, '🔧 调试与日志'),
+                _buildSectionHeader(theme, '调试与日志', icon: LucideIcons.terminal),
                 const SizedBox(height: 8),
                 _buildDebugSettings(theme),
                 const SizedBox(height: 16),
 
-                _buildSectionHeader(theme, '🧭 小工具'),
+                _buildSectionHeader(theme, '小工具', icon: LucideIcons.wrench),
                 const SizedBox(height: 8),
                 _buildCompassEntry(theme),
                 const SizedBox(height: 16),
 
-                _buildSectionHeader(theme, '🤖 AI 解卦配置'),
+                _buildSectionHeader(theme, 'AI 解卦配置', icon: LucideIcons.sparkles),
                 const SizedBox(height: 8),
                 _buildAISettings(theme),
                 const SizedBox(height: 16),
 
-                _buildSectionHeader(theme, '📖 信息'),
+                _buildSectionHeader(theme, '信息', icon: LucideIcons.info),
                 const SizedBox(height: 8),
                 _buildAboutButton(theme),
                 const SizedBox(height: 8),
@@ -181,14 +182,20 @@ class _SettingsPageState extends State<SettingsPage> {
 
   // ──────────────── 辅助组件 ────────────────
 
-  Widget _buildSectionHeader(ThemeData theme, String title) {
+  Widget _buildSectionHeader(ThemeData theme, String title, {IconData? icon}) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 4),
-      child: Text(title,
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.w600,
-          )),
+      child: Row(children: [
+        if (icon != null) ...[
+          Icon(icon, size: 16, color: theme.colorScheme.primary),
+          const SizedBox(width: 6),
+        ],
+        Text(title,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w600,
+            )),
+      ]),
     );
   }
 
