@@ -472,7 +472,7 @@ class _SettingsPageState extends State<SettingsPage> {
             sp.wanZiShi = v;
           }),
           const Divider(height: 16),
-          _buildSwitchRow('辰沐土爻', '辰/戌/丑/未月土爻旺相', sp.chenMuTuYao, (v) {
+          _buildSwitchRow('辰沐土爻', '辰/戌/丑/未月土爻旺相（已按旺衰表计算）', sp.chenMuTuYao, (v) {
             sp.chenMuTuYao = v;
           }),
         ],
