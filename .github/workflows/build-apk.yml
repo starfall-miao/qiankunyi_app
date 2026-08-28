@@ -26,6 +26,10 @@ jobs:
           channel: 'stable'
           cache: true
       - run: flutter pub get
+      # Drift 代码生成（build_runner 生成 *.g.dart 后提交到工作区，
+      # 供 analyze/测试使用；若生成失败立即报错）
+      - name: Drift 代码生成
+        run: dart run build_runner build --delete-conflicting-outputs
       - run: flutter analyze
       # 排盘引擎单元测试（六爻/梅花/八字）
       - run: flutter test
@@ -47,6 +51,8 @@ jobs:
           channel: 'stable'
           cache: true
       - run: flutter pub get
+      - name: Drift 代码生成
+        run: dart run build_runner build --delete-conflicting-outputs
 
       # 导入签名密钥（需先在 GitHub 配置 KEYSTORE_BASE64 等 Secrets）
       # 若未配置则输出警告，build.gradle 自动回退 debug 签名
@@ -99,6 +105,8 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
       - run: flutter pub get
+      - name: Drift 代码生成
+        run: dart run build_runner build --delete-conflicting-outputs
       - name: 🏗️ 构建 Linux 桌面版
         run: flutter build linux --release --build-number=${{ env.BUILD_NUMBER }}
       - uses: actions/upload-artifact@v4
@@ -120,6 +128,8 @@ jobs:
           channel: 'stable'
           cache: true
       - run: flutter pub get
+      - name: Drift 代码生成
+        run: dart run build_runner build --delete-conflicting-outputs
       - name: 🏗️ 构建 Windows 桌面版（Release）
         run: flutter build windows --release --build-number=${{ env.BUILD_NUMBER }}
       - name: 📦 打包 VC++ 运行时 DLL
@@ -153,6 +163,8 @@ jobs:
           channel: 'stable'
           cache: true
       - run: flutter pub get
+      - name: Drift 代码生成
+        run: dart run build_runner build --delete-conflicting-outputs
       - name: 🏗️ 构建 iOS 版（模拟器）
         run: flutter build ios --debug --no-codesign --simulator --build-number=${{ env.BUILD_NUMBER }}
       - uses: actions/upload-artifact@v4
@@ -174,6 +186,8 @@ jobs:
           channel: 'stable'
           cache: true
       - run: flutter pub get
+      - name: Drift 代码生成
+        run: dart run build_runner build --delete-conflicting-outputs
       - name: 🏗️ 构建 macOS 桌面版
         run: flutter build macos --release --build-number=${{ env.BUILD_NUMBER }}
       - uses: actions/upload-artifact@v4
