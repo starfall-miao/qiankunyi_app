@@ -455,7 +455,7 @@ class _SettingsPageState extends State<SettingsPage> {
           _buildSettingRow(
             icon: Icons.rule,
             title: '日破暗动规则',
-            subtitle: '（开发中，引擎暂未读取此设置）',
+            subtitle: '日辰冲爻：旺相为暗动，休囚为日破',
             trailing: DropdownButton<RiPoAnDongRule>(
               value: sp.riPoRule,
               underline: const SizedBox(),
@@ -472,7 +472,7 @@ class _SettingsPageState extends State<SettingsPage> {
             sp.wanZiShi = v;
           }),
           const Divider(height: 16),
-          _buildSwitchRow('辰沐土爻', '辰/戌/丑/未月土爻旺相（开发中）', sp.chenMuTuYao, (v) {
+          _buildSwitchRow('辰沐土爻', '辰/戌/丑/未月土爻旺相', sp.chenMuTuYao, (v) {
             sp.chenMuTuYao = v;
           }),
         ],

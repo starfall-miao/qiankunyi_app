@@ -207,6 +207,8 @@ class GuaWidget extends StatelessWidget {
             ],
             // 世应标记（放在旺衰后面）
             if (ds.showShiYing) _buildShiYingMark(yao, theme),
+            // 日破/暗动标记
+            _buildRiPoAnDongMark(yao, theme),
             const Spacer(),
             // 刑冲合害标记
             if (ds.showXingChong) _buildSpecialMarks(yao, theme),
@@ -243,8 +245,7 @@ class GuaWidget extends StatelessWidget {
   }
 
   /// 世应标记
-  Widget _buildShiYingMark(YaoModel yao, ThemeData theme) {
-    if (yao.isShi) {
+  Widget _buildShiYingMark(YaoModel yao, ThemeData theme) {    if (yao.isShi) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
         decoration: BoxDecoration(
@@ -262,6 +263,37 @@ class GuaWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(3),
         ),
         child: const Text('应', style: TextStyle(fontSize: 11, color: Color(0xFF1976D2), fontWeight: FontWeight.bold)),
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  /// 日破/暗动标记
+  Widget _buildRiPoAnDongMark(YaoModel yao, ThemeData theme) {
+    if (yao.isRiPo) {
+      return Padding(
+        padding: const EdgeInsets.only(left: 4),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+          decoration: BoxDecoration(
+            color: const Color(0xFF546E7A).withAlpha(25),
+            borderRadius: BorderRadius.circular(3),
+          ),
+          child: const Text('日破', style: TextStyle(fontSize: 10, color: Color(0xFF546E7A))),
+        ),
+      );
+    }
+    if (yao.isAnDong) {
+      return Padding(
+        padding: const EdgeInsets.only(left: 4),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2E7D32).withAlpha(25),
+            borderRadius: BorderRadius.circular(3),
+          ),
+          child: const Text('暗动', style: TextStyle(fontSize: 10, color: Color(0xFF2E7D32))),
+        ),
       );
     }
     return const SizedBox.shrink();

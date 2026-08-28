@@ -412,6 +412,9 @@ class LiuYaoEngine {
     // 刑冲合害
     _calcRelations(yaos);
 
+    // 日破/暗动（日辰冲爻）
+    _applyRiPoAnDong(yaos, dayGanZhi);
+
     final gua = GuaModel(
       name: guaName,
       gong: gong,
@@ -546,6 +549,27 @@ class LiuYaoEngine {
       if (yao.diZhi == null) continue;
       final yaoWuXing = _diZhiWuXing[yao.diZhi]!;
       yao.liuQin = _calcLiuQin(gongWuXing, yaoWuXing);
+    }
+  }
+
+  /// 日破/暗动：日辰地支冲爻，旺相为暗动、休囚为日破
+  static void _applyRiPoAnDong(List<YaoModel> yaos, String dayGanZhi) {
+    if (dayGanZhi.length < 2) return;
+    final dayZhi = dayGanZhi.substring(1);
+    const chongMap = {'子':'午','丑':'未','寅':'申','卯':'酉','辰':'戌','巳':'亥'};
+    for (final yao in yaos) {
+      if (yao.diZhi == null) continue;
+      final dzName = _diZhiMap.entries
+          .firstWhere((e) => e.value == yao.diZhi, orElse: () => MapEntry('', DiZhi.zi))
+          .key;
+      // 日支冲爻支
+      final isChong = chongMap[dayZhi] == dzName || chongMap[dzName] == dayZhi;
+      if (!isChong) continue;
+      // 旺相→暗动，休囚→日破
+      final ws = yao.wangShuai;
+      final wangXiang = ws == WangShuaiLevel.wang || ws == WangShuaiLevel.xiang;
+      yao.isAnDong = wangXiang;
+      yao.isRiPo = !wangXiang;
     }
   }
 
