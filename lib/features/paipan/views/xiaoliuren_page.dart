@@ -202,20 +202,27 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
         ),  // Card
           const SizedBox(height: 12),
 
-          // 结果
-          if (_result != null) ...[
-            RepaintBoundary(
-              key: _shotKey,
-              child: _resultCard(_result!, p, t, b, isDark),
-            ),
-            const SizedBox(height: 8),
-            Row(children: [
-              Expanded(
+          // 结果（淡入动画）
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 350),
+            switchInCurve: Curves.easeOut,
+            child: _result != null
+                ? KeyedSubtree(
+                    key: ValueKey(_result),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                RepaintBoundary(
+                  key: _shotKey,
+                  child: _resultCard(_result!, p, t, b, isDark),
+                ),
+                const SizedBox(height: 8),
+                Row(children: [
+                  Expanded(
                 child: TextButton.icon(
                   onPressed: _save,
                   icon: const Icon(Icons.bookmark_add_outlined, size: 16),
                   label: const Text('保存卦例'),
-                  style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+                style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
                 ),
               ),
               const SizedBox(width: 8),
@@ -228,7 +235,10 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
                 ),
               ),
             ]),
-          ],
+              ]),
+                  )
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );

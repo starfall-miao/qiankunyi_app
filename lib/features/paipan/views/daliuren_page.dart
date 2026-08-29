@@ -343,7 +343,14 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
           style: ElevatedButton.styleFrom(backgroundColor: p, foregroundColor: Colors.white),
         ),
         const SizedBox(height: 12),
-        if (_result != null) ...[
+        // 结果（淡入动画）
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 350),
+          switchInCurve: Curves.easeOut,
+          child: _result != null
+              ? KeyedSubtree(
+                  key: ValueKey(_result),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           RepaintBoundary(
             key: _shotKey,
             child: Card(
@@ -486,7 +493,10 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
                 ),
               ),
             ]),
-        ],
+                  ]),
+                )
+              : const SizedBox.shrink(),
+        ),
       ]),
     );
   }
