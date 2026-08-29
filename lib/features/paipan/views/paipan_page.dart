@@ -1575,8 +1575,13 @@ class _BaziPageState extends State<BaziPage> {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
-      child: bp.result != null
-          ? Column(
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 350),
+        switchInCurve: Curves.easeOut,
+        child: bp.result != null
+          ? KeyedSubtree(
+              key: ValueKey('bazi_${bp.result!.dayZhu.ganZhi}'),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildInputCard(p, t, b, isDark, bp),
@@ -1586,6 +1591,7 @@ class _BaziPageState extends State<BaziPage> {
                 ),
               ],
             )
+          )
           : SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1597,6 +1603,7 @@ class _BaziPageState extends State<BaziPage> {
                 ],
               ),
             ),
+      ),
     );
   }
 
