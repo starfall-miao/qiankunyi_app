@@ -24,6 +24,22 @@ const daliurenGenerals = [
   ('天后', '吉', '恩泽庇佑，主恩泽、庇护、柔和'),
 ];
 
+/// 地支详解（五行/类象/吉凶）
+const daliurenZhiDetail = {
+  '子': ('水', '北方，聪明流动，藏癸水', '利财智，防暗耗'),
+  '丑': ('土', '东北，晦暗之库，藏己癸辛', '稳中有滞，防郁结'),
+  '寅': ('木', '东北，刚毅阳木，藏甲丙戊', '奋发，利开创'),
+  '卯': ('木', '东方，柔顺阴木，藏乙', '顺遂，利合作'),
+  '辰': ('土', '东南，水库，藏戊乙癸', '藏机，宜蓄势'),
+  '巳': ('火', '东南，驿马阳火，藏丙戊庚', '动变，利出行'),
+  '午': ('火', '南方，明丽阳火，藏丁己', '光明，防急躁'),
+  '未': ('土', '西南，木库，藏己丁乙', '平缓，利积累'),
+  '申': ('金', '西南，肃杀阳金，藏庚壬戊', '果断，防锋芒'),
+  '酉': ('金', '西方，娇艳阴金，藏辛', '精致，防固执'),
+  '戌': ('土', '西北，火库，藏戊辛丁', '收敛，宜守成'),
+  '亥': ('水', '西北，汪洋阴水，藏壬甲', '润泽，利流动'),
+};
+
 /// 十二地支（地盘/月将用）
 const daliurenZhi = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
 
@@ -501,29 +517,61 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
     }
   }
 
+  /// 地支详解弹窗（点击三传/四课触发）
+  void _showZhiDetail(String label, String zhi) {
+    final d = daliurenZhiDetail[zhi];
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('$label · $zhi'),
+        content: d == null
+            ? Text('暂无 $zhi 详解')
+            : Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('五行：${d.$1}', style: const TextStyle(fontSize: 13)),
+                const SizedBox(height: 6),
+                Text('类象：${d.$2}', style: const TextStyle(fontSize: 13, height: 1.6)),
+                const SizedBox(height: 6),
+                Text('吉凶：${d.$3}', style: const TextStyle(fontSize: 13)),
+              ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('关闭')),
+        ],
+      ),
+    );
+  }
+
   Widget _ke(String label, String zhi, Color p, Color t, Color bg, Color b) {
-    return Container(
-      width: (360 - 32) / 2,
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8), border: Border.all(color: b.withAlpha(80))),
-      child: Column(children: [
-        Text(label, style: TextStyle(fontSize: 10, color: t.withAlpha(130))),
-        const SizedBox(height: 2),
-        Text(zhi, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: p)),
-      ]),
+    return GestureDetector(
+      onTap: () => _showZhiDetail(label, zhi),
+      child: Container(
+        width: (360 - 32) / 2,
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8), border: Border.all(color: b.withAlpha(80))),
+        child: Column(children: [
+          Text(label, style: TextStyle(fontSize: 10, color: t.withAlpha(130))),
+          const SizedBox(height: 2),
+          Text(zhi, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: p)),
+          const SizedBox(height: 1),
+          Icon(Icons.touch_app, size: 10, color: p.withAlpha(120)),
+        ]),
+      ),
     );
   }
 
   Widget _chuan(String label, String zhi, Color p, Color t, Color bg, Color b) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8), border: Border.all(color: b.withAlpha(80))),
-        child: Column(children: [
-          Text(label, style: TextStyle(fontSize: 11, color: t.withAlpha(130))),
-          const SizedBox(height: 2),
-          Text(zhi, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: p)),
-        ]),
+      child: GestureDetector(
+        onTap: () => _showZhiDetail(label, zhi),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8), border: Border.all(color: b.withAlpha(80))),
+          child: Column(children: [
+            Text(label, style: TextStyle(fontSize: 11, color: t.withAlpha(130))),
+            const SizedBox(height: 2),
+            Text(zhi, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: p)),
+            Icon(Icons.touch_app, size: 11, color: p.withAlpha(120)),
+          ]),
+        ),
       ),
     );
   }
