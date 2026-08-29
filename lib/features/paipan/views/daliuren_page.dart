@@ -330,9 +330,9 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text('月将 ${daliurenYueJiang[_result!.yueJiang]}（${_result!.yueJiangZhi}）加于 ${_hours[_result!.hourIndex]}',
                         style: const TextStyle(fontSize: 11.5)),
-                    const SizedBox(height: 6),
-                    Text('天盘：${_result!.tianPan.join('、')}',
-                        style: const TextStyle(fontSize: 11, height: 1.5)),
+                    const SizedBox(height: 8),
+                    // 地盘/天盘对照网格
+                    _tianPanGrid(_result!.tianPan, _result!.yueJiangZhi, p, t, b),
                   ]),
                 ),
                 const SizedBox(height: 8),
@@ -523,6 +523,63 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
         );
       }
     }
+  }
+
+  /// 天地盘对照网格（上：天盘，下：地盘）
+  Widget _tianPanGrid(List<String> tianPan, String yueJiangZhi,
+      Color p, Color t, Color b) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('天盘', style: TextStyle(fontSize: 10, color: p.withAlpha(170))),
+      const SizedBox(height: 4),
+      Row(
+        children: List.generate(12, (i) {
+          final isYueJiang = tianPan[i] == yueJiangZhi;
+          return Expanded(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 1),
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              decoration: BoxDecoration(
+                color: isYueJiang ? p.withAlpha(30) : t.withAlpha(6),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                    color: isYueJiang ? p : b.withAlpha(40),
+                    width: isYueJiang ? 1.5 : 1),
+              ),
+              child: Text(tianPan[i],
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: isYueJiang ? FontWeight.bold : FontWeight.normal,
+                      color: isYueJiang ? p : t.withAlpha(180))),
+            ),
+          );
+        }),
+      ),
+      const SizedBox(height: 6),
+      Text('地盘', style: TextStyle(fontSize: 10, color: t.withAlpha(120))),
+      const SizedBox(height: 4),
+      Row(
+        children: List.generate(12, (i) {
+          final isHour = i == (_result?.hourIndex ?? 0);
+          return Expanded(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 1),
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              decoration: BoxDecoration(
+                color: isHour ? t.withAlpha(14) : Colors.transparent,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(daliurenZhi[i],
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: isHour ? FontWeight.bold : FontWeight.normal,
+                      color: t.withAlpha(isHour ? 210 : 150))),
+            ),
+          );
+        }),
+      ),
+    ]);
   }
 
   /// 地支详解弹窗（点击三传/四课触发）
