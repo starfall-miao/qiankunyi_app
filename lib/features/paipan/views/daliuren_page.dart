@@ -201,8 +201,8 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         const Text('大六壬（入门版）', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
-        Text('大六壬为三式之一，以月将加时、四课三传断吉凶。'
-            '本版提供简化起课，完整天地盘、十二天将排布后续完善。',
+        Text('大六壬为三式之一，以月将加时、天地盘、四课三传断吉凶。'
+            '已支持月将加时、四课、三传、十二天将按贵人排布。',
             style: TextStyle(fontSize: 12, height: 1.6, color: t.withAlpha(160))),
         const SizedBox(height: 12),
         // 输入区 Card（与六爻梅花一致）
