@@ -1,6 +1,7 @@
 // 落·乾坤 - 小六壬排盘页
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import '../../../shared/widgets/save_image_dialog.dart';
@@ -113,6 +114,30 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
   String _jsonEncode(XiaoLiuRenResult r) {
     final m = r.toJson();
     return m.entries.map((e) => '"${e.key}":${e.value}').join(',');
+  }
+
+  /// 分享结果到剪贴板
+  Future<void> _share() async {
+    final r = _result;
+    if (r == null) return;
+    final palm = r.resultPalm;
+    final buf = StringBuffer()
+      ..writeln('【落·乾坤】小六壬排盘结果')
+      ..writeln('━━━━━━━━━━━━━━')
+      ..writeln('最终落位：${palm.name}（${palm.goodBad}）')
+      ..writeln('五行：${palm.element} · 方位：${palm.direction}')
+      ..writeln('起课：${r.month}月${r.day}日 ${['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][r.hour]}时 · ${r.method}')
+      ..writeln('━━━━━━━━━━━━━━')
+      ..writeln('象义：${palm.meaning}')
+      ..writeln('断语：${palm.advice}')
+      ..writeln('━━━━━━━━━━━━━━')
+      ..writeln('—— 来自「落·乾坤」');
+    await Clipboard.setData(ClipboardData(text: buf.toString()));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('排盘结果已复制到剪贴板'), duration: Duration(seconds: 2)),
+      );
+    }
   }
 
   @override
@@ -231,6 +256,15 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
                   onPressed: _saveImage,
                   icon: const Icon(Icons.image_outlined, size: 16),
                   label: const Text('保存图片'),
+                  style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: _share,
+                  icon: const Icon(Icons.share_outlined, size: 16),
+                  label: const Text('分享'),
                   style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
                 ),
               ),

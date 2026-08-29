@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import '../../cases/providers/case_provider.dart';
@@ -492,6 +493,15 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
                   style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
                 ),
               ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: _share,
+                  icon: const Icon(Icons.share_outlined, size: 16),
+                  label: const Text('分享'),
+                  style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+                ),
+              ),
             ]),
                   ]),
                 )
@@ -551,6 +561,27 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
         ],
       ),
     );
+  }
+
+  /// 分享结果到剪贴板
+  Future<void> _share() async {
+    final r = _result;
+    if (r == null) return;
+    final buf = StringBuffer()
+      ..writeln('【落·乾坤】大六壬排盘结果')
+      ..writeln('━━━━━━━━━━━━━━')
+      ..writeln('月将：${daliurenYueJiang[r.yueJiang]}（临${r.yueJiangZhi} · ${r.method}）')
+      ..writeln('三传：初传${r.chuChuan} → 中传${r.zhongChuan} → 末传${r.moChuan}')
+      ..writeln('四课：${r.siKe.join(' / ')}')
+      ..writeln('贵人临${r.guiRen} · 三传天将：${_chuanTianJiang('', r.chuChuan, r).trim()} / ${_chuanTianJiang('', r.zhongChuan, r).trim()} / ${_chuanTianJiang('', r.moChuan, r).trim()}')
+      ..writeln('━━━━━━━━━━━━━━')
+      ..writeln('—— 来自「落·乾坤」');
+    await Clipboard.setData(ClipboardData(text: buf.toString()));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('排盘结果已复制到剪贴板'), duration: Duration(seconds: 2)),
+      );
+    }
   }
 
   String _jsonEncode(DaLiuRenResult r) {
