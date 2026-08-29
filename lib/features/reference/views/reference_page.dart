@@ -13,6 +13,7 @@ import '../data/meihua_data.dart';
 import '../data/liuyao_reference_data.dart';
 import '../data/bazi_reference_data.dart';
 import '../../paipan/models/gua_model.dart';
+import '../../settings/views/tutorial_page.dart';
 import '../../cases/models/case_models.dart';
 
 // ─── 六爻阴阳模式 ───
@@ -71,6 +72,16 @@ class ReferencePage extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('参考资料'),
+          actions: [
+            // 入门手册入口（与教程页关联）
+            IconButton(
+              tooltip: '易学入门手册',
+              icon: const Icon(Icons.menu_book_outlined),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const TutorialPage()),
+              ),
+            ),
+          ],
           bottom: TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
