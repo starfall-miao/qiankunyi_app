@@ -36,6 +36,8 @@ class DaLiuRenResult {
   final int hourIndex;      // 时辰
   final int yueJiang;       // 月将索引(0-11)
   final List<String> shiYong; // 三传（初传/中传/末传）地支
+  final String yueJiangZhi; // 月将所临地支
+  final List<String> tianPan; // 天盘（月将加时后十二支）
   final String chuChuan;    // 初传
   final String zhongChuan;  // 中传
   final String moChuan;     // 末传
@@ -45,6 +47,8 @@ class DaLiuRenResult {
     required this.hourIndex,
     required this.yueJiang,
     required this.shiYong,
+    required this.yueJiangZhi,
+    required this.tianPan,
     required this.chuChuan,
     required this.zhongChuan,
     required this.moChuan,
@@ -54,6 +58,8 @@ class DaLiuRenResult {
   Map<String, dynamic> toJson() => {
         'hourIndex': hourIndex,
         'yueJiang': yueJiang,
+        'yueJiangZhi': yueJiangZhi,
+        'tianPan': tianPan,
         'shiYong': shiYong,
         'chuChuan': chuChuan,
         'zhongChuan': zhongChuan,
@@ -67,6 +73,14 @@ class DaLiuRenEngine {
   /// 简化起课：以月将加时定三传（不做完整天地盘，供入门展示）
   static DaLiuRenResult byHour(int hourIndex, int month) {
     final yueJiang = (month - 1) % 12; // 月将
+    // 月将地支（登明=亥…神后=子）
+    final yueJiangZhi = daliurenZhi[(11 - yueJiang) % 12];
+    // 天盘：月将加时，月将落到时支上，其余顺排
+    final tianPan = List.generate(12, (i) {
+      final j = (i - hourIndex + 12) % 12;
+      final diZhiIdx = (11 - yueJiang + j) % 12;
+      return daliurenZhi[diZhiIdx];
+    });
     // 三传简化推算：从月将顺数时辰取初传，再顺数得中传、末传
     final start = (yueJiang + hourIndex) % 12;
     final chu = daliurenZhi[start];
@@ -75,6 +89,8 @@ class DaLiuRenEngine {
     return DaLiuRenResult(
       hourIndex: hourIndex,
       yueJiang: yueJiang,
+      yueJiangZhi: yueJiangZhi,
+      tianPan: tianPan,
       shiYong: [chu, zhong, mo],
       chuChuan: chu,
       zhongChuan: zhong,
@@ -190,8 +206,28 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
                 child: Padding(
               padding: const EdgeInsets.all(14),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('月将：${daliurenYueJiang[_result!.yueJiang]}（${_result!.method}）',
+                Text('月将：${daliurenYueJiang[_result!.yueJiang]}（临${_result!.yueJiangZhi} · ${_result!.method}）',
                     style: const TextStyle(fontSize: 13)),
+                const SizedBox(height: 8),
+                // 天地盘：月将加时，天盘十二支
+                Text('天地盘（月将加时）', style: TextStyle(fontSize: 13, color: t.withAlpha(150))),
+                const SizedBox(height: 6),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: bg,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: b.withAlpha(80)),
+                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('月将 ${daliurenYueJiang[_result!.yueJiang]}（${_result!.yueJiangZhi}）加于 ${_hours[_result!.hourIndex]}',
+                        style: const TextStyle(fontSize: 11.5)),
+                    const SizedBox(height: 6),
+                    Text('天盘：${_result!.tianPan.join('、')}',
+                        style: const TextStyle(fontSize: 11, height: 1.5)),
+                  ]),
+                ),
                 const SizedBox(height: 8),
                 Text('三传', style: TextStyle(fontSize: 13, color: t.withAlpha(150))),
                 const SizedBox(height: 6),
