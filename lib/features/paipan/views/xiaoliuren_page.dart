@@ -211,18 +211,20 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
             const SizedBox(height: 8),
             Row(children: [
               Expanded(
-                child: OutlinedButton.icon(
+                child: TextButton.icon(
                   onPressed: _save,
-                  icon: const Icon(Icons.bookmark_add_outlined, size: 18),
+                  icon: const Icon(Icons.bookmark_add_outlined, size: 16),
                   label: const Text('保存卦例'),
+                  style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: OutlinedButton.icon(
+                child: TextButton.icon(
                   onPressed: _saveImage,
-                  icon: const Icon(Icons.image_outlined, size: 18),
+                  icon: const Icon(Icons.image_outlined, size: 16),
                   label: const Text('保存图片'),
+                  style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
                 ),
               ),
             ]),

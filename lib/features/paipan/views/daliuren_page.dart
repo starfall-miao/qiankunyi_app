@@ -415,17 +415,25 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
           ),
         ),
             const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: _saveImage,
-              icon: const Icon(Icons.image_outlined, size: 18),
-              label: const Text('保存图片'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: _saveCase,
-              icon: const Icon(Icons.bookmark_add_outlined, size: 18),
-              label: const Text('保存卦例'),
-            ),
+            Row(children: [
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: _saveImage,
+                  icon: const Icon(Icons.image_outlined, size: 16),
+                  label: const Text('保存图片'),
+                  style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: _saveCase,
+                  icon: const Icon(Icons.bookmark_add_outlined, size: 16),
+                  label: const Text('保存卦例'),
+                  style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+                ),
+              ),
+            ]),
         ],
       ]),
     );
