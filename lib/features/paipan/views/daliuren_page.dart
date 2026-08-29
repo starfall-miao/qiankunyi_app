@@ -39,6 +39,8 @@ class DaLiuRenResult {
   final String yueJiangZhi; // 月将所临地支
   final List<String> tianPan; // 天盘（月将加时后十二支）
   final List<String> siKe;    // 四课（日干上神/下神/日支上神/下神）
+  final String guiRen;        // 贵人（所在天将）
+  final List<String> tianJiang; // 十二天将按支排布
   final String chuChuan;    // 初传
   final String zhongChuan;  // 中传
   final String moChuan;     // 末传
@@ -51,6 +53,8 @@ class DaLiuRenResult {
     required this.yueJiangZhi,
     required this.tianPan,
     required this.siKe,
+    required this.guiRen,
+    required this.tianJiang,
     required this.chuChuan,
     required this.zhongChuan,
     required this.moChuan,
@@ -63,6 +67,8 @@ class DaLiuRenResult {
         'yueJiangZhi': yueJiangZhi,
         'tianPan': tianPan,
         'siKe': siKe,
+        'guiRen': guiRen,
+        'tianJiang': tianJiang,
         'shiYong': shiYong,
         'chuChuan': chuChuan,
         'zhongChuan': zhongChuan,
@@ -74,6 +80,17 @@ class DaLiuRenResult {
 /// 大六壬引擎（基础简化版）
 class DaLiuRenEngine {
   /// 简化起课：以月将加时定三传（不做完整天地盘，供入门展示）
+  /// 十二天将顺序（贵人起）
+  static const _tiJiangOrd = ['贵人','螣蛇','朱雀','六合','勾陈','青龙','天空','白虎','太常','玄武','太阴','天后'];
+
+  /// 贵人口诀：甲戊庚牛羊、乙己鼠猴乡（阳贵/阴贵）
+  static String calcGuiRen(String dayGan, int hourIndex) {
+    final isDay = hourIndex < 6; // 子到巳为昼（阳贵），午到亥为夜（阴贵）
+    const yang = {'甲':'丑','戊':'丑','庚':'丑','乙':'子','己':'子','丙':'亥','丁':'亥','壬':'卯','癸':'卯','辛':'午'};
+    const yin = {'甲':'未','戊':'未','庚':'未','乙':'申','己':'申','丙':'酉','丁':'酉','壬':'巳','癸':'巳','辛':'寅'};
+    return (isDay ? yang[dayGan] : yin[dayGan]) ?? '丑';
+  }
+
   /// 日干寄宫（甲寅乙辰丙戊巳，丁己未，庚申辛戌，壬子癸丑）
   static const _ganJiGong = {
     '甲': 2, '乙': 4, '丙': 5, '丁': 7, '戊': 5,
@@ -92,6 +109,11 @@ class DaLiuRenEngine {
       return daliurenZhi[diZhiIdx];
     });
     // 三传简化推算：从月将顺数时辰取初传，再顺数得中传、末传
+    // 贵人 + 十二天将排布（贵人支起顺布）
+    final guiRen = calcGuiRen(dayGan, hourIndex);
+    final guiIdx = daliurenZhi.indexOf(guiRen);
+    final gi = guiIdx >= 0 ? guiIdx : 0;
+    final tianJiang = List.generate(12, (i) => _tiJiangOrd[(i - gi + 12) % 12]);
     // 四课：日干上神/下神 + 日支上神/下神
     final ganJi = _ganJiGong[dayGan] ?? 2;
     final zhiIdx = daliurenZhi.indexOf(dayZhi);
@@ -113,6 +135,8 @@ class DaLiuRenEngine {
       tianPan: tianPan,
       shiYong: [chu, zhong, mo],
       siKe: siKe,
+      guiRen: guiRen,
+      tianJiang: tianJiang,
       chuChuan: chu,
       zhongChuan: zhong,
       moChuan: mo,
@@ -292,6 +316,27 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
                         style: const TextStyle(fontSize: 11.5)),
                     const SizedBox(height: 6),
                     Text('天盘：${_result!.tianPan.join('、')}',
+                        style: const TextStyle(fontSize: 11, height: 1.5)),
+                  ]),
+                ),
+                const SizedBox(height: 8),
+                // 贵人与十二天将排布
+                Text('贵人与天将', style: TextStyle(fontSize: 13, color: t.withAlpha(150))),
+                const SizedBox(height: 6),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: bg,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: b.withAlpha(80)),
+                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('贵人临 ${_result!.guiRen}（${_hours[_result!.hourIndex]} ${
+                        _result!.hourIndex < 6 ? "昼·阳贵" : "夜·阴贵"}）',
+                        style: const TextStyle(fontSize: 11.5)),
+                    const SizedBox(height: 6),
+                    Text('天将：${_result!.tianJiang.join('、')}',
                         style: const TextStyle(fontSize: 11, height: 1.5)),
                   ]),
                 ),
