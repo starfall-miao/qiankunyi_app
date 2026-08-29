@@ -310,11 +310,58 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
               child: Text('断语：${palm.advice}',
                   style: TextStyle(fontSize: 12.5, height: 1.6, color: t.withAlpha(190))),
             ),
+            const SizedBox(height: 10),
+            // 六掌诀环形图
+            _palmRing(r, p, t, bg, b),
           ],
         ]),
         ),
       ),
     );
+  }
+
+  /// 六掌诀环形图（当前落位高亮，标注月/日/时落点）
+  Widget _palmRing(XiaoLiuRenResult r, Color p, Color t, Color bg, Color b) {
+    final resultIdx = r.resultPos;
+    final marks = {r.monthPos: '月', r.dayPos: '日', r.resultPos: '终'};
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('六掌诀位置', style: TextStyle(fontSize: 11, color: t.withAlpha(130))),
+      const SizedBox(height: 6),
+      Row(
+        children: List.generate(6, (i) {
+          final palm = xiaoliurenPalms[i];
+          final isResult = i == resultIdx;
+          final color = _palmColor(palm.goodBad);
+          return Expanded(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 1),
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              decoration: BoxDecoration(
+                color: isResult ? color.withAlpha(35) : bg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: isResult ? color : b.withAlpha(60),
+                    width: isResult ? 2 : 1),
+              ),
+              child: Column(children: [
+                Text(palm.name,
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: isResult ? FontWeight.bold : FontWeight.normal,
+                        color: isResult ? color : t.withAlpha(170))),
+                if (marks.containsKey(i))
+                  Text(marks[i]!,
+                      style: TextStyle(
+                          fontSize: 9, fontWeight: FontWeight.bold, color: p)),
+              ]),
+            ),
+          );
+        }),
+      ),
+      const SizedBox(height: 4),
+      Text('顺时针起课：月→日→时，最终落"终"',
+          style: TextStyle(fontSize: 10, color: t.withAlpha(120))),
+    ]);
   }
 
   /// 掌诀详情弹窗
