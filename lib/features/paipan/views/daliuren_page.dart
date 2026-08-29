@@ -6,6 +6,8 @@ import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import '../../cases/providers/case_provider.dart';
 import '../../cases/models/case_models.dart';
+import 'package:tyme/tyme.dart' as tyme;
+import '../engines/liuyao_date_helper.dart';
 import '../../../shared/widgets/save_image_dialog.dart';
 
 /// 十二天将（贵人顺序：吉/凶 + 象义）
@@ -182,6 +184,27 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
   static const _hours = ['子时', '丑时', '寅时', '卯时', '辰时', '巳时',
     '午时', '未时', '申时', '酉时', '戌时', '亥时'];
 
+  /// 用当前时间起课：自动定月份、时辰与日干支
+  void _useNow() {
+    final now = DateTime.now();
+    final hourIdx = (now.hour == 23 || now.hour == 0)
+        ? 0
+        : ((now.hour + 1) ~/ 2) % 12;
+    final solar = tyme.SolarDay.fromYmd(now.year, now.month, now.day);
+    final gz = dayGanZhiFromTyme(solar);
+    final g = gz.isNotEmpty ? gz[0] : '甲';
+    final zhi = gz.length > 1 ? gz[1] : '子';
+    setState(() {
+      _month = now.month;
+      _hour = hourIdx;
+      _dayGan = _ganCN.indexOf(g);
+      if (_dayGan < 0) _dayGan = 0;
+      _dayZhi = daliurenZhi.indexOf(zhi);
+      if (_dayZhi < 0) _dayZhi = 0;
+    });
+    _calc();
+  }
+
   void _calc() {
     setState(() => _result = DaLiuRenEngine.byHour(
       _hour, _month,
@@ -214,6 +237,21 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+        // 当前时间起课
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: _useNow,
+            icon: const Icon(Icons.schedule, size: 16),
+            label: const Text('使用当前时间起课', style: TextStyle(fontSize: 13)),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
         // 日干支选择
         Text('日干支（定四课）', style: TextStyle(fontSize: 12, color: t.withAlpha(150))),
         const SizedBox(height: 6),

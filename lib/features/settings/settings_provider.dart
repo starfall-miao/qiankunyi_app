@@ -31,7 +31,7 @@ class DisplaySettings {
     this.showNaYin = true,
     this.showShenSha = true,
     this.showLiuShen = true,
-    this.showWangShuai = false,
+    this.showWangShuai = true,
     this.showShiYing = true,
     this.showXingChong = true,
   });
@@ -111,8 +111,8 @@ class AiProviderPreset {
 class SettingsProvider extends ChangeNotifier {
   double _fontSize = 16;
   RiPoAnDongRule _riPoRule = RiPoAnDongRule.youQing;
-  bool _wanZiShi = false;
-  bool _chenMuTuYao = false;
+  bool _wanZiShi = true;
+  bool _chenMuTuYao = true;
   DisplaySettings _display = DisplaySettings();
   bool _loaded = false;
   /// 使用引导是否已完成（首次启动自动弹出，完成后可在设置页重新查看）
@@ -251,8 +251,8 @@ class SettingsProvider extends ChangeNotifier {
     _prefs = await SharedPreferences.getInstance();
     _fontSize = _prefs!.getDouble('paipan_fontSize') ?? 16;
     _riPoRule = RiPoAnDongRule.values[_prefs!.getInt('paipan_riPoRule') ?? 1];
-    _wanZiShi = _prefs!.getBool('paipan_wanZiShi') ?? false;
-    _chenMuTuYao = _prefs!.getBool('paipan_chenMuTuYao') ?? false;
+    _wanZiShi = _prefs!.getBool('paipan_wanZiShi') ?? true;
+    _chenMuTuYao = _prefs!.getBool('paipan_chenMuTuYao') ?? true;
     // 加载自定义提供商
     final rawProviders = _prefs!.getString('ai_custom_providers');
     if (rawProviders != null && rawProviders.isNotEmpty) {
@@ -505,8 +505,8 @@ class SettingsProvider extends ChangeNotifier {
     // 重置内存字段
     _fontSize = 16;
     _riPoRule = RiPoAnDongRule.youQing;
-    _wanZiShi = false;
-    _chenMuTuYao = false;
+    _wanZiShi = true;
+    _chenMuTuYao = true;
     _display = DisplaySettings();
     _aiEndpoint = aiPresets[0].endpoint;
     _aiApiKey = aiPresets[0].apiKey;
