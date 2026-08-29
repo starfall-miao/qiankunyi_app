@@ -1080,4 +1080,86 @@ class _ShenShaTabState extends State<_ShenShaTab> {
   }
 }
 
-/// ──────────────── 六爻纳甲 Tab ────────────────
+class _DongBianTab extends StatefulWidget {
+  const _DongBianTab();
+  @override
+  State<_DongBianTab> createState() => _DongBianTabState();
+}
+
+class _DongBianTabState extends State<_DongBianTab> {
+  String _filterCat = '全部';
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cats = ['全部', '基础', '动变关系', '动变趋势', '特殊'];
+    var list = dongBianDictionary;
+    if (_filterCat != '全部') {
+      list = list.where((d) => d.category == _filterCat).toList();
+    }
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 40,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            children: cats.map((c) => Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: ChoiceChip(
+                label: Text(c, style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: _filterCat == c ? FontWeight.bold : FontWeight.normal,
+                  color: _filterCat == c ? theme.colorScheme.primary : null,
+                )),
+                selected: _filterCat == c,
+                selectedColor: theme.colorScheme.primary.withAlpha(30),
+                backgroundColor: theme.colorScheme.surface,
+                side: BorderSide(color: _filterCat == c ? theme.colorScheme.primary : theme.colorScheme.outlineVariant, width: _filterCat == c ? 1.5 : 1),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                onSelected: (_) => setState(() => _filterCat = c),
+              ),
+            )).toList(),
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(12),
+            children: list.map((d) => Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ExpansionTile(
+                leading: CircleAvatar(
+                  radius: 16,
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  child: Text(d.category[0], style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onPrimaryContainer)),
+                ),
+                title: Text(d.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(d.description, style: theme.textTheme.bodySmall),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: d.details.map((detail) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('• ', style: TextStyle(color: theme.colorScheme.primary)),
+                            Expanded(child: Text(detail, style: theme.textTheme.bodySmall)),
+                          ],
+                        ),
+                      )).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            )).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+}
