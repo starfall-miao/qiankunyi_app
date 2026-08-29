@@ -786,11 +786,18 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         ),  // Card
         const SizedBox(height: 12),
 
+        // 梅花结果（淡入+上移，与六爻一致）
         FadeTransition(
           opacity: _fadeAnim,
-          child: pr.meihuaResult != null
-              ? _meihuaResultSection(context, pr, pr.meihuaResult!, p, t, b, c, dark)
-              : _emptyHint(p, t),
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.05),
+              end: Offset.zero,
+            ).animate(_fadeAnim),
+            child: pr.meihuaResult != null
+                ? _meihuaResultSection(context, pr, pr.meihuaResult!, p, t, b, c, dark)
+                : _emptyHint(p, t),
+          ),
         ),
       ],
     );
