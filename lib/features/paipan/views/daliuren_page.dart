@@ -140,10 +140,12 @@ class DaLiuRenEngine {
       tianPan[ziIdx],           // 日支上神
       dayZhi,                   // 日支下神
     ];
-    final start = (yueJiang + hourIndex) % 12;
-    final chu = daliurenZhi[start];
-    final zhong = daliurenZhi[(start + 2) % 12];
-    final mo = daliurenZhi[(start + 4) % 12];
+    // 三传推算（符合人工排盘）：初传取日干上神，中传/末传自初传位天盘顺行 2/4 位
+    final chuIdx = daliurenZhi.indexOf(siKe[0]);
+    final ci = chuIdx >= 0 ? chuIdx : 0;
+    final chu = siKe[0];
+    final zhong = tianPan[(ci + 2) % 12];
+    final mo = tianPan[(ci + 4) % 12];
     return DaLiuRenResult(
       hourIndex: hourIndex,
       yueJiang: yueJiang,
@@ -333,6 +335,12 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
                     const SizedBox(height: 8),
                     // 地盘/天盘对照网格
                     _tianPanGrid(_result!.tianPan, _result!.yueJiangZhi, p, t, b),
+                    const SizedBox(height: 6),
+                    // 天地盘信息解释
+                    Text('🛰 天地盘说明：地盘固定十二支（子北午南），天盘由月将顺加而成。'
+                        '月将 ${_result!.yueJiangZhi} 落于时支 ${daliurenZhi[_result!.hourIndex]}，'
+                        '天盘随十二支顺布。断课以天盘神将临地盘支位定吉凶。',
+                        style: TextStyle(fontSize: 10.5, height: 1.6, color: t.withAlpha(150))),
                   ]),
                 ),
                 const SizedBox(height: 8),
@@ -352,8 +360,14 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
                         _result!.hourIndex < 6 ? "昼·阳贵" : "夜·阴贵"}）',
                         style: const TextStyle(fontSize: 11.5)),
                     const SizedBox(height: 6),
-                    Text('天将：${_result!.tianJiang.join('、')}',
-                        style: const TextStyle(fontSize: 11, height: 1.5)),
+                    // 只展示三传对应天将（不凑数）
+                    Text('三传天将：${_chuanTianJiang('初传', _result!.chuChuan, _result!)}　'
+                        '${_chuanTianJiang('中传', _result!.zhongChuan, _result!)}　'
+                        '${_chuanTianJiang('末传', _result!.moChuan, _result!)}',
+                        style: const TextStyle(fontSize: 11.5, height: 1.5)),
+                    const SizedBox(height: 4),
+                    Text('（天将随贵人支顺布，此处仅列三传所临天将，详见详解）',
+                        style: TextStyle(fontSize: 10, color: t.withAlpha(110))),
                   ]),
                 ),
                 const SizedBox(height: 8),
@@ -523,6 +537,13 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
         );
       }
     }
+  }
+
+  /// 某传支所临天将（地支索引 → 天将）
+  String _chuanTianJiang(String label, String zhi, DaLiuRenResult r) {
+    final idx = daliurenZhi.indexOf(zhi);
+    final gi = idx >= 0 ? idx : 0;
+    return '$label $zhi·${r.tianJiang[gi]}';
   }
 
   /// 天地盘对照网格（上：天盘，下：地盘）
