@@ -38,6 +38,7 @@ class DaLiuRenResult {
   final List<String> shiYong; // 三传（初传/中传/末传）地支
   final String yueJiangZhi; // 月将所临地支
   final List<String> tianPan; // 天盘（月将加时后十二支）
+  final List<String> siKe;    // 四课（日干上神/下神/日支上神/下神）
   final String chuChuan;    // 初传
   final String zhongChuan;  // 中传
   final String moChuan;     // 末传
@@ -49,6 +50,7 @@ class DaLiuRenResult {
     required this.shiYong,
     required this.yueJiangZhi,
     required this.tianPan,
+    required this.siKe,
     required this.chuChuan,
     required this.zhongChuan,
     required this.moChuan,
@@ -60,6 +62,7 @@ class DaLiuRenResult {
         'yueJiang': yueJiang,
         'yueJiangZhi': yueJiangZhi,
         'tianPan': tianPan,
+        'siKe': siKe,
         'shiYong': shiYong,
         'chuChuan': chuChuan,
         'zhongChuan': zhongChuan,
@@ -71,7 +74,14 @@ class DaLiuRenResult {
 /// 大六壬引擎（基础简化版）
 class DaLiuRenEngine {
   /// 简化起课：以月将加时定三传（不做完整天地盘，供入门展示）
-  static DaLiuRenResult byHour(int hourIndex, int month) {
+  /// 日干寄宫（甲寅乙辰丙戊巳，丁己未，庚申辛戌，壬子癸丑）
+  static const _ganJiGong = {
+    '甲': 2, '乙': 4, '丙': 5, '丁': 7, '戊': 5,
+    '己': 7, '庚': 8, '辛': 10, '壬': 0, '癸': 1,
+  };
+
+  static DaLiuRenResult byHour(int hourIndex, int month,
+      {String dayGan = '甲', String dayZhi = '子'}) {
     final yueJiang = (month - 1) % 12; // 月将
     // 月将地支（登明=亥…神后=子）
     final yueJiangZhi = daliurenZhi[(11 - yueJiang) % 12];
@@ -82,6 +92,16 @@ class DaLiuRenEngine {
       return daliurenZhi[diZhiIdx];
     });
     // 三传简化推算：从月将顺数时辰取初传，再顺数得中传、末传
+    // 四课：日干上神/下神 + 日支上神/下神
+    final ganJi = _ganJiGong[dayGan] ?? 2;
+    final zhiIdx = daliurenZhi.indexOf(dayZhi);
+    final ziIdx = zhiIdx >= 0 ? zhiIdx : 0;
+    final siKe = [
+      tianPan[ganJi],           // 日干上神
+      daliurenZhi[ganJi],       // 日干下神（寄宫）
+      tianPan[ziIdx],           // 日支上神
+      dayZhi,                   // 日支下神
+    ];
     final start = (yueJiang + hourIndex) % 12;
     final chu = daliurenZhi[start];
     final zhong = daliurenZhi[(start + 2) % 12];
@@ -92,6 +112,7 @@ class DaLiuRenEngine {
       yueJiangZhi: yueJiangZhi,
       tianPan: tianPan,
       shiYong: [chu, zhong, mo],
+      siKe: siKe,
       chuChuan: chu,
       zhongChuan: zhong,
       moChuan: mo,
@@ -110,6 +131,9 @@ class DaLiuRenPage extends StatefulWidget {
 class _DaLiuRenPageState extends State<DaLiuRenPage> {
   int _month = 1;
   int _hour = 0;
+  int _dayGan = 0; // 甲
+  int _dayZhi = 0; // 子
+  static const _ganCN = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
   DaLiuRenResult? _result;
   final _shotKey = GlobalKey();
 
@@ -117,7 +141,11 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
     '午时', '未时', '申时', '酉时', '戌时', '亥时'];
 
   void _calc() {
-    setState(() => _result = DaLiuRenEngine.byHour(_hour, _month));
+    setState(() => _result = DaLiuRenEngine.byHour(
+      _hour, _month,
+      dayGan: _ganCN[_dayGan],
+      dayZhi: daliurenZhi[_dayZhi],
+    ));
   }
 
   @override
@@ -144,6 +172,45 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+        // 日干支选择
+        Text('日干支（定四课）', style: TextStyle(fontSize: 12, color: t.withAlpha(150))),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: List.generate(10, (i) {
+            final sel = _dayGan == i;
+            return ChoiceChip(
+              label: Text(_ganCN[i], style: TextStyle(fontSize: 11, color: sel ? p : t)),
+              selected: sel,
+              onSelected: (_) => setState(() => _dayGan = i),
+              selectedColor: p.withAlpha(40),
+              backgroundColor: bg,
+              side: BorderSide(color: sel ? p : b, width: 1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              visualDensity: VisualDensity.compact,
+            );
+          }),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: List.generate(12, (i) {
+            final sel = _dayZhi == i;
+            return ChoiceChip(
+              label: Text(daliurenZhi[i], style: TextStyle(fontSize: 11, color: sel ? p : t)),
+              selected: sel,
+              onSelected: (_) => setState(() => _dayZhi = i),
+              selectedColor: p.withAlpha(40),
+              backgroundColor: bg,
+              side: BorderSide(color: sel ? p : b, width: 1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              visualDensity: VisualDensity.compact,
+            );
+          }),
+        ),
+        const SizedBox(height: 10),
         // 月份选择（ChoiceChip）
         Text('月份（定月将）', style: TextStyle(fontSize: 12, color: t.withAlpha(150))),
         const SizedBox(height: 6),
@@ -227,6 +294,19 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
                     Text('天盘：${_result!.tianPan.join('、')}',
                         style: const TextStyle(fontSize: 11, height: 1.5)),
                   ]),
+                ),
+                const SizedBox(height: 8),
+                Text('四课', style: TextStyle(fontSize: 13, color: t.withAlpha(150))),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _ke('一课·日干上神', _result!.siKe[0], p, t, bg, b),
+                    _ke('二课·日干下神', _result!.siKe[1], p, t, bg, b),
+                    _ke('三课·日支上神', _result!.siKe[2], p, t, bg, b),
+                    _ke('四课·日支下神', _result!.siKe[3], p, t, bg, b),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Text('三传', style: TextStyle(fontSize: 13, color: t.withAlpha(150))),
@@ -374,6 +454,19 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
         );
       }
     }
+  }
+
+  Widget _ke(String label, String zhi, Color p, Color t, Color bg, Color b) {
+    return Container(
+      width: (360 - 32) / 2,
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8), border: Border.all(color: b.withAlpha(80))),
+      child: Column(children: [
+        Text(label, style: TextStyle(fontSize: 10, color: t.withAlpha(130))),
+        const SizedBox(height: 2),
+        Text(zhi, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: p)),
+      ]),
+    );
   }
 
   Widget _chuan(String label, String zhi, Color p, Color t, Color bg, Color b) {
