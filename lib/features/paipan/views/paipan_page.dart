@@ -333,10 +333,15 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         ),  // Card
         const SizedBox(height: 12),
 
-        // 排盘结果
+        // 排盘结果（淡入 + 上移动画）
         FadeTransition(
           opacity: _fadeAnim,
-          child: lr != null ? Column(
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.05),
+              end: Offset.zero,
+            ).animate(_fadeAnim),
+            child: lr != null ? Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
           RepaintBoundary(
@@ -522,7 +527,8 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         ],
       )
     : _emptyHint(p, t),
-    ),
+          ),  // SlideTransition
+        ),
   ],
 );
   }
@@ -569,7 +575,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
       // 模拟短加载延迟（增强仪式感）
       Future.delayed(const Duration(milliseconds: 300), () {
         pr.setLiuyaoResult(r);
-        _animCtrl.forward();
+        _animCtrl.forward(from: 0); // 排盘结果出现动画（淡入+上移）
         setState(() => _isLoading = false);
         final names = ['手工摇卦', '机器摇卦', '时间起卦', '数字起卦'];
         _log.info('六爻起卦: ${names[_liuyaoMethod]}', '${r.benGua.name}');
