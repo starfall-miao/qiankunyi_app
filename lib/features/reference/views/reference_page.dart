@@ -65,7 +65,7 @@ class ReferencePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return DefaultTabController(
-      length: 10,
+      length: 7,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('参考资料'),

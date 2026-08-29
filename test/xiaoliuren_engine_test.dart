@@ -11,12 +11,12 @@ void main() {
       expect(r.resultPalm.name, '大安');
     });
 
-    test('二月午时：月=留连(1)，日=午=留连顺1=速喜(2)，时午=速喜顺6=速喜(2)', () {
+    test('二月一日午时：月留连(1)，日落位留连(1)，时午顺6回留连(1)', () {
       final r = XiaoLiuRenEngine.byMonthDayHour(2, 1, 6);
       expect(r.monthPos, 1);
-      expect(r.dayPos, 2);
-      expect(r.resultPos, 2);
-      expect(r.resultPalm.name, '速喜');
+      expect(r.dayPos, 1);
+      expect(r.resultPos, 1);
+      expect(r.resultPalm.name, '留连');
     });
 
     test('六掌诀齐全且吉凶标记正确', () {
