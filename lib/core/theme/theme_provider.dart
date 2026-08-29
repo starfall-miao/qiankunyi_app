@@ -14,7 +14,7 @@ class ThemeProvider extends ChangeNotifier {
 
   ThemeMode _themeMode = ThemeMode.system;
   ColorSchemeType _colorScheme = ColorSchemeType.xuanZi;
-  bool _useAcrylic = false;
+  bool _useAcrylic = true;
   double _acrylicOpacity = 0.75;
   bool _renderDebug = false;
   bool _immersiveMode = false;
@@ -35,7 +35,7 @@ class ThemeProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _themeMode = _parseMode(prefs.getString(_modeKey) ?? 'system');
     _colorScheme = _parseColor(prefs.getString(_colorKey) ?? 'xuanZi');
-    _useAcrylic = prefs.getBool(_acrylicKey) ?? false;
+    _useAcrylic = prefs.getBool(_acrylicKey) ?? true;
     _acrylicOpacity = prefs.getDouble(_opacityKey) ?? 0.75;
     notifyListeners();
   }

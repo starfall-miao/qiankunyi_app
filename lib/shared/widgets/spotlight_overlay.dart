@@ -69,6 +69,22 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> {
             ),
           ),
         ),
+        // 无目标步骤：中央显示引导标记（⌘ 页面要点）
+        if (rect == null)
+          Center(
+            child: Container(
+              width: 64,
+              height: 64,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25),
+                shape: BoxShape.circle,
+                border: Border.all(
+                    color: Theme.of(context).colorScheme.primary, width: 2),
+              ),
+              child: const Text('👆', style: TextStyle(fontSize: 28)),
+            ),
+          ),
         // 说明气泡（目标下方）
         if (rect != null)
           Positioned(
@@ -109,6 +125,10 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> {
                                 setState(() => _index++);
                                 // 通知外部切换画面（tabIndex）
                                 widget.onStepChanged?.call(_index);
+                                // 延后一帧重建：切换 Tab 后目标控件位置可能更新
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  if (mounted) setState(() {});
+                                });
                               }
                             : widget.onFinish,
                         child: Text(_index < widget.steps.length - 1 ? '下一步' : '完成'),
