@@ -7,6 +7,7 @@ import '../data/reference_data.dart';
 import '../data/xiangyi_data.dart';
 import '../data/qinxing_data.dart';
 import '../data/shensha_dictionary.dart';
+import '../data/dongbian_dictionary.dart';
 import '../data/yaoci_data.dart';
 import '../../paipan/models/gua_model.dart';
 import '../../settings/views/tutorial_page.dart';
