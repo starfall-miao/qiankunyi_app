@@ -129,16 +129,26 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
             _sectionTitle(scheme, '🤖 AI 解卦参考'),
             Card(
-              child: SwitchListTile(
-                dense: true,
-                value: u.aiReferenceEnabled,
-                title: const Text('解卦时参考我的画像', style: TextStyle(fontSize: 13)),
-                subtitle: const Text('AI 会结合日主五行/备注信息分析',
-                    style: TextStyle(fontSize: 11)),
-                onChanged: (v) {
-                  up.updateUser(u.copyWith(aiReferenceEnabled: v));
-                },
-              ),
+              child: Column(children: [
+                SwitchListTile(
+                  dense: true,
+                  value: u.aiReferenceEnabled,
+                  title: const Text('解卦时参考我的画像', style: TextStyle(fontSize: 13)),
+                  subtitle: const Text('AI 会结合日主五行/备注信息分析',
+                      style: TextStyle(fontSize: 11)),
+                  onChanged: (v) {
+                    up.updateUser(u.copyWith(aiReferenceEnabled: v));
+                  },
+                ),
+                SwitchListTile(
+                  dense: true,
+                  value: up.aiAutoProfile,
+                  title: const Text('解卦后自动分析画像', style: TextStyle(fontSize: 13)),
+                  subtitle: const Text('每次 AI 解卦后，自动提取性格/关注点标签加入画像',
+                      style: TextStyle(fontSize: 11)),
+                  onChanged: (v) => up.aiAutoProfile = v,
+                ),
+              ]),
             ),
             const SizedBox(height: 20),
 

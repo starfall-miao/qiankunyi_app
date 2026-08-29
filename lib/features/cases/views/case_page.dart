@@ -2653,8 +2653,59 @@ class _AiChatSectionState extends State<_AiChatSection> {
             .toList(),
       );
       Logger.instance.info('$logTag持久化完成', '当前消息数: ${_localMessages.length}');
+      // 解卦成功后：若开启画像自动分析，异步调用 AI 分析并更新画像（不阻塞）
+      _autoProfileAnalysis(logTag);
     } catch (e) {
       Logger.instance.error('AI解卦', 'AI 消息持久化失败: $e');
+    }
+  }
+
+  /// 用 AI 分析本次卦例+对话，提取用户画像标签并入画像备注（可关闭）
+  Future<void> _autoProfileAnalysis(String logTag) async {
+    try {
+      final up = context.read<UserProvider>();
+      if (!up.aiAutoProfile || up.current == null) return;
+      final sp = context.read<SettingsProvider>();
+      if (!sp.aiEnabled) return;
+      // 取最后一条 AI 回复作为分析素材
+      final aiReply = _localMessages
+          .lastWhere((m) => m.role == 'assistant' && m.content.trim().isNotEmpty,
+              orElse: () => _localMessages.isNotEmpty ? _localMessages.last : AiMessage(role: 'assistant', content: ''))
+          .content;
+      if (aiReply.trim().isEmpty) return;
+      final ask = widget.caseModel.askEvent?.isNotEmpty == true
+          ? '，所问：${widget.caseModel.askEvent}'
+          : '';
+      final prompt = '根据以下六爻/梅花/八字解卦内容，用最简短的词（每个 2-6 字）'
+          '推断占问者可能的性格、关注点或近况特征，最多 5 个，用顿号分隔。'
+          '只输出标签，不要解释。\n\n解卦内容：${aiReply.length > 600 ? aiReply.substring(0, 600) : aiReply}$ask';
+      final res = await AiService().chat(
+        endpoint: sp.aiEndpoint,
+        apiKey: sp.aiApiKey,
+        model: sp.effectiveAiModel,
+        messages: [
+          {'role': 'system', 'content': '你是命理画像分析助手，只输出精简标签。'},
+          {'role': 'user', 'content': prompt},
+        ],
+        logTag: '画像分析',
+      );
+      if (!res.success || res.content.trim().isEmpty) return;
+      // 解析标签（顿号/逗号/换行分隔）
+      final tags = res.content
+          .replaceAll('，', '、')
+          .replaceAll(',', '、')
+          .replaceAll('\n', '、')
+          .split('、')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty && s.length <= 12)
+          .take(5)
+          .toList();
+      if (tags.isNotEmpty) {
+        up.mergeProfileTags(tags);
+        Logger.instance.info('画像自动分析', '新增标签: ${tags.join('、')}');
+      }
+    } catch (e) {
+      Logger.instance.warn('画像自动分析', '分析失败: $e');
     }
   }
 

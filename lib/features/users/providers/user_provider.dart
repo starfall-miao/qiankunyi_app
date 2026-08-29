@@ -16,11 +16,37 @@ class UserProvider extends ChangeNotifier {
   SharedPreferences? _prefs;
   /// 当前会话是否已通过密码验证（防止切换后未验证直接使用）
   bool _unlocked = false;
+  /// AI 解卦后自动分析并更新用户画像（可关闭）
+  bool _aiAutoProfile = true;
 
   List<UserProfile> get users => _users;
   UserProfile? get current => _current;
   bool get initialized => _initialized;
   bool get unlocked => _unlocked;
+  bool get aiAutoProfile => _aiAutoProfile;
+  set aiAutoProfile(bool v) {
+    _aiAutoProfile = v;
+    _prefs?.setBool('user_ai_auto_profile', v);
+    notifyListeners();
+  }
+
+  /// 将 AI 分析出的画像标签并入当前用户备注（去重，无则忽略）
+  void mergeProfileTags(List<String> tags) {
+    final u = _current;
+    if (u == null || tags.isEmpty) return;
+    final existing = Set<String>.from(u.notes);
+    var changed = false;
+    for (final tag in tags) {
+      final t2 = tag.trim();
+      if (t2.isNotEmpty && !existing.contains(t2)) {
+        existing.add(t2);
+        changed = true;
+      }
+    }
+    if (changed) {
+      updateUser(u.copyWith(notes: existing.toList()));
+    }
+  }
 
   /// 当前用户画像摘要（供 AI 解卦注入）
   String get aiPicContext {
@@ -57,6 +83,7 @@ class UserProvider extends ChangeNotifier {
         }
       }
     }
+    _aiAutoProfile = _prefs!.getBool('user_ai_auto_profile') ?? true;
     _initialized = true;
     notifyListeners();
   }
