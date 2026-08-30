@@ -165,12 +165,36 @@ jobs:
       - run: flutter pub get
       - name: Drift 代码生成
         run: dart run build_runner build --delete-conflicting-outputs
-      - name: 🏗️ 构建 iOS 版（模拟器）
-        run: flutter build ios --debug --no-codesign --simulator --build-number=${{ env.BUILD_NUMBER }}
+      - name: 🏗️ 构建 iOS 真机版
+        run: flutter build ios --release --no-codesign --build-number=${{ env.BUILD_NUMBER }}
+      - name: 🔐 自签名并打包 ipa
+        run: |
+          # 创建临时 keychain 与自签名证书
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain 2>/dev/null || true
+          openssl req -x509 -newkey rsa:2048 -keyout /tmp/key.pem -out /tmp/cert.pem \
+            -days 365 -nodes -subj "/CN=QianKunYi iOS Dev"
+          openssl pkcs12 -export -out /tmp/cert.p12 -inkey /tmp/key.pem -in /tmp/cert.pem -passout pass:
+          security import /tmp/cert.p12 -k build.keychain -P "" -T /usr/bin/codesign 2>/dev/null || true
+          # 签名 Runner.app（自签名仅用于测试分发，设备需手动信任）
+          IDENTITY=$(security find-identity -p codesigning build.keychain 2>/dev/null | grep -o '"[^"]*"' | head -1 | tr -d '"')
+          echo "自签名身份: ${IDENTITY:-ad-hoc}"
+          if [ -n "$IDENTITY" ]; then
+            codesign --force --sign "$IDENTITY" --deep --preserve-metadata=entitlements build/ios/iphoneos/Runner.app
+          else
+            echo "未找到证书，使用 ad-hoc 签名"
+            codesign --force --sign - --deep build/ios/iphoneos/Runner.app
+          fi
+          # 打包 ipa（Payload 结构，自签名 ipa 可 sideload）
+          mkdir -p /tmp/Payload
+          cp -r build/ios/iphoneos/Runner.app /tmp/Payload/
+          cd /tmp && zip -r $GITHUB_WORKSPACE/qiankunyi_ios.ipa Payload/ && cd -
+          echo "🍎 iOS ipa 生成完成"
       - uses: actions/upload-artifact@v4
         with:
-          name: ios-debug
-          path: build/ios/Debug-iphonesimulator/
+          name: ios-ipa
+          path: qiankunyi_ios.ipa
           if-no-files-found: warn
 
   ###########################################################################

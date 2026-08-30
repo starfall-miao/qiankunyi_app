@@ -427,27 +427,36 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
                   ]),
                 ),
                 const SizedBox(height: 8),
-                Text('四课', style: TextStyle(fontSize: 13, color: t.withAlpha(150))),
+                Text('四课（一课日阳 · 二课日阴 · 三课辰阳 · 四课辰阴）',
+                    style: TextStyle(fontSize: 12.5, color: t.withAlpha(150))),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    _ke('一课·日干上神', _result!.siKe[0], p, t, bg, b),
-                    _ke('二课·日干下神', _result!.siKe[1], p, t, bg, b),
-                    _ke('三课·日支上神', _result!.siKe[2], p, t, bg, b),
-                    _ke('四课·日支下神', _result!.siKe[3], p, t, bg, b),
+                    _ke('一课·日干上神', _result!.siKe[0], p, t, bg, b,
+                        info: '日干上神，代表自身现状、主导'),
+                    _ke('二课·日干下神', _result!.siKe[1], p, t, bg, b,
+                        info: '日干下神，代表自身内在/同盟'),
+                    _ke('三课·日支上神', _result!.siKe[2], p, t, bg, b,
+                        info: '日支上神，代表所测之事与环境'),
+                    _ke('四课·日支下神', _result!.siKe[3], p, t, bg, b,
+                        info: '日支下神，代表事之内情/他人'),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text('三传', style: TextStyle(fontSize: 13, color: t.withAlpha(150))),
+                Text('三传（初事始 · 中事中 · 末事终）',
+                    style: TextStyle(fontSize: 12.5, color: t.withAlpha(150))),
                 const SizedBox(height: 6),
                 Row(children: [
-                  _chuan('初传', _result!.chuChuan, p, t, bg, b),
+                  _chuan('初传', _result!.chuChuan, p, t, bg, b,
+                      info: '事之始：起因、开端'),
                   const SizedBox(width: 8),
-                  _chuan('中传', _result!.zhongChuan, p, t, bg, b),
+                  _chuan('中传', _result!.zhongChuan, p, t, bg, b,
+                      info: '事之中：发展过程'),
                   const SizedBox(width: 8),
-                  _chuan('末传', _result!.moChuan, p, t, bg, b),
+                  _chuan('末传', _result!.moChuan, p, t, bg, b,
+                      info: '事之终：结果、归宿'),
                 ]),
                 const SizedBox(height: 8),
                 Text('十二天将详解', style: TextStyle(fontSize: 13, color: t.withAlpha(150))),
@@ -665,21 +674,31 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
   }
 
   /// 地支详解弹窗（点击三传/四课触发）
-  void _showZhiDetail(String label, String zhi) {
+  void _showZhiDetail(String label, String zhi, {String? info}) {
     final d = daliurenZhiDetail[zhi];
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('$label · $zhi'),
-        content: d == null
-            ? Text('暂无 $zhi 详解')
-            : Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('五行：${d.$1}', style: const TextStyle(fontSize: 13)),
-                const SizedBox(height: 6),
-                Text('类象：${d.$2}', style: const TextStyle(fontSize: 13, height: 1.6)),
-                const SizedBox(height: 6),
-                Text('吉凶：${d.$3}', style: const TextStyle(fontSize: 13)),
-              ]),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (info != null) ...[
+              Text(info, style: const TextStyle(fontSize: 13, height: 1.5, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+            ],
+            if (d == null)
+              const Text('暂无详解')
+            else ...[
+              Text('五行：${d.$1}', style: const TextStyle(fontSize: 13)),
+              const SizedBox(height: 6),
+              Text('类象：${d.$2}', style: const TextStyle(fontSize: 13, height: 1.6)),
+              const SizedBox(height: 6),
+              Text('吉凶：${d.$3}', style: const TextStyle(fontSize: 13)),
+            ],
+          ]),
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('关闭')),
         ],
@@ -687,9 +706,9 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
     );
   }
 
-  Widget _ke(String label, String zhi, Color p, Color t, Color bg, Color b) {
+  Widget _ke(String label, String zhi, Color p, Color t, Color bg, Color b, {String? info}) {
     return GestureDetector(
-      onTap: () => _showZhiDetail(label, zhi),
+      onTap: () => _showZhiDetail(label, zhi, info: info),
       child: Container(
         width: (360 - 32) / 2,
         padding: const EdgeInsets.symmetric(vertical: 6),
@@ -705,10 +724,10 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
     );
   }
 
-  Widget _chuan(String label, String zhi, Color p, Color t, Color bg, Color b) {
+  Widget _chuan(String label, String zhi, Color p, Color t, Color bg, Color b, {String? info}) {
     return Expanded(
       child: GestureDetector(
-        onTap: () => _showZhiDetail(label, zhi),
+        onTap: () => _showZhiDetail(label, zhi, info: info),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8), border: Border.all(color: b.withAlpha(80))),
