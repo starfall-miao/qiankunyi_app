@@ -268,6 +268,15 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
                   style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
                 ),
               ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: () => setState(() => _result = null),
+                  icon: const Icon(Icons.refresh, size: 16),
+                  label: const Text('清空'),
+                  style: TextButton.styleFrom(foregroundColor: t.withAlpha(200)),
+                ),
+              ),
             ]),
               ]),
                   )
