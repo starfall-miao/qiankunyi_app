@@ -408,6 +408,17 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
               child: Padding(
               padding: const EdgeInsets.all(14),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                // 大标题（保存图片/分享更醒目）
+                Row(children: [
+                  Icon(Icons.auto_awesome, size: 16, color: p),
+                  const SizedBox(width: 6),
+                  Text('大六壬排盘',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: p)),
+                  const Spacer(),
+                  Text('${_ganCN[_dayGan]}${daliurenZhi[_dayZhi]}日',
+                      style: TextStyle(fontSize: 11, color: t.withAlpha(140))),
+                ]),
+                const SizedBox(height: 8),
                 Text('月将：${daliurenYueJiang[_result!.yueJiang]}（临${_result!.yueJiangZhi} · ${_result!.method}）',
                     style: const TextStyle(fontSize: 13)),
                 const SizedBox(height: 8),
