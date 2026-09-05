@@ -2050,39 +2050,53 @@ class _BaziPageState extends State<BaziPage> {
                   controller: _daYunScrollCtrl,
                   scrollDirection: Axis.horizontal,
                   child: Row(
-                    children: r.daYun.map((dy) {
-                      final ganWx = _ganZhiWx(dy.tianGan);
-                      final ganColor = _wxColors[ganWx] ?? t;
-                      return Container(
-                        width: 76,
-                        margin: const EdgeInsets.only(right: 6),
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                        decoration: BoxDecoration(
-                          color: dark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: ganColor.withAlpha(80)),
-                        ),
-                        child: Column(
-                          children: [
-                            Text('${dy.startAge}岁',
-                                style: TextStyle(
-                                    fontSize: 11, color: t.withAlpha(150))),
-                            const SizedBox(height: 2),
-                            Text(dy.ganZhi,
-                                style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: ganColor)),
-                            if (dy.naYin != null) ...[
-                              const SizedBox(height: 2),
-                              Text(dy.naYin!,
-                                  style: TextStyle(
-                                      fontSize: 9, color: t.withAlpha(130))),
-                            ],
-                          ],
-                        ),
-                      );
-                    }).toList(),
+                    children: [
+                      // 当前虚岁 → 定位当前大运
+                      ...(() {
+                        final xuSui = DateTime.now().year - r.birth.year + 1;
+                        final curIdx = r.daYun.lastIndexWhere((d) => d.startAge <= xuSui);
+                        return r.daYun.asMap().entries.map((e) {
+                          final i = e.key;
+                          final dy = e.value;
+                          final isCur = i == curIdx;
+                          final ganWx = _ganZhiWx(dy.tianGan);
+                          final ganColor = _wxColors[ganWx] ?? t;
+                          return Container(
+                            width: 76,
+                            margin: const EdgeInsets.only(right: 6),
+                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                            decoration: BoxDecoration(
+                              color: isCur
+                                  ? p.withAlpha(22)
+                                  : (dark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2)),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                  color: isCur ? p : ganColor.withAlpha(80),
+                                  width: isCur ? 2 : 1),
+                            ),
+                            child: Column(
+                              children: [
+                                Text('${dy.startAge}岁',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: isCur ? p : t.withAlpha(150),
+                                        fontWeight: isCur ? FontWeight.bold : FontWeight.normal)),
+                                const SizedBox(height: 2),
+                                Text(dy.ganZhi,
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: ganColor)),
+                                Text(isCur ? '● 当前运' : (dy.naYin ?? ''),
+                                    style: TextStyle(
+                                        fontSize: 9,
+                                        color: isCur ? p : t.withAlpha(130))),
+                              ],
+                            ),
+                          );
+                        });
+                      })(),
+                    ],
                   ),
                 ),
               ),
