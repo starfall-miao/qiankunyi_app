@@ -1,6 +1,5 @@
 // 落·乾坤 - 大六壬排盘页（基础版）
 import 'dart:convert';
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -365,10 +364,7 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
           RepaintBoundary(
             key: _shotKey,
             child: Card(
-              child: InkWell(
-                onTap: () => _showDetail(),
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
+              child: Padding(
               padding: const EdgeInsets.all(14),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('月将：${daliurenYueJiang[_result!.yueJiang]}（临${_result!.yueJiangZhi} · ${_result!.method}）',
@@ -459,38 +455,19 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
                       info: '事之终：结果、归宿'),
                 ]),
                 const SizedBox(height: 8),
-                Text('十二天将详解', style: TextStyle(fontSize: 13, color: t.withAlpha(150))),
+                Text('三传天将详解（对应事之始/中/终）',
+                    style: TextStyle(fontSize: 13, color: t.withAlpha(150))),
                 const SizedBox(height: 6),
-                // 天将网格（名称+吉凶+含义）
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: daliurenGenerals.map((g) {
-                    final isGood = g.$2 == '吉';
-                    final gc = isGood ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
-                    return Container(
-                      width: (340 - 24) / 2,
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: gc.withAlpha(12),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: gc.withAlpha(40)),
-                      ),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Row(children: [
-                          Text(g.$1, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: gc)),
-                          const SizedBox(width: 6),
-                          Text(g.$2, style: TextStyle(fontSize: 10, color: gc)),
-                        ]),
-                        const SizedBox(height: 2),
-                        Text(g.$3, style: TextStyle(fontSize: 10, height: 1.4, color: t.withAlpha(160))),
-                      ]),
-                    );
-                  }).toList(),
-                ),
+                // 只展示三传所临天将（初/中/末），避免全量冗余
+                Column(children: [
+                  _chuanGeneral('初传', _result!.chuChuan, _result!, t),
+                  const SizedBox(height: 4),
+                  _chuanGeneral('中传', _result!.zhongChuan, _result!, t),
+                  const SizedBox(height: 4),
+                  _chuanGeneral('末传', _result!.moChuan, _result!, t),
+                ]),
               ]),
             ),
-          ),
           ),
         ),
             const SizedBox(height: 8),
@@ -653,23 +630,70 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
     return '$label $zhi·${r.tianJiang[gi]}';
   }
 
-  /// 天地盘对照网格（上：天盘，下：地盘）
+  /// 传统天地盘：12 个框填十二地支（地盘固定），再填天盘（月将加时）
   Widget _tianPanGrid(List<String> tianPan, String yueJiangZhi,
       Color p, Color t, Color b) {
-    // 标准大六壬圆盘：12 宫环形，外圈地盘支 + 内圈天盘支（月将高亮）
-    return SizedBox(
-      height: 230,
+    final hourZhi = daliurenZhi[_result?.hourIndex ?? 0];
+    // 3 行 × 4 列展示 12 宫（子丑寅卯…顺时针），每格：地盘支 + 天盘支
+    return Column(
+      children: List.generate(3, (row) => Row(
+        children: List.generate(4, (col) {
+          final i = row * 4 + col;
+          if (i >= 12) return const Expanded(child: SizedBox());
+          final diZhi = daliurenZhi[i];
+          final tianZhi = tianPan[i];
+          final isYueJiang = tianZhi == yueJiangZhi; // 月将
+          final isHour = diZhi == hourZhi;           // 时辰
+          return Expanded(
+            child: Container(
+              margin: const EdgeInsets.all(2),
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              decoration: BoxDecoration(
+                color: isYueJiang ? p.withAlpha(30) : (isHour ? t.withAlpha(14) : t.withAlpha(6)),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                    color: isYueJiang ? p : b.withAlpha(50), width: 1),
+              ),
+              child: Column(children: [
+                Text(diZhi,
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: isHour ? p : t)),
+                const SizedBox(height: 2),
+                Text(tianZhi,
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: isYueJiang ? FontWeight.bold : FontWeight.normal,
+                        color: isYueJiang ? p : t.withAlpha(160))),
+              ]),
+            ),
+          );
+        }),
+      )),
+    );
+  }
+
+  /// 某传所临天将详解（初/中/末 → 天将名+吉凶+含义）
+  Widget _chuanGeneral(String label, String zhi, DaLiuRenResult r, Color t) {
+    final idx = daliurenZhi.indexOf(zhi);
+    final gi = idx >= 0 ? idx : 0;
+    final g = daliurenGenerals[gi];
+    final isGood = g.$2 == '吉';
+    final gc = isGood ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
+    return Container(
       width: double.infinity,
-      child: CustomPaint(
-        painter: _TianPanPainter(
-          tianPan: tianPan,
-          yueJiangZhi: yueJiangZhi,
-          hourZhi: daliurenZhi[_result?.hourIndex ?? 0],
-          diPan: daliurenZhi,
-          primary: p,
-          textColor: t,
-        ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: gc.withAlpha(10),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: gc.withAlpha(40)),
       ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('$label $zhi·${g.$1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: gc)),
+        const SizedBox(width: 8),
+        Expanded(child: Text('${g.$3}', style: TextStyle(fontSize: 11, height: 1.4, color: t.withAlpha(180)))),
+      ]),
     );
   }
 
@@ -742,87 +766,4 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
     );
   }
 
-}
-
-/// 大六壬圆盘绘制器：12 宫环形，外圈地盘支 + 内圈天盘支
-class _TianPanPainter extends CustomPainter {
-  final List<String> tianPan;   // 天盘：索引=地盘宫位
-  final String yueJiangZhi;     // 月将（天盘高亮）
-  final String hourZhi;         // 时辰（地盘高亮）
-  final List<String> diPan;     // 地盘十二支（子丑寅…）
-  final Color primary;
-  final Color textColor;
-
-  _TianPanPainter({
-    required this.tianPan,
-    required this.yueJiangZhi,
-    required this.hourZhi,
-    required this.diPan,
-    required this.primary,
-    required this.textColor,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.height / 2 - 8;
-    // 外圈圆
-    final outer = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..color = primary.withAlpha(120);
-    canvas.drawCircle(center, radius, outer);
-
-    // 12 宫分割线与标注（子正北，顺时针）
-    for (int i = 0; i < 12; i++) {
-      final angle = (i * 30 - 90) * 3.14159 / 180; // 子时(0)在正北(-90°)
-      final dir = Offset(math.cos(angle), math.sin(angle));
-
-      // 宫位分隔线
-      final linePaint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.8
-        ..color = textColor.withValues(alpha: 0.15);
-      canvas.drawLine(
-        center + dir * radius * 0.65,
-        center + dir * radius,
-        linePaint,
-      );
-
-      // 外圈：地盘支
-      final diZhi = diPan[i];
-      final isHour = diZhi == hourZhi;
-      _text(canvas, diZhi, center + dir * (radius - 14),
-          isHour ? primary : textColor, isHour, 13);
-
-      // 内圈：天盘支
-      final tz = tianPan[i];
-      final isYueJiang = tz == yueJiangZhi;
-      _text(canvas, tz, center + dir * (radius - 36),
-          isYueJiang ? primary : textColor.withValues(alpha: 0.8), isYueJiang, 11);
-    }
-
-    // 中心标注
-    _text(canvas, '三式',
-        center, primary.withValues(alpha: 0.7), true, 12);
-  }
-
-  void _text(Canvas canvas, String s, Offset pos, Color color, bool bold, double fontSize) {
-    final tp = TextPainter(
-      text: TextSpan(
-        text: s,
-        style: TextStyle(
-          fontSize: fontSize,
-          fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-          color: color,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
-  }
-
-  @override
-  bool shouldRepaint(covariant _TianPanPainter old) =>
-      old.tianPan != tianPan || old.yueJiangZhi != yueJiangZhi;
 }
