@@ -462,6 +462,45 @@ class _CasePageState extends State<CasePage> {
     );
   }
 
+    /// 解析小六壬/大六壬等自定义排盘 JSON，返回文本摘要（失败返回 null）
+  String? _tryParseCustomPaipan(String? paipanData) {
+    if (paipanData == null || paipanData.isEmpty) return null;
+    try {
+      final map = jsonDecode(paipanData) as Map<String, dynamic>;
+      // 小六壬：{"xiaoLiuRen": {...}}
+      if (map.containsKey('xiaoLiuRen')) {
+        final r = map['xiaoLiuRen'] as Map<String, dynamic>;
+        final pos = r['resultPos'] as int? ?? 0;
+        final names = ['大安', '留连', '速喜', '赤口', '小吉', '空亡'];
+        final name = pos >= 0 && pos < names.length ? names[pos] : '?';
+        return '小六壬排盘\n'
+            '落位：$name\n'
+            '起课：${r['month'] ?? '?'}月${r['day'] ?? '?'}日 '
+            '${_diZhiHourCN(r['hour'])}时 · ${r['method'] ?? ''}';
+      }
+      // 大六壬：{"daLiuRen": {...}}
+      if (map.containsKey('daLiuRen')) {
+        final r = map['daLiuRen'] as Map<String, dynamic>;
+        final siKe = (r['siKe'] as List?)?.join(' / ') ?? '';
+        final shiYong = (r['shiYong'] as List?)?.join(' → ') ?? '';
+        final yj = r['yueJiangZhi'] as String? ?? '';
+        return '大六壬排盘\n'
+            '月将：${r['yueJiang'] ?? '?'}（临$yj）\n'
+            '四课：$siKe\n'
+            '三传：$shiYong\n'
+            '贵人临${r['guiRen'] ?? ''}';
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// 地支索引 → 时辰中文名（小六壬 hour 字段）
+  String _diZhiHourCN(dynamic hour) {
+    if (hour is! int || hour < 0 || hour >= 12) return '?';
+    const zh = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+    return zh[hour];
+  }
+
   void _showCaseDetail(BuildContext context, CaseModel c) {
     PaipanResult? result;
     BaziResult? baziResult;
@@ -475,6 +514,8 @@ class _CasePageState extends State<CasePage> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final t = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
+    // 小六壬/大六壬自定义排盘摘要（PaipanResult/BaziResult 无法解析时兜底展示）
+    final customSummary = _tryParseCustomPaipan(c.paipanData);
 
     // 全屏/还原：控制 DraggableScrollableSheet 的高度（桌面端无触摸上滑手势，提供显式按钮）
     final sheetCtrl = DraggableScrollableController();
@@ -660,10 +701,22 @@ class _CasePageState extends State<CasePage> {
                 ),
               ],
               const SizedBox(height: 16),
-              // 排盘结果
+              // 排盘结果（小六壬/大六壬等自定义排盘兜底展示）
+              if (customSummary != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8)),
+                  ),
+                  child: Text(customSummary,
+                      style: TextStyle(fontSize: 13, height: 1.6, color: t)),
+                ),
+              ],
               if (result != null) ...[
-                GuaWidget(gua: result.benGua),
-                if (result.bianGua != null) ...[
+                GuaWidget(gua: result.benGua),                if (result.bianGua != null) ...[
                   const SizedBox(height: 12),
                   Text('变卦', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: t)),
                   const SizedBox(height: 6),
