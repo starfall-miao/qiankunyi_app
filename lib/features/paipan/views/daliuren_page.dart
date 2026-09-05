@@ -573,37 +573,6 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
   }
 
   /// 结果详解弹窗
-  void _showDetail() {
-    final r = _result;
-    if (r == null) return;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('大六壬 结果详解'),
-        content: SingleChildScrollView(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('月将：${daliurenYueJiang[r.yueJiang]}（${r.method}）',
-                style: const TextStyle(fontSize: 13)),
-            const SizedBox(height: 8),
-            Text('三传：初传${r.chuChuan} → 中传${r.zhongChuan} → 末传${r.moChuan}',
-                style: const TextStyle(fontSize: 13)),
-            const SizedBox(height: 10),
-            const Text('十二天将', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            for (final g in daliurenGenerals)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text('${g.$1}（${g.$2}）：${g.$3}',
-                    style: const TextStyle(fontSize: 12, height: 1.5)),
-              ),
-          ]),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('关闭')),
-        ],
-      ),
-    );
-  }
 
   /// 分享结果到剪贴板
   Future<void> _share() async {

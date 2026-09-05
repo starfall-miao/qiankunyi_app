@@ -29,8 +29,6 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
   XiaoLiuRenResult? _result;
   final _shotKey = GlobalKey();
 
-  static const _months = ['正月', '二月', '三月', '四月', '五月', '六月',
-    '七月', '八月', '九月', '十月', '冬月', '腊月'];
   static const _hours = ['子时', '丑时', '寅时', '卯时', '辰时', '巳时',
     '午时', '未时', '申时', '酉时', '戌时', '亥时'];
 
@@ -320,19 +318,6 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
         ],
       ),
     );
-  }
-
-  Widget _select(String label, int value, List<String> options, ValueChanged<int> onSel) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontSize: 12)),
-      DropdownButton<int>(
-        value: value,
-        isExpanded: true,
-        items: List.generate(options.length, (i) =>
-            DropdownMenuItem(value: i, child: Text(options[i], style: const TextStyle(fontSize: 13)))),
-        onChanged: (v) => v != null ? onSel(v) : null,
-      ),
-    ]);
   }
 
   Widget _resultCard(XiaoLiuRenResult r, Color p, Color t, Color b, bool dark) {
