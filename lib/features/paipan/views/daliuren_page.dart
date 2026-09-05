@@ -30,18 +30,18 @@ const daliurenGenerals = [
 
 /// 地支详解（五行/类象/吉凶）
 const daliurenZhiDetail = {
-  '子': ('水', '北方，聪明流动，藏癸水', '利财智，防暗耗'),
-  '丑': ('土', '东北，晦暗之库，藏己癸辛', '稳中有滞，防郁结'),
-  '寅': ('木', '东北，刚毅阳木，藏甲丙戊', '奋发，利开创'),
-  '卯': ('木', '东方，柔顺阴木，藏乙', '顺遂，利合作'),
-  '辰': ('土', '东南，水库，藏戊乙癸', '藏机，宜蓄势'),
-  '巳': ('火', '东南，驿马阳火，藏丙戊庚', '动变，利出行'),
-  '午': ('火', '南方，明丽阳火，藏丁己', '光明，防急躁'),
-  '未': ('土', '西南，木库，藏己丁乙', '平缓，利积累'),
-  '申': ('金', '西南，肃杀阳金，藏庚壬戊', '果断，防锋芒'),
-  '酉': ('金', '西方，娇艳阴金，藏辛', '精致，防固执'),
-  '戌': ('土', '西北，火库，藏戊辛丁', '收敛，宜守成'),
-  '亥': ('水', '西北，汪洋阴水，藏壬甲', '润泽，利流动'),
+  '子': ('水', '北方', '聪明流动，藏癸水', '孩童、妇女、水性人；利智谋财帛', '利财智，防暗耗'),
+  '丑': ('土', '东北', '晦暗之库，藏己癸辛', '田产、库房、老人；利守成置业', '稳中有滞，防郁结'),
+  '寅': ('木', '东北', '刚毅阳木，藏甲丙戊', '公门、车马、壮年男；利开创官讼', '奋发，利开创'),
+  '卯': ('木', '东方', '柔顺阴木，藏乙', '门庭、舟车、文士；利婚嫁文书', '顺遂，利合作'),
+  '辰': ('土', '东南', '水库，藏戊乙癸', '龙潭、牢狱、渔人；利积蓄防争讼', '藏机，宜蓄势'),
+  '巳': ('火', '东南', '驿马阳火，藏丙戊庚', '驿路、炉冶、远行客；利出行变动', '动变，利出行'),
+  '午': ('火', '南方', '明丽阳火，藏丁己', '文书、殿堂、文秀；利名声升迁', '光明，防急躁'),
+  '未': ('土', '西南', '木库，藏己丁乙', '园林、酒食、妇人；利宴乐积累', '平缓，利积累'),
+  '申': ('金', '西南', '肃杀阳金，藏庚壬戊', '道路、兵戈、武人；利决断争胜', '果断，防锋芒'),
+  '酉': ('金', '西方', '娇艳阴金，藏辛', '刀剑、珠玉、少女；利婚配修饰', '精致，防固执'),
+  '戌': ('土', '西北', '火库，藏戊辛丁', '城墙、狱牢、僧道；利收敛防灾', '收敛，宜守成'),
+  '亥': ('水', '西北', '汪洋阴水，藏壬甲', '江海、舟楫、谋士；利流通远谋', '润泽，利流动'),
 };
 
 /// 十二地支（地盘/月将用）
@@ -752,11 +752,20 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
             if (d == null)
               const Text('暂无详解')
             else ...[
-              Text('五行：${d.$1}', style: const TextStyle(fontSize: 13)),
-              const SizedBox(height: 6),
-              Text('类象：${d.$2}', style: const TextStyle(fontSize: 13, height: 1.6)),
-              const SizedBox(height: 6),
-              Text('吉凶：${d.$3}', style: const TextStyle(fontSize: 13)),
+              Text('五行：${d.$1} · 方位：${d.$2}',
+                  style: const TextStyle(fontSize: 13)),
+              const SizedBox(height: 8),
+              const Text('🪧 类象', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 3),
+              Text(d.$3, style: const TextStyle(fontSize: 13, height: 1.6)),
+              const SizedBox(height: 8),
+              const Text('👥 人事', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 3),
+              Text(d.$4, style: const TextStyle(fontSize: 13, height: 1.6)),
+              const SizedBox(height: 8),
+              const Text('⚖️ 吉凶', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 3),
+              Text(d.$5, style: const TextStyle(fontSize: 13)),
             ],
           ]),
         ),

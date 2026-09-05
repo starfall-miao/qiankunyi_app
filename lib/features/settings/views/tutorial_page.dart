@@ -87,6 +87,61 @@ class _P extends StatelessWidget {
   }
 }
 
+/// 落落气泡（可爱俏皮口吻）
+class _LuoLuoCard extends StatelessWidget {
+  final String text;
+  final String mood; // 表情
+  const _LuoLuoCard(this.text, {this.mood = '🌸'});
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.primary.withAlpha(12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: scheme.primary.withAlpha(50), width: 1.2),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: scheme.primary.withAlpha(25),
+              shape: BoxShape.circle,
+            ),
+            child: Text(mood, style: const TextStyle(fontSize: 20)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('落落说：',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: scheme.primary)),
+                const SizedBox(height: 3),
+                Text(text,
+                    style: TextStyle(
+                        fontSize: 12.5,
+                        height: 1.7,
+                        color: scheme.onSurface.withAlpha(210))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// 提示框（重要/示例）
 class _Tip extends StatelessWidget {
   final String text;
@@ -262,6 +317,8 @@ class _ZhouYiTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _ScrollBody([
+      const _LuoLuoCard('欢迎来到周易小课堂呀～落落带你三分钟入门！✨
+咱们先记住一句话：周易就是讲"变化"的学问，阴阳一换、八卦一摆，天地万物的规律就藏在这六十四卦里啦。放轻松，跟着落落慢慢看～', mood: '📜'),
       const _H('📜 周易是什么'),
       const _P('《周易》又称《易经》，是中国最古老的经典之一，被尊为"群经之首、大道之源"。'
           '它以阴阳八卦为基础，通过六十四卦的卦象与卦辞爻辞，阐释天地万物的变化规律，'
@@ -302,6 +359,11 @@ class _LiuYaoTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _ScrollBody([
+      const _LuoLuoCard('排六爻一点也不难哦！落落手把手教你：
+① 摇卦前先在心里默念你想问的事（比如"我这工作能不能成呀"）
+② 摇六次铜钱，从下往上记，动爻最特殊！
+③ 排出来之后看世应、六亲、空亡，再点开卦象看详解～
+跟着步骤走，包你第一次就排得像模像样！🎉', mood: '🔮'),
       const _H('🪙 六爻占卜教程'),
       const _P('六爻（六爻纳甲）以三枚铜钱摇动成卦，通过"装卦"（安世应、配六亲、纳甲、装六神）'
           '对卦象进行解读。是民间最流行的占卜法之一。'),
@@ -366,6 +428,9 @@ class _MeiHuaTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _ScrollBody([
+      const _LuoLuoCard('梅花易数是落落最喜欢的玩法啦，因为它超级方便！💮
+随手报几个数字、看一眼时间，甚至听到鸟叫都能起卦，"以数起卦、以象断事"，特别适合生活里的小问题～
+不会也没关系，跟着下面的步骤，三个数字就能起卦！', mood: '🌸'),
       const _H('🌸 梅花易数教程'),
       const _P('梅花易数相传为北宋邵雍（康节）所创。其法"以数起卦、以象断事"，'
           '简便灵活，随时随地可起卦，是初学者最易入门的占卜法。'),
@@ -411,6 +476,9 @@ class _BaZiTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _ScrollBody([
+      const _LuoLuoCard('想知道自己的命盘长啥样吗？落落来帮你！🌟
+八字嘛，就是"出生时间+天干地支"的组合，年柱、月柱、日柱、时柱四柱凑齐。填好出生信息点排盘，五行旺衰、十神关系全都有～
+先看日主（日柱天干）是什么，再看它旺不旺，这是入门第一步哦！', mood: '🐣'),
       const _H('📜 八字命理教程'),
       const _P('八字（四柱）以人出生的年、月、日、时四柱干支推算命运。'
           '日柱天干为"日主"（代表自己），是论命的核心。'),
@@ -465,6 +533,8 @@ class _QuickRefTab extends StatelessWidget {
       '水': Color(0xFF1565C0),
     };
     return _ScrollBody([
+      const _LuoLuoCard('速查卡是落落的小宝库！🧮
+天干地支的五行、六亲、纳甲装卦……排盘时突然忘了哪个，来这里一翻就有，比翻书快多啦！建议收藏慢慢看～', mood: '🗂️'),
       const _H('⚡ 五行速查卡'),
       _WxCard('木', wxColors['木']!, '天干：甲乙；地支：寅卯；方位：东；季节：春。'
           '性情：仁、直、生长。旺相时曲直向上，休囚则弯曲。'),
