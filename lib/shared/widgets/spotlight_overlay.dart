@@ -57,6 +57,10 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> {
 
     return Stack(
       children: [
+        // 底部拦截层：阻止用户操作背后内容（引导期间锁定界面）
+        Positioned.fill(
+          child: ModalBarrier(dismissible: false, color: Colors.transparent),
+        ),
         // 遮罩 + 聚光灯挖空
         Positioned.fill(
           child: IgnorePointer(
