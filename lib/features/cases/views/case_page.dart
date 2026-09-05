@@ -1940,9 +1940,12 @@ class _AiChatSectionState extends State<_AiChatSection> {
           jsonDecode(widget.caseModel.paipanData) as Map<String, dynamic>);
       cnInfo = _buildPaipanTextCN(r);
     } catch (_) {
-      // 旧数据解析失败时降级为标题信息
-      cnInfo = '卦名：${widget.caseModel.guaName}（${widget.caseModel.guaGong}宫）\n'
-          '起卦方式：${widget.caseModel.method}';
+      // 小六壬/大六壬等自定义排盘：用摘要作为 AI 上下文
+      final custom = _customPaipanText(widget.caseModel.paipanData);
+      cnInfo = custom.isNotEmpty
+          ? custom
+          : '卦名：${widget.caseModel.guaName}（${widget.caseModel.guaGong}宫）\n'
+              '起卦方式：${widget.caseModel.method}';
     }
     return AiService().buildJieGuaPrompt(cnInfo);
   }
@@ -3611,8 +3614,33 @@ class _AiChatScreenshotTemplate extends StatelessWidget {
       ];
       return buf.join('　');
     } catch (_) {
-      return '';
+      // 小六壬/大六壬等自定义排盘：解析 JSON 生成摘要供 AI 解卦
+      return _customPaipanText(caseModel.paipanData);
     }
+  }
+
+  /// 小六壬/大六壬自定义排盘摘要（AI 解卦上下文）
+  String _customPaipanText(String? paipanData) {
+    if (paipanData == null || paipanData.isEmpty) return '';
+    try {
+      final map = jsonDecode(paipanData) as Map<String, dynamic>;
+      if (map.containsKey('xiaoLiuRen')) {
+        final r = map['xiaoLiuRen'] as Map<String, dynamic>;
+        final pos = r['resultPos'] as int? ?? 0;
+        const names = ['大安', '留连', '速喜', '赤口', '小吉', '空亡'];
+        final name = pos >= 0 && pos < names.length ? names[pos] : '?';
+        return '小六壬：落位${name}　起课${r['month'] ?? '?'}月${r['day'] ?? '?'}日'
+            '　${r['method'] ?? ''}';
+      }
+      if (map.containsKey('daLiuRen')) {
+        final r = map['daLiuRen'] as Map<String, dynamic>;
+        final siKe = (r['siKe'] as List?)?.join('、') ?? '';
+        final shiYong = (r['shiYong'] as List?)?.join('→') ?? '';
+        return '大六壬：四课${siKe}　三传${shiYong}　'
+            '贵人临${r['guiRen'] ?? ''}　月将${r['yueJiangZhi'] ?? ''}';
+      }
+    } catch (_) {}
+    return '';
   }
 
   @override
