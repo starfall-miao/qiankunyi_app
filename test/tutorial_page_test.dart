@@ -14,6 +14,8 @@ void main() {
     expect(find.text('六爻'), findsOneWidget);
     expect(find.text('梅花'), findsOneWidget);
     expect(find.text('八字'), findsOneWidget);
+    expect(find.text('小六壬'), findsOneWidget);
+    expect(find.text('大六壬'), findsOneWidget);
     expect(find.text('速查卡'), findsOneWidget);
 
     // 切换到六爻 Tab，落落导语仍在
