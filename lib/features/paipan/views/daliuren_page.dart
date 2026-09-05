@@ -370,13 +370,8 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
             const ranges = ['23-01', '01-03', '03-05', '05-07', '07-09', '09-11',
                             '11-13', '13-15', '15-17', '17-19', '19-21', '21-23'];
             return ChoiceChip(
-              label: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(_hours[i], style: TextStyle(fontSize: 11, color: sel ? p : t)),
-                  Text(ranges[i], style: TextStyle(fontSize: 8, color: sel ? p.withAlpha(180) : t.withAlpha(120))),
-                ],
-              ),
+              label: Text('${_hours[i].replaceAll('时', '')} ${ranges[i]}',
+                  style: TextStyle(fontSize: 10.5, color: sel ? p : t)),
               selected: sel,
               onSelected: (_) => setState(() => _hour = i),
               selectedColor: p.withAlpha(40),
