@@ -1595,14 +1595,14 @@ class _CasePageState extends State<CasePage> {
               Text('统计概要', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: theme.colorScheme.primary)),
             ]),
             const SizedBox(height: 10),
-            Row(
+            // 方法统计用 Wrap，避免多方法时横向溢出屏幕
+            Wrap(
+              spacing: 16,
+              runSpacing: 8,
               children: [
                 _statItem(theme, '共 $total 例', Icons.bookmark, null),
-                const SizedBox(width: 16),
-                ...methodCounts.entries.map((e) => Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: _statItem(theme, '${e.value}例', null, e.key),
-                )),
+                ...methodCounts.entries.map((e) =>
+                    _statItem(theme, '${e.key} ${e.value}例', null, null)),
               ],
             ),
             if (top3.isNotEmpty) ...[

@@ -182,6 +182,30 @@ class _GuaCiTabState extends State<_GuaCiTab> {
 
     return Column(
       children: [
+        // 搜索框
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: TextField(
+            controller: _searchCtrl,
+            decoration: InputDecoration(
+              hintText: '搜索卦名…',
+              prefixIcon: const Icon(Icons.search, size: 18),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 16),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              isDense: true,
+            ),
+            onChanged: (v) => setState(() => _searchQuery = v),
+          ),
+        ),
         Container(
           height: 48,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -207,30 +231,6 @@ class _GuaCiTabState extends State<_GuaCiTab> {
                 ),
               );
             }).toList(),
-          ),
-        ),
-        // 搜索框
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: TextField(
-            controller: _searchCtrl,
-            decoration: InputDecoration(
-              hintText: '搜索卦名…',
-              prefixIcon: const Icon(Icons.search, size: 18),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 16),
-                      onPressed: () {
-                        _searchCtrl.clear();
-                        setState(() => _searchQuery = '');
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              isDense: true,
-            ),
-            onChanged: (v) => setState(() => _searchQuery = v),
           ),
         ),
         Expanded(
