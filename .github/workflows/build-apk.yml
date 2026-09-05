@@ -252,6 +252,13 @@ jobs:
           name: android-debug-apk
           path: release/
 
+      # iOS 自签名 ipa（ios job 生成）
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: ios-ipa
+          path: release/
+
       - name: 打包桌面端产物
         run: |
           mkdir -p release/desktop
@@ -280,14 +287,15 @@ jobs:
 
           ### 📦 包含的构建产物
           - 📱 Android Release APK（已签名）
+          - 📲 iOS 自签名 ipa（可 sideload 安装）
           - 🪟 Windows 桌面版
           - 🐧 Linux 桌面版
           - 🍎 macOS 桌面版
-          - 📲 iOS Debug（模拟器）
 
           ### ⚠️ 注意事项
           - 这是测试版本，可能存在不稳定因素
           - Android APK 已使用自签名证书签名
+          - iOS ipa 为自签名（ad-hoc），设备安装后需在"设置→通用→VPN与设备管理"信任开发者
           - 桌面版为 ZIP 压缩包，解压即可运行
           RELEASENOTES
 
@@ -313,6 +321,7 @@ jobs:
           prerelease: true
           files: |
             release/*.apk
+            release/*.ipa
             release/desktop/*.zip
           fail_on_unmatched_files: false
           # 上传大文件时避免 Headers Timeout（此前 app-release.apk 上传失败）
