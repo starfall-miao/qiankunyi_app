@@ -698,7 +698,7 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('$label $zhi·${g.$1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: gc)),
         const SizedBox(width: 8),
-        Expanded(child: Text('$g.$3', style: TextStyle(fontSize: 11, height: 1.4, color: t.withAlpha(180)))),
+        Expanded(child: Text(g.$3, style: TextStyle(fontSize: 11, height: 1.4, color: t.withAlpha(180)))),
       ]),
     );
   }
