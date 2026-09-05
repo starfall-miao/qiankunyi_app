@@ -202,7 +202,7 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
                 child: Row(children: [
                   Icon(Icons.calendar_today_outlined, size: 18, color: p),
                   const SizedBox(width: 10),
-                  Text('${_month}月${_day}日',
+                  Text('$_month月$_day日',
                       style: TextStyle(fontSize: 15, color: t)),
                   const Spacer(),
                   Icon(Icons.arrow_drop_down, color: t.withAlpha(120)),
