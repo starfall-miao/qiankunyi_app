@@ -1937,6 +1937,28 @@ class _BaziPageState extends State<BaziPage> {
           ),
           const SizedBox(height: 12),
 
+          // ── 胎元（月干+1、月支+3，安命之本） ──
+          _sectionHeader(p, '胎元'),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+            decoration: BoxDecoration(
+              color: dark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: b.withAlpha(60)),
+            ),
+            child: Row(children: [
+              const Icon(Icons.child_care_outlined, size: 16, color: Colors.teal),
+              const SizedBox(width: 8),
+              Text('胎元：', style: TextStyle(fontSize: 13, color: t)),
+              Text(_calcTaiYuan(r),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.teal)),
+              const SizedBox(width: 8),
+              Text('（月柱顺推：干+1、支+3）',
+                  style: TextStyle(fontSize: 10, color: t.withAlpha(120))),
+            ]),
+          ),
+          const SizedBox(height: 12),
+
           // ── 旬空（空亡） ──
           if (r.kongWang.isNotEmpty) ...[
             _sectionHeader(p, '旬空'),
@@ -2446,8 +2468,19 @@ class _BaziPageState extends State<BaziPage> {
   }
 
   /// 区域标题
-  Widget _sectionHeader(Color p, String title) {
-    return Padding(
+  /// 胎元：月柱天干顺推1位、地支顺推3位（安命之本，反映先天禀赋）
+  String _calcTaiYuan(BaziResult r) {
+    const gan = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+    const zhi = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+    final monthGan = r.monthGan;
+    final monthZhi = r.monthZhi;
+    final gi = gan.indexOf(monthGan);
+    final zi = zhi.indexOf(monthZhi);
+    if (gi < 0 || zi < 0) return '—';
+    return '${gan[(gi + 1) % 10]}${zhi[(zi + 3) % 12]}';
+  }
+
+  Widget _sectionHeader(Color p, String title) {    return Padding(
       padding: const EdgeInsets.only(bottom: 6, top: 2),
       child: Text(title,
           style: TextStyle(
