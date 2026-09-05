@@ -437,32 +437,6 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
                   ]),
                 ),
                 const SizedBox(height: 8),
-                // 贵人与十二天将排布
-                Text('贵人与天将', style: TextStyle(fontSize: 13, color: t.withAlpha(150))),
-                const SizedBox(height: 6),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: bg,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: b.withAlpha(80)),
-                  ),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('贵人临 ${_result!.guiRen}（${_hours[_result!.hourIndex]} ${
-                        _result!.hourIndex < 6 ? "昼·阳贵" : "夜·阴贵"}）',
-                        style: const TextStyle(fontSize: 11.5)),
-                    const SizedBox(height: 6),
-                    // 只展示三传对应天将（不凑数）
-                    Text('三传天将：${_chuanTianJiang('初传', _result!.chuChuan, _result!)}　'
-                        '${_chuanTianJiang('中传', _result!.zhongChuan, _result!)}　'
-                        '${_chuanTianJiang('末传', _result!.moChuan, _result!)}',
-                        style: const TextStyle(fontSize: 11.5, height: 1.5)),
-                    const SizedBox(height: 4),
-                    Text('（天将随贵人支顺布，此处仅列三传所临天将，详见详解）',
-                        style: TextStyle(fontSize: 10, color: t.withAlpha(110))),
-                  ]),
-                ),
                 const SizedBox(height: 8),
                 Text('四课（一课日阳 · 二课日阴 · 三课辰阳 · 四课辰阴）',
                     style: TextStyle(fontSize: 12.5, color: t.withAlpha(150))),
@@ -507,6 +481,33 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
                   const SizedBox(height: 4),
                   _chuanGeneral('末传', _result!.moChuan, _result!, t),
                 ]),
+                const SizedBox(height: 8),
+                // 贵人与十二天将排布
+                Text('贵人与天将', style: TextStyle(fontSize: 13, color: t.withAlpha(150))),
+                const SizedBox(height: 6),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: bg,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: b.withAlpha(80)),
+                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('贵人临 ${_result!.guiRen}（${_hours[_result!.hourIndex]} ${
+                        _result!.hourIndex < 6 ? "昼·阳贵" : "夜·阴贵"}）',
+                        style: const TextStyle(fontSize: 11.5)),
+                    const SizedBox(height: 6),
+                    // 只展示三传对应天将（不凑数）
+                    Text('三传天将：${_chuanTianJiang('初传', _result!.chuChuan, _result!)}　'
+                        '${_chuanTianJiang('中传', _result!.zhongChuan, _result!)}　'
+                        '${_chuanTianJiang('末传', _result!.moChuan, _result!)}',
+                        style: const TextStyle(fontSize: 11.5, height: 1.5)),
+                    const SizedBox(height: 4),
+                    Text('（天将随贵人支顺布，此处仅列三传所临天将，详见详解）',
+                        style: TextStyle(fontSize: 10, color: t.withAlpha(110))),
+                  ]),
+                ),
               ]),
             ),
           ),
