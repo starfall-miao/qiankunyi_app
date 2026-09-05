@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import '../../../shared/widgets/save_image_dialog.dart';
 
+import '../../calendar/views/calendar_picker_dialog.dart';
 import '../../cases/providers/case_provider.dart';
 import '../../cases/models/case_models.dart';
 import '../engines/xiaoliuren_engine.dart';
@@ -177,19 +178,59 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
           ),
           const SizedBox(height: 12),
 
-          // 月日时输入（ChoiceChip 风格，与六爻梅花一致）
+          // 日期选择 + 时辰（与六爻梅花一致的时间选择器）
           if (_method == 0) ...[
-            Text('月份', style: TextStyle(fontSize: 12, color: t.withAlpha(150))),
+            // 日期选择
+            InkWell(
+              onTap: () async {
+                final picked = await showDialog<DateTime>(
+                  context: context,
+                  builder: (_) => const CalendarPickerDialog(),
+                );
+                if (picked != null && mounted) {
+                  setState(() {
+                    _month = picked.month;
+                    _day = picked.day;
+                  });
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: b.withAlpha(80)),
+                ),
+                child: Row(children: [
+                  Icon(Icons.calendar_today_outlined, size: 18, color: p),
+                  const SizedBox(width: 10),
+                  Text('${_month}月${_day}日',
+                      style: TextStyle(fontSize: 15, color: t)),
+                  const Spacer(),
+                  Icon(Icons.arrow_drop_down, color: t.withAlpha(120)),
+                ]),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text('时辰', style: TextStyle(fontSize: 12, color: t.withAlpha(150))),
             const SizedBox(height: 6),
             Wrap(
               spacing: 4,
               runSpacing: 4,
               children: List.generate(12, (i) {
-                final sel = _month == i + 1;
+                final sel = _hour == i;
+                const ranges = ['23-01', '01-03', '03-05', '05-07', '07-09', '09-11',
+                                '11-13', '13-15', '15-17', '17-19', '19-21', '21-23'];
                 return ChoiceChip(
-                  label: Text(_months[i], style: TextStyle(fontSize: 11, color: sel ? p : t)),
+                  label: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_hours[i], style: TextStyle(fontSize: 11, color: sel ? p : t)),
+                      Text(ranges[i], style: TextStyle(fontSize: 8, color: sel ? p.withAlpha(180) : t.withAlpha(120))),
+                    ],
+                  ),
                   selected: sel,
-                  onSelected: (_) => setState(() => _month = i + 1),
+                  onSelected: (_) => setState(() => _hour = i),
                   selectedColor: p.withAlpha(40),
                   backgroundColor: bg,
                   side: BorderSide(color: sel ? p : b, width: 1),
@@ -198,12 +239,6 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
                 );
               }),
             ),
-            const SizedBox(height: 10),
-            Row(children: [
-              Expanded(child: _select('日期', _day, List.generate(30, (i) => '${i + 1}日'), (v) => setState(() => _day = v + 1))),
-              const SizedBox(width: 8),
-              Expanded(child: _select('时辰', _hour, _hours, (v) => setState(() => _hour = v))),
-            ]),
           ] else if (_method == 2) ...[
             Row(children: [
               Expanded(child: TextField(controller: _n1, decoration: const InputDecoration(labelText: '数一', isDense: true), keyboardType: TextInputType.number)),
