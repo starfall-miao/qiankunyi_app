@@ -33,5 +33,25 @@ void main() {
       expect(r.resultPos, 0);
       expect(r.resultPalm.name, '大安');
     });
+
+    test('三月十五辰时：月速喜(2)，日小吉(4)，时顺4回速喜(2)', () {
+      final r = XiaoLiuRenEngine.byMonthDayHour(3, 15, 4);
+      expect(r.monthPos, 2);   // 三月 → 速喜
+      expect(r.dayPos, 4);     // (2+14)%6 → 小吉
+      expect(r.resultPos, 2);  // (4+4)%6 → 速喜
+      expect(r.resultPalm.name, '速喜');
+    });
+
+    test('随机起课结果在六掌诀范围内', () {
+      final r = XiaoLiuRenEngine.random();
+      expect(r.resultPos, inInclusiveRange(0, 5));
+      expect(xiaoliurenPalms[r.resultPos].name, r.resultPalm.name);
+    });
+
+    test('吉凶标签为吉或凶', () {
+      for (final p in xiaoliurenPalms) {
+        expect(['吉', '凶'], contains(p.goodBad));
+      }
+    });
   });
 }

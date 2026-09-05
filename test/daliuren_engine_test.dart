@@ -32,5 +32,27 @@ void main() {
       // 四课（日支下神）= 子
       expect(r.siKe[3], '子');
     });
+
+    test('三传自日干上神起（符合人工排盘）', () {
+      final r = DaLiuRenEngine.byHour(0, 1, dayGan: '甲', dayZhi: '子');
+      // 初传 = 一课（日干上神）
+      expect(r.chuChuan, r.siKe[0]);
+      // 中/末传为十二支
+      expect(daliurenZhi, contains(r.zhongChuan));
+      expect(daliurenZhi, contains(r.moChuan));
+    });
+
+    test('天盘长度为12且含月将地支', () {
+      final r = DaLiuRenEngine.byHour(6, 3);
+      expect(r.tianPan.length, 12);
+      expect(r.tianPan, contains(r.yueJiangZhi));
+    });
+
+    test('十二天将按贵人支顺布（贵人临位为贵人）', () {
+      final r = DaLiuRenEngine.byHour(0, 1, dayGan: '甲', dayZhi: '子');
+      final guiIdx = daliurenZhi.indexOf(r.guiRen);
+      // 贵人所在支对应天将 = 贵人
+      expect(r.tianJiang[guiIdx], '贵人');
+    });
   });
 }
