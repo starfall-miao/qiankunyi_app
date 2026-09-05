@@ -368,6 +368,17 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
         child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // 大标题（保存图片/分享更醒目）
+          Row(children: [
+            Icon(Icons.back_hand_outlined, size: 16, color: p),
+            const SizedBox(width: 6),
+            Text('小六壬排盘',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: p)),
+            const Spacer(),
+            Text('$_year年$_month月$_day日',
+                style: TextStyle(fontSize: 11, color: t.withAlpha(140))),
+          ]),
+          const SizedBox(height: 8),
           Row(children: [
             Text('最终落位：', style: TextStyle(fontSize: 14, color: t.withAlpha(150))),
             Text('${palm.name}（${palm.goodBad}）',
