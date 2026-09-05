@@ -175,7 +175,9 @@ class DaLiuRenPage extends StatefulWidget {
 }
 
 class _DaLiuRenPageState extends State<DaLiuRenPage> {
-  int _month = 1;
+  int _year = DateTime.now().year;
+  int _month = DateTime.now().month;
+  int _day = DateTime.now().day;
   int _hour = 0;
   int _dayGan = 0; // 甲
   int _dayZhi = 0; // 子
@@ -199,13 +201,14 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
     final g = gz.isNotEmpty ? gz[0] : '甲';
     final zhi = gz.length > 1 ? gz[1] : '子';
     setState(() {
+      _year = picked.year;
       _month = picked.month;
+      _day = picked.day;
       _dayGan = _ganCN.indexOf(g);
       if (_dayGan < 0) _dayGan = 0;
       _dayZhi = daliurenZhi.indexOf(zhi);
       if (_dayZhi < 0) _dayZhi = 0;
     });
-    _calc();
   }
 
   void _useNow() {    final now = DateTime.now();
@@ -217,14 +220,15 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
     final g = gz.isNotEmpty ? gz[0] : '甲';
     final zhi = gz.length > 1 ? gz[1] : '子';
     setState(() {
+      _year = now.year;
       _month = now.month;
+      _day = now.day;
       _hour = hourIdx;
       _dayGan = _ganCN.indexOf(g);
       if (_dayGan < 0) _dayGan = 0;
       _dayZhi = daliurenZhi.indexOf(zhi);
       if (_dayZhi < 0) _dayZhi = 0;
     });
-    _calc();
   }
 
   void _calc() {
@@ -259,37 +263,42 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-        // 日期选择（选日期自动定月/日干支/时辰提示）
+        // 使用当前时间（只填入数据，不自动排盘）
         Align(
           alignment: Alignment.centerLeft,
-          child: Row(children: [
-            Expanded(
-              child: TextButton.icon(
-                onPressed: _useNow,
-                icon: const Icon(Icons.schedule, size: 16),
-                label: const Text('使用当前时间', style: TextStyle(fontSize: 13)),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              ),
+          child: TextButton.icon(
+            onPressed: _useNow,
+            icon: const Icon(Icons.schedule, size: 16),
+            label: const Text('使用当前时间', style: TextStyle(fontSize: 13)),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            Expanded(
-              child: TextButton.icon(
-                onPressed: _pickDate,
-                icon: const Icon(Icons.calendar_today_outlined, size: 15),
-                label: const Text('选择日期', style: TextStyle(fontSize: 13)),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              ),
-            ),
-          ]),
+          ),
         ),
         const SizedBox(height: 4),
+        // 日期选择（与小六壬一致的样式）
+        InkWell(
+          onTap: _pickDate,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: b.withAlpha(80)),
+            ),
+            child: Row(children: [
+              Icon(Icons.calendar_today_outlined, size: 18, color: p),
+              const SizedBox(width: 10),
+              Text('$_year年$_month月$_day日',
+                  style: TextStyle(fontSize: 15, color: t)),
+              const Spacer(),
+              Icon(Icons.arrow_drop_down, color: t.withAlpha(120)),
+            ]),
+          ),
+        ),
+        const SizedBox(height: 10),
         // 日干支选择
         Text('日干支（定四课）', style: TextStyle(fontSize: 12, color: t.withAlpha(150))),
         const SizedBox(height: 6),

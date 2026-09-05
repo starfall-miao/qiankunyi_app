@@ -20,12 +20,13 @@ class XiaoLiuRenPage extends StatefulWidget {
 
 class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
   int _method = 0; // 0月日时 1随机 2数字
-  int _month = 1;
-  int _day = 1;
+  int _year = DateTime.now().year;
+  int _month = DateTime.now().month;
+  int _day = DateTime.now().day;
   int _hour = 0;
-  final _n1 = TextEditingController(text: '3');
-  final _n2 = TextEditingController(text: '5');
-  final _n3 = TextEditingController(text: '7');
+  final _n1 = TextEditingController();
+  final _n2 = TextEditingController();
+  final _n3 = TextEditingController();
   XiaoLiuRenResult? _result;
   final _shotKey = GlobalKey();
 
@@ -54,9 +55,27 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
         r = XiaoLiuRenEngine.random();
         break;
       default:
-        final n1 = int.tryParse(_n1.text) ?? 1;
-        final n2 = int.tryParse(_n2.text) ?? 1;
-        final n3 = int.tryParse(_n3.text) ?? 1;
+        // 数字起课：用户未填时提示，不默认取数
+        final n1t = _n1.text.trim();
+        final n2t = _n2.text.trim();
+        final n3t = _n3.text.trim();
+        if (n1t.isEmpty || n2t.isEmpty || n3t.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('请填写三个数字后再排盘（数一/数二/数三）'),
+                duration: Duration(seconds: 2)),
+          );
+          return;
+        }
+        final n1 = int.tryParse(n1t) ?? 0;
+        final n2 = int.tryParse(n2t) ?? 0;
+        final n3 = int.tryParse(n3t) ?? 0;
+        if (n1 == 0 || n2 == 0 || n3 == 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('请输入有效的正整数（不能为 0）'),
+                duration: Duration(seconds: 2)),
+          );
+          return;
+        }
         r = XiaoLiuRenEngine.byNumbers(n1, n2, n3);
     }
     setState(() => _result = r);
@@ -178,6 +197,28 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
 
           // 日期选择 + 时辰（与六爻梅花一致的时间选择器）
           if (_method == 0) ...[
+            // 使用当前时间
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => setState(() {
+                  final now = DateTime.now();
+                  _year = now.year;
+                  _month = now.month;
+                  _day = now.day;
+                  _hour = (now.hour == 23 || now.hour == 0)
+                      ? 0
+                      : ((now.hour + 1) ~/ 2) % 12;
+                }),
+                icon: const Icon(Icons.schedule, size: 16),
+                label: const Text('使用当前时间', style: TextStyle(fontSize: 13)),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ),
             // 日期选择
             InkWell(
               onTap: () async {
@@ -187,6 +228,7 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
                 );
                 if (picked != null && mounted) {
                   setState(() {
+                    _year = picked.year;
                     _month = picked.month;
                     _day = picked.day;
                   });
@@ -202,7 +244,7 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
                 child: Row(children: [
                   Icon(Icons.calendar_today_outlined, size: 18, color: p),
                   const SizedBox(width: 10),
-                  Text('$_month月$_day日',
+                  Text('$_year年$_month月$_day日',
                       style: TextStyle(fontSize: 15, color: t)),
                   const Spacer(),
                   Icon(Icons.arrow_drop_down, color: t.withAlpha(120)),
@@ -239,11 +281,11 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
             ),
           ] else if (_method == 2) ...[
             Row(children: [
-              Expanded(child: TextField(controller: _n1, decoration: const InputDecoration(labelText: '数一', isDense: true), keyboardType: TextInputType.number)),
+              Expanded(child: TextField(controller: _n1, decoration: const InputDecoration(labelText: '数一', hintText: '请输入', isDense: true), keyboardType: TextInputType.number)),
               const SizedBox(width: 8),
-              Expanded(child: TextField(controller: _n2, decoration: const InputDecoration(labelText: '数二', isDense: true), keyboardType: TextInputType.number)),
+              Expanded(child: TextField(controller: _n2, decoration: const InputDecoration(labelText: '数二', hintText: '请输入', isDense: true), keyboardType: TextInputType.number)),
               const SizedBox(width: 8),
-              Expanded(child: TextField(controller: _n3, decoration: const InputDecoration(labelText: '数三', isDense: true), keyboardType: TextInputType.number)),
+              Expanded(child: TextField(controller: _n3, decoration: const InputDecoration(labelText: '数三', hintText: '请输入', isDense: true), keyboardType: TextInputType.number)),
             ]),
           ],
 
