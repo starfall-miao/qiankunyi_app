@@ -89,13 +89,14 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> {
               child: const Text('👆', style: TextStyle(fontSize: 28)),
             ),
           ),
-        // 说明气泡（目标下方）
-        if (rect != null)
-          Positioned(
-            left: 12,
-            right: 12,
-            bottom: MediaQuery.of(context).padding.bottom + 120,
-            child: Card(
+        // 说明气泡（始终显示：有目标在目标下方，无目标居中，确保可操作）
+        Positioned(
+          left: 12,
+          right: 12,
+          bottom: rect != null
+              ? MediaQuery.of(context).padding.bottom + 120
+              : MediaQuery.of(context).padding.bottom + 48,
+          child: Card(
               elevation: 8,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
