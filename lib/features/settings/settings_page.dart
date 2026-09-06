@@ -12,6 +12,13 @@ import '../../core/theme/theme_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/logger.dart';
 import 'settings_provider.dart';
+
+/// 默认 AI 系统提示词（设置页预览/编辑预填用，与解卦时默认一致）
+const kDefaultPromptTemplate = '你是六爻/梅花解卦专家。'
+    '直接分析卦象即可，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式。'
+    '正式结果要详细清晰有条理，直接输出全文，不要附加任何包裹标记；'
+    '各爻逐行输出（初爻：…／二爻：…）；不同要点换行，禁止挤在一行。'
+    '若为小六壬/大六壬盘面，按对应术数规则解读（掌诀吉凶/四课三传天将）。';
 import 'views/about_page.dart';
 import 'views/compass_page.dart';
 import '../onboarding/views/onboarding_page.dart';
@@ -29,6 +36,8 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   final _log = Logger.instance;
+  // 模型管理：添加模型输入框（自由增删）
+  final _modelAddCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -895,12 +904,11 @@ class _SettingsPageState extends State<SettingsPage> {
           Consumer<SettingsProvider>(
             builder: (ctx, sp, _) {
               final prompt = sp.aiSystemPrompt;
-              // 默认也显示：未自定义时展示默认模板说明
-              final displayText = prompt.isEmpty
-                  ? '（未自定义）默认使用内置模板：让 AI 扮演六爻/梅花/八字解卦专家，'
-                      '结合卦象/命盘、占问对象与事件、用户画像进行针对性分析并给出建议。\n'
-                      '点击下方"编辑提示词模板"可自定义。'
-                  : (prompt.length > 120 ? '${prompt.substring(0, 120)}…' : prompt);
+              // 默认展示实际模板全文（未自定义时展示内置默认模板），可点击编辑
+              final effective = prompt.isEmpty ? kDefaultPromptTemplate : prompt;
+              final displayText = effective.length > 200
+                  ? '${effective.substring(0, 200)}…'
+                  : effective;
               return InkWell(
                 onTap: () => _editPromptTemplate(context, sp),
                 child: Container(
@@ -1015,7 +1023,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
   /// 编辑 AI 提示词模板（多行文本）
   void _editPromptTemplate(BuildContext context, SettingsProvider sp) {
-    final ctrl = TextEditingController(text: sp.aiSystemPrompt);
+    // 未自定义时预填默认模板，用户可在此基础上修改
+    final ctrl = TextEditingController(
+        text: sp.aiSystemPrompt.isEmpty ? kDefaultPromptTemplate : sp.aiSystemPrompt);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1026,7 +1036,7 @@ class _SettingsPageState extends State<SettingsPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('自定义 AI 系统提示词，留空使用内置默认模板（已调优）。',
+              Text('已预填当前模板，可直接修改；保存后解卦将使用自定义提示词。',
                   style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(180))),
               const SizedBox(height: 8),
               TextField(
@@ -1077,7 +1087,90 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   /// 模型选择弹窗（使用当前提供商的推荐模型列表 + 自定义）
+  /// 模型 chips（可点选 + 可删除），自由增删
+  List<Widget> _editableModelsEntry(
+      BuildContext ctx, SettingsProvider sp, List<String> models) {
+    final theme2 = Theme.of(ctx);
+    return models.map((m) {
+      final sel = sp.effectiveAiModel == m;
+      return InputChip(
+        label: Text(m,
+            style: TextStyle(
+                fontSize: 13, color: sel ? theme2.colorScheme.primary : null)),
+        selected: sel,
+        visualDensity: VisualDensity.compact,
+        onSelected: (_) {
+          sp.aiCustomModel = '';
+          sp.aiModel = m;
+          Navigator.pop(ctx);
+        },
+        onDeleted: () => _deleteModelInline(sp, models, m),
+      );
+    }).toList();
+  }
+
+  /// 添加模型到当前提供商
+  void _addModelInline(
+      BuildContext ctx, SettingsProvider sp, List<String> models) {
+    final m = _modelAddCtrl.text.trim();
+    if (m.isEmpty) return;
+    final merged = <String>[...models, m];
+    _modelAddCtrl.clear();
+    final p = sp.currentProvider;
+    if (p != null) {
+      if (p.builtin) {
+        sp.setProviderModels(p.name, merged);
+      } else {
+        sp.updateCustomProvider(
+            sp.aiProviders.indexOf(p),
+            AiProviderPreset(
+              name: p.name,
+              endpoint: p.endpoint,
+              apiKey: p.apiKey,
+              model: p.model,
+              models: merged,
+            ));
+      }
+    }
+    setState(() {});
+    // 选中新模型
+    sp.aiCustomModel = '';
+    sp.aiModel = m;
+  }
+
+  /// 删除当前提供商的某个模型
+  void _deleteModelInline(SettingsProvider sp, List<String> models, String m) {
+    final merged = models.where((x) => x != m).toList();
+    final p = sp.currentProvider;
+    if (p != null) {
+      if (p.builtin) {
+        sp.setProviderModels(p.name, merged);
+      } else {
+        sp.updateCustomProvider(
+            sp.aiProviders.indexOf(p),
+            AiProviderPreset(
+              name: p.name,
+              endpoint: p.endpoint,
+              apiKey: p.apiKey,
+              model: p.model,
+              models: merged,
+            ));
+      }
+    }
+    setState(() {});
+    // 若删除的是当前选中模型，回退到第一个
+    if (sp.effectiveAiModel == m) {
+      if (merged.isNotEmpty) {
+        sp.aiCustomModel = '';
+        sp.aiModel = merged.first;
+      } else {
+        sp.aiCustomModel = '';
+      }
+    }
+  }
+
   void _selectModelDialog(BuildContext context, SettingsProvider sp) {
+    _modelAddCtrl.clear();
     final currentProvider = sp.currentProvider;
     final models = currentProvider != null
         ? List<String>.from(currentProvider.models)
@@ -1098,19 +1191,34 @@ class _SettingsPageState extends State<SettingsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 当前提供商的推荐模型
-                Text('推荐模型', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                Text('推荐模型（可自由增删）', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: models.map((m) {
-                    final sel = sp.effectiveAiModel == m;
-                    return ChoiceChip(
-                      label: Text(m, style: TextStyle(fontSize: 13, color: sel ? theme2.colorScheme.primary : null)),
-                      selected: sel,
-                      onSelected: (_) { sp.aiCustomModel = ''; sp.aiModel = m; Navigator.pop(ctx); },
-                    );
-                  }).toList(),
+                  children: _editableModelsEntry(ctx, sp, models),
+                ),
+                const SizedBox(height: 8),
+                // 添加模型（可自由添加）
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _modelAddCtrl,
+                        decoration: const InputDecoration(
+                          hintText: '添加模型名，回车或点 +',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                        onSubmitted: (_) => _addModelInline(ctx, sp, models),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: () => _addModelInline(ctx, sp, models),
+                      icon: const Icon(Icons.add_circle_outline),
+                    ),
+                  ],
                 ),
                 const Divider(height: 20),
                 const Text('或自定义模型名', style: TextStyle(fontSize: 12)),
@@ -1244,6 +1352,7 @@ class _ProviderEditDialogState extends State<_ProviderEditDialog> {
     _endpointCtrl.dispose();
     _keyCtrl.dispose();
     _addModelCtrl.dispose();
+    _modelAddCtrl.dispose();
     super.dispose();
   }
 
