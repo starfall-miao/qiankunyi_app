@@ -125,15 +125,6 @@ class SettingsProvider extends ChangeNotifier {
   /// 内置提供商预设（内置免费 Key 源码混淆存储，运行时解码）
   static final List<AiProviderPreset> aiPresets = [
     AiProviderPreset(
-      name: '智谱 GLM（免费）',
-      endpoint: 'https://open.bigmodel.cn/api/paas/v4',
-      apiKey: _decodeKey('PzxvbWNuaGo+OT4+bmM7P2NsYjhvaW9iPj84PGtqbDt0KxAwAzsib28MCxQ3HGM5OA=='),
-      model: 'glm-4.7-flash',
-      models: ['glm-4.7-flash', 'glm-4.7', 'glm-5'],
-      free: true,
-      builtin: true,
-    ),
-    AiProviderPreset(
       name: '商汤日日新（免费）',
       endpoint: 'https://token.sensenova.cn/v1',
       apiKey: _decodeKey('KTF3LQ44PTs5DyoOKggvEClvFxYgaQ8zNzMiaBsUIjwyGSI='),
@@ -143,11 +134,21 @@ class SettingsProvider extends ChangeNotifier {
       builtin: true,
     ),
     AiProviderPreset(
+      name: '智谱 GLM（免费）',
+      endpoint: 'https://open.bigmodel.cn/api/paas/v4',
+      apiKey: _decodeKey('PzxvbWNuaGo+OT4+bmM7P2NsYjhvaW9iPj84PGtqbDt0KxAwAzsib28MCxQ3HGM5OA=='),
+      model: 'glm-4.7-flash',
+      models: ['glm-4.7-flash', 'glm-4.7', 'glm-5'],
+      free: true,
+      builtin: true,
+    ),
+    AiProviderPreset(
       name: 'opencode zen（免费）',
       endpoint: 'https://opencode.ai/zen/v1',
       apiKey: '',
-      model: 'mimo-v2.5-free',
-      models: ['mimo-v2.5-free', 'north-mini-code-free', 'nemotron-3-ultra-free', 'big-pickle'],
+      model: 'deepseek-v4-flash-free',
+      models: ['deepseek-v4-flash-free', 'mimo-v2.5-free', 'nemotron-3-ultra-free',
+               'nemotron-3.5-lightning-free', 'big-pickle'],
       free: true,
       builtin: true,
     ),
