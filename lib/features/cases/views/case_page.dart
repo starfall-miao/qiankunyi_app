@@ -1952,8 +1952,31 @@ class _AiChatSectionState extends State<_AiChatSection> {
 
   /// 把排盘结果格式化为中文文本（复用"复制结果"的格式化逻辑），
   /// 供 AI 解卦提示词使用——避免把英文键的 JSON 原文发给模型。
-  String _buildPaipanTextCN(PaipanResult result) {
-    const wxCN = <WuXing, String>{
+  /// 小六壬/大六壬自定义排盘摘要（AI 解卦上下文）
+  String _customPaipanText(String? paipanData) {
+    if (paipanData == null || paipanData.isEmpty) return '';
+    try {
+      final map = jsonDecode(paipanData) as Map<String, dynamic>;
+      if (map.containsKey('xiaoLiuRen')) {
+        final r = map['xiaoLiuRen'] as Map<String, dynamic>;
+        final pos = r['resultPos'] as int? ?? 0;
+        const names = ['大安', '留连', '速喜', '赤口', '小吉', '空亡'];
+        final name = pos >= 0 && pos < names.length ? names[pos] : '?';
+        return '小六壬：落位$name　起课${r['month'] ?? '?'}月${r['day'] ?? '?'}日'
+            '　${r['method'] ?? ''}';
+      }
+      if (map.containsKey('daLiuRen')) {
+        final r = map['daLiuRen'] as Map<String, dynamic>;
+        final siKe = (r['siKe'] as List?)?.join('、') ?? '';
+        final shiYong = (r['shiYong'] as List?)?.join('→') ?? '';
+        return '大六壬：四课$siKe　三传$shiYong　'
+            '贵人临${r['guiRen'] ?? ''}　月将${r['yueJiangZhi'] ?? ''}';
+      }
+    } catch (_) {}
+    return '';
+  }
+
+  String _buildPaipanTextCN(PaipanResult result) {    const wxCN = <WuXing, String>{
       WuXing.jin: '金', WuXing.mu: '木', WuXing.shui: '水',
       WuXing.huo: '火', WuXing.tu: '土',
     };
@@ -3629,14 +3652,14 @@ class _AiChatScreenshotTemplate extends StatelessWidget {
         final pos = r['resultPos'] as int? ?? 0;
         const names = ['大安', '留连', '速喜', '赤口', '小吉', '空亡'];
         final name = pos >= 0 && pos < names.length ? names[pos] : '?';
-        return '小六壬：落位${name}　起课${r['month'] ?? '?'}月${r['day'] ?? '?'}日'
+        return '小六壬：落位$name　起课${r['month'] ?? '?'}月${r['day'] ?? '?'}日'
             '　${r['method'] ?? ''}';
       }
       if (map.containsKey('daLiuRen')) {
         final r = map['daLiuRen'] as Map<String, dynamic>;
         final siKe = (r['siKe'] as List?)?.join('、') ?? '';
         final shiYong = (r['shiYong'] as List?)?.join('→') ?? '';
-        return '大六壬：四课${siKe}　三传${shiYong}　'
+        return '大六壬：四课$siKe　三传$shiYong　'
             '贵人临${r['guiRen'] ?? ''}　月将${r['yueJiangZhi'] ?? ''}';
       }
     } catch (_) {}

@@ -1499,6 +1499,24 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
 
 }
 /// 八字排盘页面
+/// 十二个月令的司令藏干（各天干司权天数，月令判断旺衰之根本）
+const _yueLingSiLing = <String, String>{
+  '寅': '戊土 7 日 · 丙火 7 日 · 甲木 16 日（立春起）',
+  '卯': '甲木 10 日 · 乙木 20 日（惊蛰起）',
+  '辰': '乙木 9 日 · 癸水 3 日 · 戊土 18 日（清明起）',
+  '巳': '戊土 7 日 · 庚金 7 日 · 丙火 16 日（立夏起）',
+  '午': '丙火 10 日 · 己土 9 日 · 丁火 11 日（芒种起）',
+  '未': '丁火 9 日 · 乙木 3 日 · 己土 18 日（小暑起）',
+  '申': '戊土 7 日 · 壬水 7 日 · 庚金 16 日（立秋起）',
+  '酉': '庚金 10 日 · 辛金 20 日（白露起）',
+  '戌': '辛金 9 日 · 丁火 3 日 · 戊土 18 日（寒露起）',
+  '亥': '戊土 7 日 · 甲木 7 日 · 壬水 16 日（立冬起）',
+  '子': '壬水 10 日 · 癸水 20 日（大雪起）',
+  '丑': '癸水 9 日 · 辛金 3 日 · 己土 18 日（小寒起）',
+};
+
+
+
 class BaziPage extends StatefulWidget {
   const BaziPage({super.key});
 
@@ -2505,28 +2523,12 @@ class _BaziPageState extends State<BaziPage> {
   }
 
   /// 区域标题
-/// 十二个月令的司令藏干（各天干司权天数，月令判断旺衰之根本）
-const _yueLingSiLing = <String, String>{
-  '寅': '戊土 7 日 · 丙火 7 日 · 甲木 16 日（立春起）',
-  '卯': '甲木 10 日 · 乙木 20 日（惊蛰起）',
-  '辰': '乙木 9 日 · 癸水 3 日 · 戊土 18 日（清明起）',
-  '巳': '戊土 7 日 · 庚金 7 日 · 丙火 16 日（立夏起）',
-  '午': '丙火 10 日 · 己土 9 日 · 丁火 11 日（芒种起）',
-  '未': '丁火 9 日 · 乙木 3 日 · 己土 18 日（小暑起）',
-  '申': '戊土 7 日 · 壬水 7 日 · 庚金 16 日（立秋起）',
-  '酉': '庚金 10 日 · 辛金 20 日（白露起）',
-  '戌': '辛金 9 日 · 丁火 3 日 · 戊土 18 日（寒露起）',
-  '亥': '戊土 7 日 · 甲木 7 日 · 壬水 16 日（立冬起）',
-  '子': '壬水 10 日 · 癸水 20 日（大雪起）',
-  '丑': '癸水 9 日 · 辛金 3 日 · 己土 18 日（小寒起）',
-};
-
   /// 胎元：月柱天干顺推1位、地支顺推3位（安命之本，反映先天禀赋）
   String _calcTaiYuan(BaziResult r) {
     const gan = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
     const zhi = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-    final monthGan = r.monthGan;
-    final monthZhi = r.monthZhi;
+    final monthGan = r.monthZhu.tianGan;
+    final monthZhi = r.monthZhu.diZhi;
     final gi = gan.indexOf(monthGan);
     final zi = zhi.indexOf(monthZhi);
     if (gi < 0 || zi < 0) return '—';
