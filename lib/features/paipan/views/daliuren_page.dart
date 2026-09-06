@@ -573,18 +573,75 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
   void _saveCase() {
     final r = _result;
     if (r == null) return;
-    final cm = CaseModel(
-      id: DateTime.now().millisecondsSinceEpoch,
-      title: '大六壬 · ${r.chuChuan}传',
-      guaName: '大六壬',
-      guaGong: r.chuChuan,
-      method: '大六壬（${r.method}）',
-      paipanData: '{"daLiuRen":${_jsonEncode(r)}}',
-      caseType: CaseType.liuyao,
-    );
-    context.read<CaseProvider>().addCase(cm);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('已保存到卦例库')),
+    // 与六爻一致的保存弹窗：可填标题/占问对象/事件/备注
+    final titleCtrl =
+        TextEditingController(text: '大六壬 · ${r.chuChuan}传');
+    final notesCtrl = TextEditingController();
+    final askObjectCtrl = TextEditingController();
+    final askEventCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('保存卦例'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                decoration: const InputDecoration(labelText: '标题', hintText: '为卦例取个名字'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: askObjectCtrl,
+                decoration: const InputDecoration(labelText: '占问对象（可选）', hintText: '如：朋友 / 家人 / 工作 / 房贷'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: askEventCtrl,
+                decoration: const InputDecoration(labelText: '占问事件（可选）', hintText: '如：是否应该换工作'),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: notesCtrl,
+                decoration: const InputDecoration(labelText: '备注（可选）', hintText: '补充说明'),
+                maxLines: 2,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final cm = CaseModel(
+                id: DateTime.now().millisecondsSinceEpoch,
+                title: titleCtrl.text.trim().isEmpty
+                    ? '大六壬 · ${r.chuChuan}传'
+                    : titleCtrl.text.trim(),
+                guaName: '大六壬',
+                guaGong: r.chuChuan,
+                method: '大六壬（${r.method}）',
+                paipanData: '{"daLiuRen":${_jsonEncode(r)}}',
+                askObject: askObjectCtrl.text.trim().isEmpty ? null : askObjectCtrl.text.trim(),
+                askEvent: askEventCtrl.text.trim().isEmpty ? null : askEventCtrl.text.trim(),
+                notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
+                caseType: CaseType.liuyao,
+              );
+              context.read<CaseProvider>().addCase(cm);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('已保存到卦例库')),
+              );
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
     );
   }
 
