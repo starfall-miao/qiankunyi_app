@@ -715,6 +715,36 @@ class _CasePageState extends State<CasePage> {
                       style: TextStyle(fontSize: 13, height: 1.6, color: t)),
                 ),
               ],
+              // 兜底：result/bazi/customSummary 都无法解析（如旧版非法JSON）时，
+              // 也展示卦例基本信息，避免"空内容"
+              if (result == null && baziResult == null && customSummary == null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: isDark ? const Color(0xFF444444) : const Color(0xFFE0D5C8)),
+                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('卦名：${_displayGuaName(c.guaName)}',
+                        style: TextStyle(fontSize: 13, height: 1.6, color: t)),
+                    if (c.guaGong.isNotEmpty)
+                      Text('宫位：${c.guaGong}',
+                          style: TextStyle(fontSize: 13, height: 1.6, color: t)),
+                    Text('起卦方式：${methodToCN(c.method)}',
+                        style: TextStyle(fontSize: 13, height: 1.6, color: t)),
+                    if (c.askObject != null && c.askObject!.isNotEmpty)
+                      Text('占问对象：${c.askObject}',
+                          style: TextStyle(fontSize: 13, height: 1.6, color: t)),
+                    if (c.askEvent != null && c.askEvent!.isNotEmpty)
+                      Text('占问事件：${c.askEvent}',
+                          style: TextStyle(fontSize: 13, height: 1.6, color: t)),
+                    Text('（此卦例排盘数据较早，仅显示基本信息）',
+                        style: TextStyle(fontSize: 11, color: t.withAlpha(130))),
+                  ]),
+                ),
+              ],
               if (result != null) ...[
                 GuaWidget(gua: result.benGua),                if (result.bianGua != null) ...[
                   const SizedBox(height: 12),
