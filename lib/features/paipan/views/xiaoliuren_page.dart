@@ -1,4 +1,5 @@
 // 落·乾坤 - 小六壬排盘页
+import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -131,7 +132,7 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
 
   String _jsonEncode(XiaoLiuRenResult r) {
     final m = r.toJson();
-    return m.entries.map((e) => '"${e.key}":${e.value}').join(',');
+    return m.entries.map((e) => '"${e.key}":${jsonEncode(e.value)}').join(',');
   }
 
   /// 分享结果到剪贴板
