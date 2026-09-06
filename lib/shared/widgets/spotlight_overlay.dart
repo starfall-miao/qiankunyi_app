@@ -22,12 +22,15 @@ class SpotlightOverlay extends StatefulWidget {
   final VoidCallback onFinish;
   final VoidCallback onSkip;
   final void Function(int stepIndex)? onStepChanged;
+  /// 主框架导航项的 GlobalKey（说明步骤回退指向对应 Tab 用）
+  final List<GlobalKey>? fallbackNavKeys;
   const SpotlightOverlay({
     super.key,
     required this.steps,
     required this.onFinish,
     required this.onSkip,
     this.onStepChanged,
+    this.fallbackNavKeys,
   });
 
   @override
@@ -38,8 +41,17 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> {
   int _index = 0;
 
   /// 当前步骤目标控件在全局坐标中的矩形
+  /// （targetKey 为 null 时回退到步骤 tabIndex 对应的主框架导航项）
   Rect? get _targetRect {
-    final key = widget.steps[_index].targetKey;
+    final step = widget.steps[_index];
+    GlobalKey? key = step.targetKey;
+    if (key == null && step.tabIndex != null) {
+      // 回退：指向对应 Tab 的导航项（_fallbackNavKeys 由 MainShell 传入）
+      final navKeys = widget.fallbackNavKeys;
+      if (navKeys != null && step.tabIndex! >= 0 && step.tabIndex! < navKeys.length) {
+        key = navKeys[step.tabIndex!];
+      }
+    }
     if (key == null) return null;
     final ctx = key.currentContext;
     if (ctx == null) return null;
@@ -73,22 +85,6 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> {
             ),
           ),
         ),
-        // 无目标步骤：中央显示引导标记（⌘ 页面要点）
-        if (rect == null)
-          Center(
-            child: Container(
-              width: 64,
-              height: 64,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25),
-                shape: BoxShape.circle,
-                border: Border.all(
-                    color: Theme.of(context).colorScheme.primary, width: 2),
-              ),
-              child: const Text('👆', style: TextStyle(fontSize: 28)),
-            ),
-          ),
         // 说明气泡（始终显示：有目标在目标下方，无目标居中，确保可操作）
         Positioned(
           left: 12,

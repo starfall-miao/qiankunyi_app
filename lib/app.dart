@@ -92,10 +92,11 @@ class _MainShellState extends State<MainShell> {
         SpotlightStep(title: '2. 选择起卦方式', tabIndex: 0,
             desc: '排盘页顶部可选起卦方式：\n'
                 '· 手工摇卦 / 机器摇卦 / 时间起卦 / 数字起卦\n'
-                '例子：选"数字起卦"，输入 3 个数字（如 3、5、7）点排盘。'),
+                '✍️ 练习：先退出引导（点"跳过"），选"数字起卦"，输入 3 个数字点排盘试试！'
+                '再回来继续引导。'),
         SpotlightStep(title: '3. 查看卦象', tabIndex: 0,
             desc: '排盘结果展示本卦/变卦/互卦、世应、六亲、空亡、藏爻等。\n'
-                '点按卦象可看详解，点"保存卦例"存入卦例库。'),
+                '✍️ 练习：排盘后点按卦象看详解，再点"保存卦例"试试。'),
         SpotlightStep(targetKey: _navKeys[1], title: '4. 卦例 Tab', tabIndex: 1,
             desc: '这是"卦例"入口，保存的卦例都在这里。\n'
                 '点击卦例可查看详情、编辑占问对象/事件、AI 解卦、导出/导入。'),
@@ -266,6 +267,7 @@ class _MainShellState extends State<MainShell> {
           steps: _spotlightSteps,
           onFinish: _finishSpotlight,
           onSkip: _finishSpotlight,
+          fallbackNavKeys: _navKeys,
           onStepChanged: (i) {
             // 画面随引导步骤切换对应 Tab
             final tab = i >= 0 && i < _spotlightSteps.length
