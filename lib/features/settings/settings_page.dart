@@ -12,13 +12,6 @@ import '../../core/theme/theme_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/logger.dart';
 import 'settings_provider.dart';
-
-/// 默认 AI 系统提示词（设置页预览/编辑预填用，与解卦时默认一致）
-const kDefaultPromptTemplate = '你是六爻/梅花解卦专家。'
-    '直接分析卦象即可，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式。'
-    '正式结果要详细清晰有条理，直接输出全文，不要附加任何包裹标记；'
-    '各爻逐行输出（初爻：…／二爻：…）；不同要点换行，禁止挤在一行。'
-    '若为小六壬/大六壬盘面，按对应术数规则解读（掌诀吉凶/四课三传天将）。';
 import 'views/about_page.dart';
 import 'views/compass_page.dart';
 import '../onboarding/views/onboarding_page.dart';
@@ -26,6 +19,13 @@ import '../users/views/user_profile_page.dart';
 import '../users/providers/user_provider.dart';
 import 'views/tutorial_page.dart';
 import 'views/data_management_page.dart';
+
+/// 默认 AI 系统提示词（设置页预览/编辑预填用，与解卦时默认一致）
+const kDefaultPromptTemplate = '你是六爻/梅花解卦专家。'
+    '直接分析卦象即可，不要冗长思考、不要复述排盘数据、不要讨论自己的输出方式。'
+    '正式结果要详细清晰有条理，直接输出全文，不要附加任何包裹标记；'
+    '各爻逐行输出（初爻：…／二爻：…）；不同要点换行，禁止挤在一行。'
+    '若为小六壬/大六壬盘面，按对应术数规则解读（掌诀吉凶/四课三传天将）。';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -1182,7 +1182,6 @@ class _SettingsPageState extends State<SettingsPage> {
     showDialog(
       context: context,
       builder: (ctx) {
-        final theme2 = Theme.of(ctx);
         return AlertDialog(
           title: const Text('选择 AI 模型'),
           content: SingleChildScrollView(
@@ -1352,7 +1351,6 @@ class _ProviderEditDialogState extends State<_ProviderEditDialog> {
     _endpointCtrl.dispose();
     _keyCtrl.dispose();
     _addModelCtrl.dispose();
-    _modelAddCtrl.dispose();
     super.dispose();
   }
 
