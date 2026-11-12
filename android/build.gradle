@@ -5,14 +5,18 @@ allprojects {
     }
 }
 
-rootProject.buildDir = "../build"
+// Gradle 9：Project.buildDir 的 setter 已移除，统一改用 layout.buildDirectory
+// （产物仍输出到项目根的 build/ 目录，与原 ../build 行为一致）
+def newBuildDir = rootProject.layout.buildDirectory.dir("../../build").get()
+rootProject.layout.buildDirectory.value(newBuildDir)
+
 subprojects {
-    project.buildDir = "${rootProject.buildDir}/${project.name}"
+    project.layout.buildDirectory.value(newBuildDir.dir(project.name))
 }
 subprojects {
     project.evaluationDependsOn(":app")
 }
 
 tasks.register("clean", Delete) {
-    delete rootProject.buildDir
+    delete rootProject.layout.buildDirectory
 }
