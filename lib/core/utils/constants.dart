@@ -1,15 +1,15 @@
-/// 乾坤易 - 应用常量定义
+/// 落·乾坤 - 应用常量定义
 class AppConstants {
   AppConstants._();
 
   /// 应用名称
-  static const String appName = '乾坤易';
+  static const String appName = '落·乾坤';
 
   /// 应用描述
-  static const String appDescription = '玄学排盘与案例管理工具';
+  static const String appDescription = '乾坤易 · 离线多端版';
 
-  /// 版本号
-  static const String appVersion = '1.0.0';
+  /// 版本号（与 pubspec.yaml 的 version 保持一致，发版时同步更新）
+  static const String appVersion = '1.1.0';
 
   /// 数据库名称
   static const String databaseName = 'qiankunyi.db';

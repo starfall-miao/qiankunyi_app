@@ -10,6 +10,7 @@ import 'package:lucide_flutter/lucide_flutter.dart';
 
 import '../../core/theme/theme_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/constants.dart';
 import '../../core/utils/logger.dart';
 import 'settings_provider.dart';
 import 'views/about_page.dart';
@@ -1302,7 +1303,7 @@ class _SettingsPageState extends State<SettingsPage> {
           child: _buildSettingRow(
             icon: Icons.info_outline,
             title: '关于落·乾坤',
-            subtitle: '版本 1.0.0',
+            subtitle: '版本 ${AppConstants.appVersion}',
             trailing: const Icon(Icons.chevron_right, color: Colors.grey),
           ),
         ),

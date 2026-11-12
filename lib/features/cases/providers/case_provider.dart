@@ -60,16 +60,39 @@ class CaseProvider extends ChangeNotifier {
         // 2) 迁移旧数据（仅一次）
         final legacy = prefs.getString(_legacyKey);
         if (legacy != null && legacy.isNotEmpty) {
-          final list = jsonDecode(legacy) as List;
-          final migrated =
-              list.map((e) => CaseModel.fromMap(e as Map<String, dynamic>)).toList();
-          for (final c in migrated) {
-            await _insertRow(c);
+          List<dynamic> raw;
+          try {
+            final parsed = jsonDecode(legacy);
+            raw = parsed is List ? parsed : [parsed];
+          } catch (e) {
+            Logger.instance.error('CaseProvider', '旧版数据 JSON 解析失败，跳过迁移: $e');
+            raw = const [];
+          }
+          final migrated = <CaseModel>[];
+          var skipped = 0;
+          // 逐条解析 + 逐条入库：任一坏条目只跳过自身，不再让整批迁移失败
+          // （旧实现整批 map + 无 try/catch，一条脏数据会导致每次启动都迁移失败）
+          var nextId = DateTime.now().millisecondsSinceEpoch;
+          for (final e in raw) {
+            try {
+              if (e is! Map<String, dynamic>) {
+                skipped++;
+                continue;
+              }
+              final c = CaseModel.fromMap(e);
+              // 补主键：保证迁移后内存与数据库主键一致，更新/删除可用
+              final withId = c.id == null ? c.copyWith(id: nextId++) : c;
+              await _insertRow(withId);
+              migrated.add(withId);
+            } catch (_) {
+              skipped++;
+            }
           }
           _cases = migrated;
           await prefs.remove(_legacyKey);
           await prefs.setBool(_migratedKey, true);
-          Logger.instance.info('CaseProvider', '已从旧版迁移 ${migrated.length} 条卦例到 SQLite');
+          Logger.instance.info('CaseProvider',
+              '已从旧版迁移 ${migrated.length} 条卦例到 SQLite（跳过 $skipped 条异常数据）');
         }
       }
     } catch (e, st) {
@@ -157,10 +180,17 @@ class CaseProvider extends ChangeNotifier {
 
   /// 添加卦例
   Future<void> addCase(CaseModel caseModel) async {
-    _cases.insert(0, caseModel);
+    // 归一化主键：导入的旧数据可能缺 id（fromMap 允许 null），若直接入库，
+    // 数据库用插入时间戳作主键、而内存中仍是 null，导致此后按 id 的
+    // 更新/删除全部静默失效。这里在入库前补一个稳定 id，保证内存与
+    // 数据库主键一致。
+    final normalized = caseModel.id == null
+        ? caseModel.copyWith(id: DateTime.now().millisecondsSinceEpoch)
+        : caseModel;
+    _cases.insert(0, normalized);
     try {
       _db ??= AppDatabase();
-      await _insertRow(caseModel);
+      await _insertRow(normalized);
     } catch (e) {
       debugPrint('添加卦例失败: $e');
     }
@@ -176,6 +206,15 @@ class CaseProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('删除卦例失败: $e');
     }
+    notifyListeners();
+  }
+
+  /// 删除无 id 的卦例（仅内存/界面移除）。
+  /// 导入的历史 JSON 可能缺 id（fromMap 允许 null），这类条目在数据库中
+  /// 以插入时的时间戳作为主键，无法按 c.id 删除；此方法按对象引用移除，
+  /// 避免 UI 层 `c.id!` 空断言崩溃。
+  void removeCaseWithoutId(CaseModel caseModel) {
+    _cases.removeWhere((c) => identical(c, caseModel));
     notifyListeners();
   }
 
@@ -196,9 +235,11 @@ class CaseProvider extends ChangeNotifier {
         askEvent: updated.askEvent,
         tags: updated.tags,
         caseType: updated.caseType,
-        aiMessages: updated.aiMessages.isNotEmpty
-            ? updated.aiMessages
-            : latest.aiMessages,
+        // AI 对话历史一律取 provider 当前实例（latest），忽略调用方快照里的
+        // updated.aiMessages：所有调用方（断语/编辑保存）传的都是"打开弹窗那一刻"
+        // 的过期快照，若按非空判断合并，本次会话内新生成的 AI 消息会被旧快照
+        // 静默回滚（数据丢失）。AI 对话只允许经 updateAiMessages 修改。
+        aiMessages: latest.aiMessages,
         updatedAt: DateTime.now(),
       );
       _cases[index] = merged;

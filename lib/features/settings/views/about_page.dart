@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../../core/utils/constants.dart';
 
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
@@ -61,7 +62,7 @@ class AboutPage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    'v1.0.0',
+                    'v${AppConstants.appVersion}',
                     style: TextStyle(fontSize: 12, color: primary),
                   ),
                 ),

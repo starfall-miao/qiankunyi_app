@@ -149,7 +149,11 @@ class BaziResult {
     liuNian: j['liuNian'] as String?,
     wuXingCounts: (j['wuXingCounts'] as Map<String, dynamic>?)?.map((k, v) => MapEntry(k, (v as num).toInt())) ?? {},
     wuXingWangShuai: (j['wuXingWangShuai'] as Map<String, dynamic>?)?.cast<String, String>() ?? {},
-    shiShenMap: (j['shiShenMap'] as Map<String, dynamic>?)?.cast<String, String>() ?? {},
+    // 兼容历史键名：toJson 曾写入 'shishenMap'（小写 s），此处两个键都读，
+    // 否则旧卦例反序列化后十神整块丢失（详情页展示与 AI 上下文均受影响）。
+    shiShenMap: ((j['shiShenMap'] ?? j['shishenMap']) as Map<String, dynamic>?)
+            ?.cast<String, String>() ??
+        {},
     kongWang: (j['kongWang'] as List?)?.cast<String>() ?? [],
   );
 

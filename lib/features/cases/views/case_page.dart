@@ -306,14 +306,13 @@ class _CasePageState extends State<CasePage> {
         allowedExtensions: ['json'],
       );
       if (path == null) return; // 用户取消
-      // 桌面端 saveFile 返回路径后需自行写入，移动端已写入 bytes
+      // 桌面端 saveFile 只返回路径、不写文件；移动端已写入 bytes。
+      // 一律显式写入：桌面端覆盖已存在文件时若跳过写入，旧文件会被原样
+      // 保留却提示"导出成功"（数据错位的静默失败）。
       try {
-        final file = File(path);
-        if (!await file.exists()) {
-          await file.writeAsString(jsonStr);
-        }
+        await File(path).writeAsString(jsonStr);
       } catch (_) {
-        // 移动端已写入，无需额外操作
+        // 移动端已由 picker 写入，重复写入失败（如只读 URI）时忽略
       }
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -393,34 +392,61 @@ class _CasePageState extends State<CasePage> {
   }
 
   /// 解析 JSON 并合并导入
+  ///
+  /// 健壮性约定：逐条解析 + 逐条写入，坏条目跳过并计数，不因一条脏数据
+  /// 导致整批导入失败（旧实现整批 `map` 解析，任一字段异常即全批报错）。
   Future<void> _parseAndAddCases(BuildContext context, String text) async {
+    final provider = context.read<CaseProvider>();
+    List<dynamic> rawList;
     try {
       final parsed = jsonDecode(text);
-      final list = (parsed as List).map((e) =>
-          CaseModel.fromMap(e as Map<String, dynamic>)).toList();
-      final provider = context.read<CaseProvider>();
-      var added = 0;
-      for (final c in list) {
-        // 避免重复（按 id 去重）
-        final exists = provider.allCases.any((e) => e.id == c.id);
-        if (!exists) {
-          provider.addCase(c);
-          added++;
-        }
-      }
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('成功导入 $added 条卦例（跳过 ${list.length - added} 条重复）')),
-        );
-      }
-      Logger.instance.info('卦例导入', '导入 ${list.length} 条（新增 $added）');
+      // 兼容"导出文件是数组"与"用户粘贴单个对象"两种输入
+      rawList = parsed is List ? parsed : [parsed];
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导入失败: $e'), backgroundColor: Colors.red.shade300),
+          SnackBar(content: Text('导入失败: JSON 格式错误 $e'),
+              backgroundColor: Colors.red.shade300),
         );
       }
+      return;
     }
+    var added = 0;
+    var duplicate = 0;
+    var broken = 0;
+    for (final e in rawList) {
+      try {
+        if (e is! Map<String, dynamic>) {
+          broken++;
+          continue;
+        }
+        final c = CaseModel.fromMap(e);
+        // 避免重复（按 id 去重）
+        final exists = provider.allCases.any((x) => x.id == c.id);
+        if (exists) {
+          duplicate++;
+          continue;
+        }
+        await provider.addCase(c);
+        added++;
+      } catch (_) {
+        broken++;
+      }
+    }
+    if (context.mounted) {
+      final skipParts = <String>[
+        if (duplicate > 0) '$duplicate 条重复',
+        if (broken > 0) '$broken 条格式异常',
+      ];
+      final msg = skipParts.isEmpty
+          ? '成功导入 $added 条卦例'
+          : '成功导入 $added 条卦例（跳过 ${skipParts.join('、')}）';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
+    }
+    Logger.instance.info('卦例导入',
+        '共 ${rawList.length} 条（新增 $added，重复 $duplicate，异常 $broken）');
   }
 
   void _importFromText(BuildContext context) {
@@ -483,9 +509,12 @@ class _CasePageState extends State<CasePage> {
         final r = map['daLiuRen'] as Map<String, dynamic>;
         final siKe = (r['siKe'] as List?)?.join(' / ') ?? '';
         final shiYong = (r['shiYong'] as List?)?.join(' → ') ?? '';
+        // 月将以地支名表示（如"申将"）；yueJiang 为 int 索引（0-11），
+        // 直接插值会显示成"月将：8"这类无意义数字，改用 yueJiangZhi。
         final yj = r['yueJiangZhi'] as String? ?? '';
+        final yueJiangName = yj.isNotEmpty ? '$yj将' : '?';
         return '大六壬排盘\n'
-            '月将：${r['yueJiang'] ?? '?'}（临$yj）\n'
+            '月将：$yueJiangName\n'
             '四课：$siKe\n'
             '三传：$shiYong\n'
             '贵人临${r['guiRen'] ?? ''}';
@@ -558,7 +587,15 @@ class _CasePageState extends State<CasePage> {
                 IconButton(
                   icon: const Icon(Icons.delete_outline, size: 20),
                   onPressed: () {
-                    context.read<CaseProvider>().deleteCase(c.id!);
+                    // 导入的旧数据可能缺 id（fromMap 允许 null）：直接 `c.id!`
+                    // 会抛空断言崩溃；无 id 时按对象引用仅从界面移除。
+                    final id = c.id;
+                    if (id == null) {
+                      context.read<CaseProvider>().removeCaseWithoutId(c);
+                      Navigator.pop(ctx);
+                      return;
+                    }
+                    context.read<CaseProvider>().deleteCase(id);
                     Navigator.pop(ctx);
                   },
                 ),
@@ -1843,6 +1880,11 @@ class _AiChatSectionState extends State<_AiChatSection> {
   List<AiMessage> _localMessages = [];
   /// 当前流式订阅（AI 解卦/追问流式输出期间非 null）
   StreamSubscription<AiStreamPiece>? _streamSub;
+  /// 流式代际号：每次挂接新订阅自增。超时/重试会关闭旧流并重开，旧流的
+  /// 残余事件（服务器慢速返回、稍后关闭）若不带代际校验，会把旧内容追加进
+  /// 新回复、或在生成中途提前复位状态（订阅泄漏竞态）。回调中比对代际号，
+  /// 非当前代的事件一律丢弃。
+  int _streamGen = 0;
   /// 正在流式更新的 assistant 消息（对象引用定位，避免删除其它消息后索引偏移）
   AiMessage? _streamingMsg;
   /// 本次流式是否已执行首次自动滚动：首个增量到达时滚到底一次（让用户看到
@@ -1908,6 +1950,8 @@ class _AiChatSectionState extends State<_AiChatSection> {
     // 停止流式订阅，避免对已 dispose 的 State 继续 setState（cancel 后不再派发事件）
     _streamSub?.cancel();
     _streamSub = null;
+    // 代际号自增：使任何残留回调（cancel 与事件派发竞争窗口内）失效
+    _streamGen++;
     _questionCtrl.dispose();
     super.dispose();
   }
@@ -2197,7 +2241,13 @@ class _AiChatSectionState extends State<_AiChatSection> {
       used += cost;
       keep.add(m);
     }
+    // 只保留 user/assistant 消息：错误气泡（role: 'error'）只是界面提示，
+    // 不是 OpenAI 兼容接口的合法 role，混入追问请求可能导致网关 400。
+    // 空内容（如失败残留的空 assistant）同样不发，避免污染上下文。
     return keep.reversed
+        .where((m) =>
+            (m.role == 'user' || m.role == 'assistant') &&
+            m.content.trim().isNotEmpty)
         .map((m) => {'role': m.role, 'content': m.content})
         .toList();
   }
@@ -2305,9 +2355,13 @@ class _AiChatSectionState extends State<_AiChatSection> {
     // 分块到达（UI 展示问题）；块数 = 1 说明一次性返回（网关缓冲或解析问题）。
     var chunkCount = 0;
     var reasoningCount = 0;
+    // 旧订阅先取消再挂新订阅（重试/超时路径的残留订阅不能继续派发事件），
+    // 并分配新的代际号；以下所有回调只有在代际号仍为当前值时才有意义。
+    _streamSub?.cancel();
+    final gen = ++_streamGen;
     _streamSub = stream.listen(
       (piece) {
-        if (!mounted || _streamingMsg == null) return;
+        if (!mounted || gen != _streamGen || _streamingMsg == null) return;
         final cur = _streamingMsg!;
         receivedAny = true;
         if (_loading) {
@@ -2346,7 +2400,11 @@ class _AiChatSectionState extends State<_AiChatSection> {
         _appendStreamPiece(piece.text);
       },
       onError: (Object e) {
-        if (!mounted) return;
+        if (!mounted || gen != _streamGen) return;
+        // 先取消出错订阅本身（timeout 只是向流注入 error，底层 HTTP 连接
+        // 并不会被关闭；不 cancel 就丢弃句柄会泄漏连接，旧流残余事件
+        // 还会混入后续重试的回复），再清空句柄。
+        _streamSub?.cancel();
         _streamSub = null;
         final cur = _streamingMsg;
         _streamingMsg = null;
@@ -2405,7 +2463,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
         );
       },
       onDone: () {
-        if (!mounted) return;
+        if (!mounted || gen != _streamGen) return;
         _streamSub = null;
         // 提交节流缓冲中最后的增量（否则最后一块内容可能留在缓冲里不显示）
         _flushPending();
@@ -2688,6 +2746,12 @@ class _AiChatSectionState extends State<_AiChatSection> {
           logTag: logTag,
         );
         if (result.success) {
+          // 用户已在等待期间点"停止"：丢弃在途结果，不替换占位也不持久化
+          // （否则界面会"停止后又冒出结果"并写入卦例，与用户预期相反）。
+          if (_cancelRequested) {
+            Logger.instance.info('$logTag回退丢弃', '已停止，丢弃在途结果');
+            break;
+          }
           Logger.instance.info('$logTag回退成功',
               'content长度: ${result.content.length} | 重试: $retry');
           _replaceAssistantContent(msg, _extractAiResult(result.content));

@@ -51,7 +51,8 @@ class DisplaySettings {
     showNaYin: m['showNaYin'] as bool? ?? true,
     showShenSha: m['showShenSha'] as bool? ?? true,
     showLiuShen: m['showLiuShen'] as bool? ?? true,
-    showWangShuai: m['showWangShuai'] as bool? ?? false,
+    // 与构造函数默认值保持一致（true）：旧版本存储串缺该字段时不应静默关闭旺衰
+    showWangShuai: m['showWangShuai'] as bool? ?? true,
     showShiYing: m['showShiYing'] as bool? ?? true,
     showXingChong: m['showXingChong'] as bool? ?? true,
   );
@@ -493,10 +494,12 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> resetToDefault() async {
     final prefs = _prefs ?? await SharedPreferences.getInstance();
     _prefs = prefs;
-    // 清空所有已持久化的设置 key
+    // 清空所有已持久化的设置 key。
+    // 注意：显示设置实际存储 key 为 'paipan_display'（见 _save），
+    // 历史 key 'display_settings' 一并清理，避免恢复默认后重启又被旧值覆盖。
     const keys = [
       'paipan_fontSize', 'paipan_riPoRule', 'paipan_wanZiShi', 'paipan_chenMuTuYao',
-      'display_settings', 'ai_endpoint', 'ai_apiKey', 'ai_model', 'ai_custom_model',
+      'paipan_display', 'display_settings', 'ai_endpoint', 'ai_apiKey', 'ai_model', 'ai_custom_model',
       'ai_system_prompt', 'ai_retry_on_429', 'ai_preset_index', 'ai_enabled',
       'ai_custom_providers', 'ai_model_overrides',
     ];

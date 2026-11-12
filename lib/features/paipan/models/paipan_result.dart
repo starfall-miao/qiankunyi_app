@@ -67,5 +67,7 @@ class PaipanResult {
     shenSha: (j['shenSha'] as List?)?.cast<String>() ?? [],
     kongWang: (j['kongWang'] as List?)?.cast<String>() ?? [],
     naYin: j['naYin'] as String?,
+    // 藏爻/伏神：toJson 已写入，早期 fromJson 漏读导致往返丢失
+    hiddenFuShen: (j['hiddenFuShen'] as List?)?.cast<String>() ?? const [],
   );
 }
