@@ -98,12 +98,12 @@ class XiaoLiuRenEngine {
   /// 从月日时起课（月1-12、日1-30、时辰0-11，0=子时）
   static XiaoLiuRenResult byMonthDayHour(
       int month, int day, int hour) {
-    // 正月起大安(0)，顺数至月
-    final monthPos = (month - 1) % 6;
+    // 正月起大安(0)，顺数至月（负数安全：0 月/0 日不再产生负索引越界）
+    final monthPos = ((month - 1) % 6 + 6) % 6;
     // 月上起日：从月落位开始，顺数 day-1 位
-    final dayPos = (monthPos + (day - 1)) % 6;
+    final dayPos = (monthPos + ((day - 1) % 6 + 6) % 6) % 6;
     // 日上起时：从日落位开始，顺数 hour 位（子时=0）
-    final resultPos = (dayPos + hour) % 6;
+    final resultPos = (dayPos + (hour % 6 + 6) % 6) % 6;
     return XiaoLiuRenResult(
       month: month,
       day: day,
@@ -117,9 +117,9 @@ class XiaoLiuRenEngine {
 
   /// 从三个数字起课（数字1起大安顺数）
   static XiaoLiuRenResult byNumbers(int n1, int n2, int n3) {
-    final monthPos = (n1 - 1) % 6;
-    final dayPos = (monthPos + (n2 - 1)) % 6;
-    final resultPos = (dayPos + (n3 - 1)) % 6;
+    final monthPos = ((n1 - 1) % 6 + 6) % 6;
+    final dayPos = (monthPos + ((n2 - 1) % 6 + 6) % 6) % 6;
+    final resultPos = (dayPos + ((n3 - 1) % 6 + 6) % 6) % 6;
     return XiaoLiuRenResult(
       month: n1,
       day: n2,

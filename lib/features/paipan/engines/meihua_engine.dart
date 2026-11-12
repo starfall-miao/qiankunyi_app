@@ -97,7 +97,9 @@ class MeihuaEngine {
     final y = dt.year % 100;
     final m = dt.month;
     final d = dt.day;
-    final h = ((dt.hour + 1) ~/ 2).clamp(1, 12);
+    // 时辰数（子1~亥12）：23点归子时，每两小时顺进一位。
+    // 旧式 ((h+1)~/2).clamp(1,12) 在 23 点与午前偶数小时算错时辰。
+    final h = ((dt.hour + 1) ~/ 2) % 12 + 1;
     final upper = _numToTrigram(y + m + d);
     final lower = _numToTrigram(y + m + d + h);
     final movingRaw = (y + m + d + h) % 6;

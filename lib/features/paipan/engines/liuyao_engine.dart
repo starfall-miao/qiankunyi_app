@@ -206,8 +206,8 @@ final _diZhiIndex = <DiZhi, int>{
 };
 
 /// 六合表 (地支索引 → 合的地支索引)
-const _liuHe = [6, 5, 11, 10, 9, 1, 0, 11, 10, 4, 3, 2];
-// 子丑合: 0↔1, 寅亥合: 2↔11, 卯戌合: 3↔10, 辰酉合: 4↔9, 巳申合: 5↔8, 午未合: 6↔7
+/// 子丑(0↔1)、寅亥(2↔11)、卯戌(3↔10)、辰酉(4↔9)、巳申(5↔8)、午未(6↔7)
+const _liuHe = [1, 0, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2];
 
 /// 六冲表
 const _liuChong = [6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5];
@@ -268,8 +268,10 @@ class LiuYaoEngine {
     final month = time.month;
     final day = time.day;
     final hour = time.hour;
-    // 时辰数（子1~亥12）
-    final shiChen = ((hour + 1) ~/ 2).clamp(1, 12);
+    // 时辰数（子1~亥12）：23:00-00:59 归子时；每两小时顺进一位。
+    // 旧式 ((h+1)~/2).clamp(1,12) 在 23 点（子时算成亥）与午前偶数小时
+    // 共 13/24 个小时上算错，直接导致下卦与动爻错误。
+    final shiChen = ((hour + 1) ~/ 2) % 12 + 1;
 
     final upperIdx = _toTrigramIndex(year + month + day);
     final lowerIdx = _toTrigramIndex(shiChen);
@@ -283,7 +285,7 @@ class LiuYaoEngine {
       {LiuyaoSchool school = LiuyaoSchool.jingFangJianBan}) {
     final upperIdx = _toTrigramIndex(a);
     final lowerIdx = _toTrigramIndex(b);
-    final movingIdx = (c - 1) % 6; // c为动爻序号（1-6），转为0-based
+    final movingIdx = ((c - 1) % 6 + 6) % 6; // c为动爻序号（1-6），转为0-based（负数安全）
     return _buildFromTrigrams(upperIdx, lowerIdx, movingIdx, '数字起卦', school: school);
   }
 
@@ -387,9 +389,15 @@ class LiuYaoEngine {
 
     // ───── 月令/日令/空亡（基于 tyme4dart） ─────
     final solarDay = tyme.SolarDay.fromYmd(dt.year, dt.month, dt.day);
-    final monthZhi = monthZhiSimple(dt.month); // 月建地支
     final dayGanZhi = dayGanZhiFromTyme(solarDay); // 日柱干支
-    final monthGanZhi = monthGanZhiFromTyme(solarDay); // 月柱干支
+    final monthGanZhi = monthGanZhiFromTyme(solarDay); // 月柱干支（精确节气月）
+    // 月建地支以 tyme 精确节气月（立春换寅月）为准：旧实现用公历月近似，
+    // 与同屏显示的精确月柱自相矛盾（如公历2月10日显示月建'卯'但月柱'甲寅'）。
+    final preciseMonthZhi =
+        monthGanZhi.length >= 2 ? monthGanZhi[1] : '';
+    final monthZhi = preciseMonthZhi.isNotEmpty
+        ? preciseMonthZhi
+        : monthZhiSimple(dt.month);
     final dayGzIdx = dayGanZhiIndex(solarDay); // 日干支索引
     final kongWangList = calcKongWang(dayGzIdx); // 旬空列表
 
@@ -406,8 +414,8 @@ class LiuYaoEngine {
     // 六神（根据日干）
     _applyLiuShen(yaos, _dayGanIndex(dt));
 
-    // 旺衰（根据月令）
-    _applyWangShuai(yaos, dt.month);
+    // 旺衰（根据月令地支五行）
+    _applyWangShuaiByZhi(yaos, monthZhi);
 
     // 刑冲合害
     _calcRelations(yaos);
@@ -708,53 +716,60 @@ class LiuYaoEngine {
 
   // ──────────── 旺衰排布 ────────────
 
-  /// 月令五行索引：寅卯=木月(0), 巳午=火月(1), 申酉=金月(2),
-  /// 亥子=水月(3), 辰戌丑未=土月(4)
-  static int _monthWuXing(int month) {
-    if (month >= 2 && month <= 3) return 0; // 寅卯木
-    if (month >= 4 && month <= 5) return 1; // 巳午火
-    if (month >= 7 && month <= 8) return 2; // 申酉金
-    if (month >= 10 && month <= 11) return 3; // 亥子水
-    return 4; // 辰戌丑未土
+  /// 月建地支 → 月令五行索引（0木 1火 2金 3水 4土）
+  /// 用于以精确节气月（月柱地支）判定旺衰，避免公历月近似误差：
+  /// 寅卯=木(0)、巳午=火(1)、申酉=金(2)、亥子=水(3)、辰戌丑未=土(4)。
+  static int _monthWuXingByZhi(String monthZhi) {
+    const map = <String, int>{
+      '寅': 0, '卯': 0,
+      '巳': 1, '午': 1,
+      '申': 2, '酉': 2,
+      '亥': 3, '子': 3,
+      '辰': 4, '戌': 4, '丑': 4, '未': 4,
+    };
+    return map[monthZhi] ?? 4;
   }
 
   /// 旺衰表：五行 → [旺, 相, 休, 囚, 死]
-  /// 顺序：木火金水土
+  /// 顺序：木火金水土（索引 0=木 1=火 2=金 3=水 4=土）
+  /// 规则：当令者旺、我生者相、生我者休、克我者囚、我克者死。
+  /// 注：此前火/金/水/土四行整体错乱（囚死互换、相休错位），
+  /// 与 bazi_engine 同一口诀的实现相互矛盾，已按标准口诀重建。
   static const _wangShuaiTable = <int, List<WangShuaiLevel>>{
-    0: [ // 木月旺
-      WangShuaiLevel.wang,   // 木旺
-      WangShuaiLevel.xiang,  // 火相
-      WangShuaiLevel.qiu,    // 金囚
-      WangShuaiLevel.xiu,    // 水休
-      WangShuaiLevel.si,     // 土死
+    0: [ // 木月：木旺 火相 金囚 水休 土死
+      WangShuaiLevel.wang,
+      WangShuaiLevel.xiang,
+      WangShuaiLevel.qiu,
+      WangShuaiLevel.xiu,
+      WangShuaiLevel.si,
     ],
-    1: [ // 火月旺
-      WangShuaiLevel.si,     // 木死
-      WangShuaiLevel.wang,   // 火旺
-      WangShuaiLevel.xiang,  // 土相
-      WangShuaiLevel.qiu,    // 金囚
-      WangShuaiLevel.xiu,    // 水休
+    1: [ // 火月：木休 火旺 金死 水囚 土相
+      WangShuaiLevel.xiu,
+      WangShuaiLevel.wang,
+      WangShuaiLevel.si,
+      WangShuaiLevel.qiu,
+      WangShuaiLevel.xiang,
     ],
-    2: [ // 金月旺
-      WangShuaiLevel.qiu,    // 木囚
-      WangShuaiLevel.si,     // 火死
-      WangShuaiLevel.wang,   // 金旺
-      WangShuaiLevel.xiang,  // 水相
-      WangShuaiLevel.xiu,    // 土休
+    2: [ // 金月：木死 火囚 金旺 水相 土休
+      WangShuaiLevel.si,
+      WangShuaiLevel.qiu,
+      WangShuaiLevel.wang,
+      WangShuaiLevel.xiang,
+      WangShuaiLevel.xiu,
     ],
-    3: [ // 水月旺
-      WangShuaiLevel.xiu,    // 木休
-      WangShuaiLevel.qiu,    // 火囚
-      WangShuaiLevel.si,     // 金死
-      WangShuaiLevel.wang,   // 水旺
-      WangShuaiLevel.xiang,  // 土相
+    3: [ // 水月：木相 火死 金休 水旺 土囚
+      WangShuaiLevel.xiang,
+      WangShuaiLevel.si,
+      WangShuaiLevel.xiu,
+      WangShuaiLevel.wang,
+      WangShuaiLevel.qiu,
     ],
-    4: [ // 土月旺
-      WangShuaiLevel.xiang,  // 木相
-      WangShuaiLevel.xiu,    // 火休
-      WangShuaiLevel.si,     // 金死
-      WangShuaiLevel.qiu,    // 水囚
-      WangShuaiLevel.wang,   // 土旺
+    4: [ // 土月：木囚 火休 金相 水死 土旺
+      WangShuaiLevel.qiu,
+      WangShuaiLevel.xiu,
+      WangShuaiLevel.xiang,
+      WangShuaiLevel.si,
+      WangShuaiLevel.wang,
     ],
   };
 
@@ -774,9 +789,9 @@ class LiuYaoEngine {
     11: 3, // 亥水
   };
 
-  /// 应用旺衰
-  static void _applyWangShuai(List<YaoModel> yaos, int month) {
-    final monthIdx = _monthWuXing(month);
+  /// 应用旺衰（以月建地支五行判定）
+  static void _applyWangShuaiByZhi(List<YaoModel> yaos, String monthZhi) {
+    final monthIdx = _monthWuXingByZhi(monthZhi);
     final table = _wangShuaiTable[monthIdx]!;
     for (final yao in yaos) {
       if (yao.diZhi == null) continue;

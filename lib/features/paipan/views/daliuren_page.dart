@@ -111,15 +111,25 @@ class DaLiuRenEngine {
     return (isDay ? yang[dayGan] : yin[dayGan]) ?? '丑';
   }
 
-  /// 日干寄宫（甲寅乙辰丙戊巳，丁己未，庚申辛戌，壬子癸丑）
+  /// 日干寄宫（十干寄宫：甲寅、乙辰、丙戊巳、丁己未、庚申、辛戌、壬亥、癸丑）
   static const _ganJiGong = {
     '甲': 2, '乙': 4, '丙': 5, '丁': 7, '戊': 5,
-    '己': 7, '庚': 8, '辛': 10, '壬': 0, '癸': 1,
+    '己': 7, '庚': 8, '辛': 10, '壬': 11, '癸': 1,
   };
 
+  /// 月建地支索引 → 月将索引（0=登明…11=神后）。
+  /// 中气换将：月将支 = 月建支 - 1（模12），即 丑月神后、寅月登明、卯月河魁…
+  /// 而月将索引 k 与月将地支 j 满足 j = (11 - k) % 12，故 k = (10 + m) % 12。
+  static int yueJiangFromMonthZhi(int monthZhiIdx) =>
+      (10 + monthZhiIdx) % 12;
+
   static DaLiuRenResult byHour(int hourIndex, int month,
-      {String dayGan = '甲', String dayZhi = '子'}) {
-    final yueJiang = (month - 1) % 12; // 月将
+      {String dayGan = '甲', String dayZhi = '子', int? monthZhiIdx}) {
+    // 月将：优先按节气月（月建地支）定，中气换将；
+    // 无月建信息时回退到公历月近似（与旧行为一致）。
+    final yueJiang = (monthZhiIdx != null && monthZhiIdx >= 0 && monthZhiIdx < 12)
+        ? yueJiangFromMonthZhi(monthZhiIdx)
+        : (month - 1) % 12;
     // 月将地支（登明=亥…神后=子）
     final yueJiangZhi = daliurenZhi[(11 - yueJiang) % 12];
     // 天盘：月将加时，月将落到时支上，其余顺排
@@ -232,10 +242,16 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
   }
 
   void _calc() {
+    // 月将按节气月（月柱地支）取，避免公历月与节气月错位导致月将/天地盘错误
+    final solar = tyme.SolarDay.fromYmd(_year, _month, _day);
+    final monthGz = monthGanZhiFromTyme(solar);
+    final monthZhi = monthGz.length > 1 ? monthGz[1] : '';
+    final monthZhiIdx = daliurenZhi.indexOf(monthZhi);
     setState(() => _result = DaLiuRenEngine.byHour(
       _hour, _month,
       dayGan: _ganCN[_dayGan],
       dayZhi: daliurenZhi[_dayZhi],
+      monthZhiIdx: monthZhiIdx >= 0 ? monthZhiIdx : null,
     ));
   }
 
