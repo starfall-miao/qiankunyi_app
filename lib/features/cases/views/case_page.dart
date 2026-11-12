@@ -297,29 +297,36 @@ class _CasePageState extends State<CasePage> {
       final now = DateTime.now();
       final defaultName =
           '乾坤易卦例_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.json';
-      final bytes = utf8.encode(jsonStr);
-      final path = await FilePicker.platform.saveFile(
+      final bytes = Uint8List.fromList(utf8.encode(jsonStr));
+      // file_picker 13：saveFile 为静态方法，返回 Uri（file:// 或 content://）
+      final uri = await FilePicker.saveFile(
         dialogTitle: '保存卦例',
         fileName: defaultName,
         bytes: bytes,
-        type: FileType.custom,
-        allowedExtensions: ['json'],
+        mimeType: 'application/json',
       );
-      if (path == null) return; // 用户取消
-      // 桌面端 saveFile 只返回路径、不写文件；移动端已写入 bytes。
-      // 一律显式写入：桌面端覆盖已存在文件时若跳过写入，旧文件会被原样
-      // 保留却提示"导出成功"（数据错位的静默失败）。
-      try {
-        await File(path).writeAsString(jsonStr);
-      } catch (_) {
-        // 移动端已由 picker 写入，重复写入失败（如只读 URI）时忽略
+      if (uri == null) return; // 用户取消
+      final displayPath =
+          uri.scheme == 'file' ? uri.toFilePath() : uri.toString();
+      // 桌面端 saveFile 只返回位置、不写文件；移动端已写入 bytes。
+      // 一律显式写入 file:// URI：桌面端覆盖已存在文件时若跳过写入，旧文件
+      // 会被原样保留却提示"导出成功"（数据错位的静默失败）。
+      // 非 file:// 方案（content:// 等）由系统 picker 负责落盘。
+      if (uri.scheme == 'file') {
+        try {
+          await File(uri.toFilePath()).writeAsString(jsonStr);
+        } catch (_) {
+          // 移动端已由 picker 写入，重复写入失败（如只读位置）时忽略
+        }
       }
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已导出 $count 条卦例到 $path'), duration: const Duration(seconds: 3)),
+          SnackBar(
+              content: Text('已导出 $count 条卦例到 $displayPath'),
+              duration: const Duration(seconds: 3)),
         );
       }
-      Logger.instance.info('卦例文件导出', '$path ($count 条)');
+      Logger.instance.info('卦例文件导出', '$displayPath ($count 条)');
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -369,13 +376,14 @@ class _CasePageState extends State<CasePage> {
   /// 从文件导入卦例
   Future<void> _importFromFile(BuildContext context) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      // file_picker 13：pickFiles 为静态方法，返回 List<PlatformFile>（取消时为空）
+      final files = await FilePicker.pickFiles(
         dialogTitle: '选择卦例文件',
         type: FileType.custom,
         allowedExtensions: ['json'],
       );
-      if (result == null || result.files.isEmpty) return;
-      final path = result.files.single.path;
+      if (files.isEmpty) return;
+      final path = files.single.path;
       if (path == null) return;
       final text = await File(path).readAsString();
       if (context.mounted) {

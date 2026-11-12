@@ -52,8 +52,8 @@ Future<String?> saveImageWithDialog({
     return null;
   }
 
-  // 点击保存后才选择保存目录
-  final directory = await FilePicker.platform.getDirectoryPath(
+  // 点击保存后才选择保存目录（file_picker 13：静态方法）
+  final directory = await FilePicker.getDirectoryPath(
     dialogTitle: '选择保存目录',
   );
   if (directory == null || directory.isEmpty) {
