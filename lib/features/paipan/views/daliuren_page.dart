@@ -154,7 +154,9 @@ class DaLiuRenEngine {
       tianPan[ziIdx],           // 日支上神
       dayZhi,                   // 日支下神
     ];
-    // 三传推算（符合人工排盘）：初传取日干上神，中传/末传自初传位天盘顺行 2/4 位
+    // 三传：简化取法（非九宗门起课）。初传取日干上神，中传/末传自初传位
+    // 天盘顺行 2/4 位。真正的三传须按贼克/比用/涉害/遥克/昴星等九宗门规则
+    // 取初传，故界面上明确标注为"简化"，避免用户误当正规课盘使用。
     final chuIdx = daliurenZhi.indexOf(siKe[0]);
     final ci = chuIdx >= 0 ? chuIdx : 0;
     final chu = siKe[0];
@@ -269,7 +271,9 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
         const Text('大六壬（入门版）', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
         Text('大六壬为三式之一，以月将加时、天地盘、四课三传断吉凶。'
-            '已支持月将加时、四课、三传、十二天将按贵人排布。',
+            '已支持月将（按节气中气换将）、月将加时、四课、十二天将按贵人排布。\n'
+            '⚠️ 三传为入门级简化取法（初传取日干上神，中末传顺行），'
+            '未按贼克/比用/涉害/遥克/昴星等九宗门起课，仅供学习参考。',
             style: TextStyle(fontSize: 12, height: 1.6, color: t.withAlpha(160))),
         const SizedBox(height: 12),
         // 输入区 Card（与六爻梅花一致）

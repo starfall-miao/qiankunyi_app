@@ -9,7 +9,7 @@ class AppConstants {
   static const String appDescription = '乾坤易 · 离线多端版';
 
   /// 版本号（与 pubspec.yaml 的 version 保持一致，发版时同步更新）
-  static const String appVersion = '1.1.0';
+  static const String appVersion = '1.1.1';
 
   /// 数据库名称
   static const String databaseName = 'qiankunyi.db';
