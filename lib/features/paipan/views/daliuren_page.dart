@@ -7,28 +7,19 @@ import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import '../../calendar/views/calendar_picker_dialog.dart';
 import '../../cases/providers/case_provider.dart';
+import '../../settings/settings_provider.dart';
 import '../../cases/models/case_models.dart';
 import 'package:tyme/tyme.dart' as tyme;
 import '../engines/liuyao_date_helper.dart';
 import '../../../shared/widgets/save_image_dialog.dart';
 
-/// 十二天将（贵人顺序：吉/凶 + 象义）
-const daliurenGenerals = [
-  ('贵人', '吉', '至尊之象，主贵人相助、尊贵吉祥'),
-  ('螣蛇', '凶', '虚惊怪异，主惊扰、缠绕、怪异之事'),
-  ('朱雀', '凶', '口舌文书，主言辞、信讯、是非'),
-  ('六合', '吉', '和合喜庆，主婚姻、合作、顺利'),
-  ('勾陈', '凶', '田土争讼，主纠缠、迟滞、争斗'),
-  ('青龙', '吉', '喜庆财帛，主喜庆、得财、吉庆'),
-  ('天空', '凶', '虚诈空亡，主欺骗、落空、虚伪'),
-  ('白虎', '凶', '凶丧血光，主凶险、疾病、丧事'),
-  ('太常', '吉', '酒食宴享，主宴乐、衣服、喜庆'),
-  ('玄武', '凶', '盗贼暗昧，主失窃、暗中、暖昧'),
-  ('太阴', '吉', '阴私妇人，主暗中相助、女贵'),
-  ('天后', '吉', '恩泽庇佑，主恩泽、庇护、柔和'),
-];
+import "../engines/daliuren_engine.dart";
 
-/// 地支详解（五行/类象/吉凶）
+// 兼容旧引用：引擎与常量已拆分到 engines/daliuren_engine.dart
+export "../engines/daliuren_engine.dart"
+    show daliurenZhi, daliurenYueJiang, daliurenGenerals,
+        DaLiuRenEngine, DaLiuRenResult;
+
 const daliurenZhiDetail = {
   '子': ('水', '北方', '聪明流动，藏癸水', '孩童、妇女、水性人；利智谋财帛', '利财智，防暗耗'),
   '丑': ('土', '东北', '晦暗之库，藏己癸辛', '田产、库房、老人；利守成置业', '稳中有滞，防郁结'),
@@ -44,184 +35,6 @@ const daliurenZhiDetail = {
   '亥': ('水', '西北', '汪洋阴水，藏壬甲', '江海、舟楫、谋士；利流通远谋', '润泽，利流动'),
 };
 
-/// 十二地支（地盘/月将用）
-const daliurenZhi = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-
-/// 十二月将（正月起登明）
-const daliurenYueJiang = ['登明', '河魁', '从魁', '传送', '小吉', '胜光',
-  '太乙', '天罡', '太冲', '功曹', '大吉', '神后'];
-
-/// 大六壬排盘结果（基础：四课三传）
-class DaLiuRenResult {
-  final int hourIndex;      // 时辰
-  final int yueJiang;       // 月将索引(0-11)
-  final List<String> shiYong; // 三传（初传/中传/末传）地支
-  final String yueJiangZhi; // 月将所临地支
-  final List<String> tianPan; // 天盘（月将加时后十二支）
-  final List<String> siKe;    // 四课（日干上神/下神/日支上神/下神）
-  final String guiRen;        // 贵人（所在天将）
-  final List<String> tianJiang; // 十二天将按支排布
-  final String chuChuan;    // 初传
-  final String zhongChuan;  // 中传
-  final String moChuan;     // 末传
-  final String method;
-
-  DaLiuRenResult({
-    required this.hourIndex,
-    required this.yueJiang,
-    required this.shiYong,
-    required this.yueJiangZhi,
-    required this.tianPan,
-    required this.siKe,
-    required this.guiRen,
-    required this.tianJiang,
-    required this.chuChuan,
-    required this.zhongChuan,
-    required this.moChuan,
-    required this.method,
-  });
-
-  Map<String, dynamic> toJson() => {
-        'hourIndex': hourIndex,
-        'yueJiang': yueJiang,
-        'yueJiangZhi': yueJiangZhi,
-        'tianPan': tianPan,
-        'siKe': siKe,
-        'guiRen': guiRen,
-        'tianJiang': tianJiang,
-        'shiYong': shiYong,
-        'chuChuan': chuChuan,
-        'zhongChuan': zhongChuan,
-        'moChuan': moChuan,
-        'method': method,
-      };
-}
-
-/// 大六壬引擎（基础简化版）
-class DaLiuRenEngine {
-  /// 简化起课：以月将加时定三传（不做完整天地盘，供入门展示）
-  /// 十二天将顺序（贵人起）
-  static const _tiJiangOrd = ['贵人','螣蛇','朱雀','六合','勾陈','青龙','天空','白虎','太常','玄武','太阴','天后'];
-
-  /// 贵人口诀：甲戊庚牛羊、乙己鼠猴乡（阳贵/阴贵）
-  ///
-  /// 昼夜分界按六壬通行法：**卯至申为昼**（日出后至日落前，用阳贵），
-  /// **酉至寅为夜**（用阴贵）。旧实现以"子至巳为昼"划分，与卯酉分界不符，
-  /// 会导致 6 个时辰（卯辰巳申酉戌… 实际是午未申酉前后）取错贵人。
-  static String calcGuiRen(String dayGan, int hourIndex) {
-    // 时辰索引：0子 1丑 2寅 3卯 4辰 5巳 6午 7未 8申 9酉 10戌 11亥
-    final isDay = hourIndex >= 3 && hourIndex <= 8; // 卯~申为昼（阳贵）
-    const yang = {'甲':'丑','戊':'丑','庚':'丑','乙':'子','己':'子','丙':'亥','丁':'亥','壬':'卯','癸':'卯','辛':'午'};
-    const yin = {'甲':'未','戊':'未','庚':'未','乙':'申','己':'申','丙':'酉','丁':'酉','壬':'巳','癸':'巳','辛':'寅'};
-    return (isDay ? yang[dayGan] : yin[dayGan]) ?? '丑';
-  }
-
-  /// 日干寄宫（十干寄宫：甲寅、乙辰、丙戊巳、丁己未、庚申、辛戌、壬亥、癸丑）
-  static const _ganJiGong = {
-    '甲': 2, '乙': 4, '丙': 5, '丁': 7, '戊': 5,
-    '己': 7, '庚': 8, '辛': 10, '壬': 11, '癸': 1,
-  };
-
-  /// 中气 → 月将索引（0=登明/亥 … 11=神后/子）。
-  ///
-  /// 大六壬以**中气换将**：雨水后登明、春分后河魁、谷雨后从魁、小满后传送、
-  /// 夏至后小吉、大暑后胜光、处暑后太乙、秋分后天罡、霜降后太冲、
-  /// 小雪后功曹、冬至后大吉、大寒后神后。
-  ///
-  /// 注意：月建（月支）随**节**更换（立春换寅月），中气在月建中段，
-  /// 因此不能用月支直接推月将（会错半个月）。旧实现按公历月取将，偏差更大。
-  static const _zhongQiToYueJiang = <String, int>{
-    '雨水': 0, '春分': 1, '谷雨': 2, '小满': 3, '夏至': 4, '大暑': 5,
-    '处暑': 6, '秋分': 7, '霜降': 8, '小雪': 9, '冬至': 10, '大寒': 11,
-  };
-
-  /// 按起课时间定月将（取最近一个已过的中气）
-  static int yueJiangOf(DateTime dt) {
-    final solar = tyme.SolarDay.fromYmd(dt.year, dt.month, dt.day);
-    // 中气间隔约 15-16 天，向前扫描 32 天必能命中
-    for (var offset = 0; offset <= 32; offset++) {
-      try {
-        final day = solar.next(-offset);
-        final termDay = day.getTermDay();
-        if (termDay.dayIndex != 0) continue;
-        final term = termDay.getSolarTerm();
-        if (!term.isQi()) continue; // 只要中气，跳过节
-        final k = _zhongQiToYueJiang[term.getName()];
-        if (k != null) return k;
-      } catch (_) {
-        // 节气数据异常时继续向前找
-      }
-    }
-    // 兜底：按公历月近似（理论上不会走到）
-    return (dt.month - 1) % 12;
-  }
-
-  /// 月建地支索引 → 月将索引（近似，仅作兜底；正式取将请用 [yueJiangOf]）
-  static int yueJiangFromMonthZhi(int monthZhiIdx) =>
-      (10 + monthZhiIdx) % 12;
-
-  static DaLiuRenResult byHour(int hourIndex, int month,
-      {String dayGan = '甲', String dayZhi = '子', int? monthZhiIdx,
-      int? yueJiangIdx}) {
-    // 月将优先级：调用方按中气直接给出 > 月建近似 > 公历月兜底
-    final int yueJiang;
-    if (yueJiangIdx != null && yueJiangIdx >= 0 && yueJiangIdx < 12) {
-      yueJiang = yueJiangIdx;
-    } else if (monthZhiIdx != null && monthZhiIdx >= 0 && monthZhiIdx < 12) {
-      yueJiang = yueJiangFromMonthZhi(monthZhiIdx);
-    } else {
-      yueJiang = (month - 1) % 12;
-    }
-    // 月将地支（登明=亥…神后=子）
-    final yueJiangZhi = daliurenZhi[(11 - yueJiang) % 12];
-    // 天盘：月将加时，月将落到时支上，其余顺排
-    final tianPan = List.generate(12, (i) {
-      final j = (i - hourIndex + 12) % 12;
-      final diZhiIdx = (11 - yueJiang + j) % 12;
-      return daliurenZhi[diZhiIdx];
-    });
-    // 三传简化推算：从月将顺数时辰取初传，再顺数得中传、末传
-    // 贵人 + 十二天将排布（贵人支起顺布）
-    final guiRen = calcGuiRen(dayGan, hourIndex);
-    final guiIdx = daliurenZhi.indexOf(guiRen);
-    final gi = guiIdx >= 0 ? guiIdx : 0;
-    final tianJiang = List.generate(12, (i) => _tiJiangOrd[(i - gi + 12) % 12]);
-    // 四课：日干上神/下神 + 日支上神/下神
-    final ganJi = _ganJiGong[dayGan] ?? 2;
-    final zhiIdx = daliurenZhi.indexOf(dayZhi);
-    final ziIdx = zhiIdx >= 0 ? zhiIdx : 0;
-    final siKe = [
-      tianPan[ganJi],           // 日干上神
-      daliurenZhi[ganJi],       // 日干下神（寄宫）
-      tianPan[ziIdx],           // 日支上神
-      dayZhi,                   // 日支下神
-    ];
-    // 三传：简化取法（非九宗门起课）。初传取日干上神，中传/末传自初传位
-    // 天盘顺行 2/4 位。真正的三传须按贼克/比用/涉害/遥克/昴星等九宗门规则
-    // 取初传，故界面上明确标注为"简化"，避免用户误当正规课盘使用。
-    final chuIdx = daliurenZhi.indexOf(siKe[0]);
-    final ci = chuIdx >= 0 ? chuIdx : 0;
-    final chu = siKe[0];
-    final zhong = tianPan[(ci + 2) % 12];
-    final mo = tianPan[(ci + 4) % 12];
-    return DaLiuRenResult(
-      hourIndex: hourIndex,
-      yueJiang: yueJiang,
-      yueJiangZhi: yueJiangZhi,
-      tianPan: tianPan,
-      shiYong: [chu, zhong, mo],
-      siKe: siKe,
-      guiRen: guiRen,
-      tianJiang: tianJiang,
-      chuChuan: chu,
-      zhongChuan: zhong,
-      moChuan: mo,
-      method: '月将加时（简化）',
-    );
-  }
-}
-
-/// 大六壬排盘页
 class DaLiuRenPage extends StatefulWidget {
   const DaLiuRenPage({super.key});
   @override
@@ -235,6 +48,8 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
   int _hour = 0;
   int _dayGan = 0; // 甲
   int _dayZhi = 0; // 子
+  /// 子时归属：true=晚子（23-24，日柱用次日），false=早子（0-1，当日）
+  bool _lateZi = true;
   static const _ganCN = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
   DaLiuRenResult? _result;
   final _shotKey = GlobalKey();
@@ -265,11 +80,16 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
     });
   }
 
-  void _useNow() {    final now = DateTime.now();
+  void _useNow() {
+    final now = DateTime.now();
     final hourIdx = (now.hour == 23 || now.hour == 0)
         ? 0
         : ((now.hour + 1) ~/ 2) % 12;
-    final solar = tyme.SolarDay.fromYmd(now.year, now.month, now.day);
+    // 晚子时换日：23:00 后日柱取次日（受设置开关控制）
+    final lateZi = now.hour >= 23;
+    final wanZiShi = context.read<SettingsProvider>().wanZiShi;
+    var solar = tyme.SolarDay.fromYmd(now.year, now.month, now.day);
+    if (hourIdx == 0 && lateZi && wanZiShi) solar = solar.next(1);
     final gz = dayGanZhiFromTyme(solar);
     final g = gz.isNotEmpty ? gz[0] : '甲';
     final zhi = gz.length > 1 ? gz[1] : '子';
@@ -278,6 +98,7 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
       _month = now.month;
       _day = now.day;
       _hour = hourIdx;
+      _lateZi = lateZi;
       _dayGan = _ganCN.indexOf(g);
       if (_dayGan < 0) _dayGan = 0;
       _dayZhi = daliurenZhi.indexOf(zhi);
@@ -286,20 +107,35 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
   }
 
   void _calc() {
+    // 晚子时换日（设置项）：子时且选「晚子」时，日柱与月将按次日取
+    final wanZiShi = context.read<SettingsProvider>().wanZiShi;
+    final baseDate = DateTime(_year, _month, _day);
+    final useNextDay = _hour == 0 && _lateZi && wanZiShi;
+    final date = useNextDay ? baseDate.add(const Duration(days: 1)) : baseDate;
     // 月将按**中气**换将（雨水后登明…大寒后神后），取起课日最近一个中气
-    final date = DateTime(_year, _month, _day);
     final yueJiangIdx = DaLiuRenEngine.yueJiangOf(date);
-    final solar = tyme.SolarDay.fromYmd(_year, _month, _day);
+    final solar = tyme.SolarDay.fromYmd(date.year, date.month, date.day);
     final monthGz = monthGanZhiFromTyme(solar);
     final monthZhi = monthGz.length > 1 ? monthGz[1] : '';
     final monthZhiIdx = daliurenZhi.indexOf(monthZhi);
-    setState(() => _result = DaLiuRenEngine.byHour(
-      _hour, _month,
-      dayGan: _ganCN[_dayGan],
-      dayZhi: daliurenZhi[_dayZhi],
-      monthZhiIdx: monthZhiIdx >= 0 ? monthZhiIdx : null,
-      yueJiangIdx: yueJiangIdx,
-    ));
+    // 日干支：手动选日期时以所选日为准；晚子换日时用次日
+    final daySolar =
+        useNextDay ? tyme.SolarDay.fromYmd(_year, _month, _day).next(1)
+                   : tyme.SolarDay.fromYmd(_year, _month, _day);
+    final gz = dayGanZhiFromTyme(daySolar);
+    final g = _ganCN.indexOf(gz.isNotEmpty ? gz[0] : '甲');
+    final zh = daliurenZhi.indexOf(gz.length > 1 ? gz[1] : '子');
+    setState(() {
+      _dayGan = g >= 0 ? g : 0;
+      _dayZhi = zh >= 0 ? zh : 0;
+      _result = DaLiuRenEngine.byHour(
+        _hour, date.month,
+        dayGan: _ganCN[_dayGan],
+        dayZhi: daliurenZhi[_dayZhi],
+        monthZhiIdx: monthZhiIdx >= 0 ? monthZhiIdx : null,
+        yueJiangIdx: yueJiangIdx,
+      );
+    });
   }
 
   @override
@@ -447,6 +283,35 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
             );
           }),
         ),
+              // 子时归属（仅子时显示）：晚子（23-24，日柱用次日）/ 早子（0-1，当日）
+              if (_hour == 0) ...[
+                const SizedBox(height: 8),
+                Wrap(spacing: 6, runSpacing: 4, children: [
+                  ChoiceChip(
+                    label: Text('晚子 23-24（日柱用次日）',
+                        style: TextStyle(fontSize: 11, color: _lateZi ? p : t)),
+                    selected: _lateZi,
+                    onSelected: (_) => setState(() => _lateZi = true),
+                    selectedColor: p.withAlpha(40),
+                    backgroundColor: bg,
+                    side: BorderSide(color: _lateZi ? p : b, width: 1),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  ChoiceChip(
+                    label: Text('早子 0-1（用当日日柱）',
+                        style: TextStyle(fontSize: 11, color: !_lateZi ? p : t)),
+                    selected: !_lateZi,
+                    onSelected: (_) => setState(() => _lateZi = false),
+                    selectedColor: p.withAlpha(40),
+                    backgroundColor: bg,
+                    side: BorderSide(color: !_lateZi ? p : b, width: 1),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ]),
+              ],
+
               ],  // Card 内 Column children
             ),  // Column
           ),  // Padding
@@ -486,6 +351,10 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
                 const SizedBox(height: 8),
                 Text('月将：${daliurenYueJiang[_result!.yueJiang]}（临${_result!.yueJiangZhi} · ${_result!.method}）',
                     style: const TextStyle(fontSize: 13)),
+                const SizedBox(height: 2),
+                Text('贵人：${_result!.guiRen}（临地盘${_result!.guiRenGong}位，'
+                    '天将${_result!.shunBu ? "顺布" : "逆布"}）',
+                    style: TextStyle(fontSize: 11.5, color: t.withAlpha(160))),
                 const SizedBox(height: 8),
                 // 天地盘：月将加时，天盘十二支
                 Text('天地盘（月将加时）', style: TextStyle(fontSize: 13, color: t.withAlpha(150))),
@@ -521,19 +390,35 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    _ke('一课·日干上神', _result!.siKe[0], p, t, bg, b,
-                        info: '日干上神，代表自身现状、主导'),
-                    _ke('二课·日干下神', _result!.siKe[1], p, t, bg, b,
-                        info: '日干下神，代表自身内在/同盟'),
-                    _ke('三课·日支上神', _result!.siKe[2], p, t, bg, b,
-                        info: '日支上神，代表所测之事与环境'),
-                    _ke('四课·日支下神', _result!.siKe[3], p, t, bg, b,
-                        info: '日支下神，代表事之内情/他人'),
+                    _ke('一课·日阳神', _result!.siKeShang[0], p, t, bg, b,
+                        info: '日干阳神：自身现状、主导',
+                        subtitle: '下 ${_result!.siKeXia[0]}'),
+                    _ke('二课·日阴神', _result!.siKeShang[1], p, t, bg, b,
+                        info: '日干阴神：自身内在/同盟',
+                        subtitle: '下 ${_result!.siKeXia[1]}'),
+                    _ke('三课·辰阳神', _result!.siKeShang[2], p, t, bg, b,
+                        info: '日支阳神：所测之事与环境',
+                        subtitle: '下 ${_result!.siKeXia[2]}'),
+                    _ke('四课·辰阴神', _result!.siKeShang[3], p, t, bg, b,
+                        info: '日支阴神：事之内情/他人',
+                        subtitle: '下 ${_result!.siKeXia[3]}'),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text('三传（初事始 · 中事中 · 末事终）',
-                    style: TextStyle(fontSize: 12.5, color: t.withAlpha(150))),
+                Row(children: [
+                  Text('三传（初事始 · 中事中 · 末事终）',
+                      style: TextStyle(fontSize: 12.5, color: t.withAlpha(150))),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: p.withAlpha(20),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text('取传：${_result!.chuanFa}',
+                        style: TextStyle(fontSize: 10, color: p)),
+                  ),
+                ]),
                 const SizedBox(height: 6),
                 Row(children: [
                   _chuan('初传', _result!.chuChuan, p, t, bg, b,
@@ -721,8 +606,12 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
       ..writeln('━━━━━━━━━━━━━━')
       ..writeln('月将：${daliurenYueJiang[r.yueJiang]}（临${r.yueJiangZhi} · ${r.method}）')
       ..writeln('三传：初传${r.chuChuan} → 中传${r.zhongChuan} → 末传${r.moChuan}')
-      ..writeln('四课：${r.siKe.join(' / ')}')
-      ..writeln('贵人临${r.guiRen} · 三传天将：${_chuanTianJiang('', r.chuChuan, r).trim()} / ${_chuanTianJiang('', r.zhongChuan, r).trim()} / ${_chuanTianJiang('', r.moChuan, r).trim()}')
+      ..writeln('四课：${[
+        for (var i = 0; i < 4; i++) '${i + 1}课 ${r.siKeShang[i]}/${r.siKeXia[i]}'
+      ].join('  ')}')
+      ..writeln('取传法：${r.chuanFa}')
+      ..writeln('贵人：${r.guiRen}（临地盘${r.guiRenGong}位，天将${r.shunBu ? "顺布" : "逆布"}）')
+      ..writeln('三传天将：${_chuanTianJiang('', r.chuChuan, r).trim()} / ${_chuanTianJiang('', r.zhongChuan, r).trim()} / ${_chuanTianJiang('', r.moChuan, r).trim()}')
       ..writeln('━━━━━━━━━━━━━━')
       ..writeln('—— 来自「落·乾坤」');
     await Clipboard.setData(ClipboardData(text: buf.toString()));
@@ -883,7 +772,8 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
     );
   }
 
-  Widget _ke(String label, String zhi, Color p, Color t, Color bg, Color b, {String? info}) {
+  Widget _ke(String label, String zhi, Color p, Color t, Color bg, Color b,
+      {String? info, String? subtitle}) {
     return GestureDetector(
       onTap: () => _showZhiDetail(label, zhi, info: info),
       child: Container(
@@ -894,6 +784,11 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
           Text(label, style: TextStyle(fontSize: 10, color: t.withAlpha(130))),
           const SizedBox(height: 2),
           Text(zhi, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: p)),
+          if (subtitle != null) ...[
+            const SizedBox(height: 1),
+            Text(subtitle,
+                style: TextStyle(fontSize: 9, color: t.withAlpha(120))),
+          ],
           const SizedBox(height: 1),
           Icon(Icons.touch_app, size: 10, color: p.withAlpha(120)),
         ]),

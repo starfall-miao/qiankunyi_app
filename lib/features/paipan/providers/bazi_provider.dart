@@ -20,13 +20,23 @@ class BaziProvider extends ChangeNotifier {
     required DateTime birth,
     required bool isMale,
     required int hourIndex,
+    bool preciseTime = false,
+    bool wanZiShi = true,
+    bool isLateZi = false,
   }) async {
     _isCalculating = true;
     notifyListeners();
 
     try {
       await Future.delayed(const Duration(milliseconds: 100)); // UI 响应
-      _result = BaiZiEngine.calc(birth: birth, isMale: isMale, hourIndex: hourIndex);
+      _result = BaiZiEngine.calc(
+        birth: birth,
+        isMale: isMale,
+        hourIndex: hourIndex,
+        preciseTime: preciseTime,
+        wanZiShi: wanZiShi,
+        isLateZi: isLateZi,
+      );
     } catch (e) {
       debugPrint('八字排盘失败: $e');
       Logger.instance.error('八字排盘失败', '$e');

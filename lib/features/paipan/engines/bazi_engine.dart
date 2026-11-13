@@ -236,21 +236,58 @@ Map<String, int> _countWuXing(String yearGan, String yearZhi, String monthGan,
 /// 八字排盘引擎
 class BaiZiEngine {
   /// 排盘计算
-  /// - [birth] 公历出生日期
+  /// - [birth] 公历出生日期（[preciseTime] 为 true 时含准确时分，用于交节判定）
   /// - [isMale] true=男 false=女
   /// - [hourIndex] 时辰索引 0=子时 … 11=亥时
+  /// - [preciseTime] birth 是否带精确时刻（默认 false：按日+时辰推算）
+  /// - [wanZiShi] 晚子时换日：23:00-23:59 出生按**次日**取日柱与时柱
+  ///   （传统「子初换日」派，默认开启；关闭则按当日「子正换日」派）
+  /// - [isLateZi] 时辰为子时且属晚子（23:00-23:59）；preciseTime 为 true 时
+  ///   由 birth.hour 自动判定，此参数仅在不精确时使用
   static BaziResult calc({
     required DateTime birth,
     required bool isMale,
     required int hourIndex,
+    bool preciseTime = false,
+    bool wanZiShi = true,
+    bool isLateZi = false,
   }) {
     // 使用 tyme 获取公历日及六十甲子
     final solar = tyme.SolarDay.fromYmd(birth.year, birth.month, birth.day);
-    final scd = solar.getSixtyCycleDay();
 
-    // 四柱干支（通过 SixtyCycleDay 获取）
-    final yearGZ = scd.getYear().getName();
-    final monthGZ = scd.getMonth().getName();
+    // ── 交节精确时刻判定 ──
+    // 年柱/月柱以**节气**为界；tyme 的 SixtyCycleDay 按「节气日 0 点」换柱，
+    // 出生在交节当日但早于交节时刻者，实际仍属上一节气，需回退一日判定。
+    var termSource = solar;
+    if (preciseTime) {
+      try {
+        final termDay = solar.getTermDay();
+        if (termDay.dayIndex == 0) {
+          final termTime =
+              termDay.getSolarTerm().getJulianDay().getSolarTime();
+          final birthTime = tyme.SolarTime.fromYmdHms(
+              birth.year, birth.month, birth.day, birth.hour, birth.minute, 0);
+          // JulianDay 无 isBefore：直接比较儒略日数值
+          if (birthTime.getJulianDay().getDay() < termTime.getJulianDay().getDay()) {
+            termSource = solar.next(-1);
+          }
+        }
+      } catch (_) {
+        // 节气数据异常时按日粒度处理
+      }
+    }
+    final termScd = termSource.getSixtyCycleDay();
+
+    // ── 晚子时换日 ──
+    final lateZi = hourIndex == 0 &&
+        wanZiShi &&
+        (preciseTime ? birth.hour >= 23 : isLateZi);
+    final daySource = lateZi ? solar.next(1) : solar;
+    final scd = daySource.getSixtyCycleDay();
+
+    // 四柱干支
+    final yearGZ = termScd.getYear().getName();
+    final monthGZ = termScd.getMonth().getName();
     final dayGZ = scd.getSixtyCycle().getName();
     // 时柱：根据日干和时辰索引推算（五鼠遁）
     final hourGZ = _calcHourGanZhi(dayGZ, hourIndex);

@@ -250,7 +250,10 @@ class LiuYaoEngine {
   ///
   /// 即：阳/阴各占 1/2，**动爻概率 1/4**（动爻中老阳/老阴各半）。
   /// 旧实现用「每爻 1/6 独立随机 + 阴阳各半」，动爻概率偏低且分布不符古法。
-  static PaipanResult manual({LiuyaoSchool school = LiuyaoSchool.jingFangJianBan}) {
+  static PaipanResult manual(
+      {LiuyaoSchool school = LiuyaoSchool.jingFangJianBan,
+      bool wanZiShi = true,
+      DateTime? time}) {
     final yaos = <YaoModel>[];
     for (int i = 0; i < 6; i++) {
       // 0 → 老阴(阴,动)；1 → 老阳(阳,动)；2-4 → 少阳(阳,静)；5-7 → 少阴(阴,静)
@@ -276,13 +279,17 @@ class LiuYaoEngine {
         isMoving: isMoving,
       ));
     }
-    return _buildResult(yaos, '机器摇卦', school: school);
+    return _buildResult(yaos, '机器摇卦',
+        school: school, wanZiShi: wanZiShi, dt: time);
   }
 
   /// 从爻列表构建排盘结果（手工输入用）
   static PaipanResult fromYaos(List<YaoModel> yaos,
-      {DateTime? time, LiuyaoSchool school = LiuyaoSchool.jingFangJianBan}) {
-    return _buildResult(yaos, '手工摇卦', dt: time, school: school);
+      {DateTime? time,
+      LiuyaoSchool school = LiuyaoSchool.jingFangJianBan,
+      bool wanZiShi = true}) {
+    return _buildResult(yaos, '手工摇卦',
+        dt: time, school: school, wanZiShi: wanZiShi);
   }
 
   /// 时间起卦（《梅花易数》通行法，与梅花引擎同一规则）
@@ -296,7 +303,8 @@ class LiuYaoEngine {
   /// 2. 原 `(和) % 6` 直接把 0 当初爻，而余 0 传统作**上爻**（1/6 的卦错位一爻）；
   /// 3. 原未把起卦时间传给日辰/月建计算，导致日辰月建取的是"当前时间"。
   static PaipanResult byTime(DateTime time,
-      {LiuyaoSchool school = LiuyaoSchool.jingFangJianBan}) {
+      {LiuyaoSchool school = LiuyaoSchool.jingFangJianBan,
+      bool wanZiShi = true}) {
     final solar = tyme.SolarDay.fromYmd(time.year, time.month, time.day);
     final lunar = solar.getLunarDay();
     // 农历年干支地支序数（子=0）+1 → 子1…亥12
@@ -320,16 +328,18 @@ class LiuYaoEngine {
     final movingIdx = movingRaw == 0 ? 5 : movingRaw - 1;
 
     return _buildFromTrigrams(upperIdx, lowerIdx, movingIdx, '时间起卦',
-        dt: time, school: school);
+        dt: time, school: school, wanZiShi: wanZiShi);
   }
 
   /// 数字起卦
   static PaipanResult byNumbers(int a, int b, int c,
-      {LiuyaoSchool school = LiuyaoSchool.jingFangJianBan}) {
+      {LiuyaoSchool school = LiuyaoSchool.jingFangJianBan,
+      bool wanZiShi = true}) {
     final upperIdx = _toTrigramIndex(a);
     final lowerIdx = _toTrigramIndex(b);
     final movingIdx = ((c - 1) % 6 + 6) % 6; // c为动爻序号（1-6），转为0-based（负数安全）
-    return _buildFromTrigrams(upperIdx, lowerIdx, movingIdx, '数字起卦', school: school);
+    return _buildFromTrigrams(upperIdx, lowerIdx, movingIdx, '数字起卦',
+        school: school, wanZiShi: wanZiShi);
   }
 
   /// 数字 → 八卦索引（0=乾 ~ 7=坤）
@@ -341,7 +351,9 @@ class LiuYaoEngine {
   /// 由上下卦构建排盘结果
   static PaipanResult _buildFromTrigrams(
       int upperIdx, int lowerIdx, int movingYaoIdx, String method,
-      {DateTime? dt, LiuyaoSchool school = LiuyaoSchool.jingFangJianBan}) {
+      {DateTime? dt,
+      LiuyaoSchool school = LiuyaoSchool.jingFangJianBan,
+      bool wanZiShi = true}) {
     // 八卦爻模式：从初爻到上爻（0~2为下卦/内卦，3~5为上卦/外卦）
     const triPatterns = [
       [1, 1, 1], // 0乾
@@ -367,12 +379,15 @@ class LiuYaoEngine {
       );
     });
 
-    return _buildResult(yaos, method, dt: dt, school: school);
+    return _buildResult(yaos, method,
+        dt: dt, school: school, wanZiShi: wanZiShi);
   }
 
   /// 从爻数据构建完整排盘结果
   static PaipanResult _buildResult(List<YaoModel> yaos, String method,
-      {DateTime? dt, LiuyaoSchool school = LiuyaoSchool.jingFangJianBan}) {
+      {DateTime? dt,
+      LiuyaoSchool school = LiuyaoSchool.jingFangJianBan,
+      bool wanZiShi = true}) {
     dt ??= DateTime.now();
     // 从六个爻反推上下卦掩码
     final upperMask = _yaosToMask(yaos.sublist(0, 3).reversed.toList());
@@ -432,7 +447,11 @@ class LiuYaoEngine {
 
     // ───── 月令/日令/空亡（基于 tyme4dart） ─────
     final solarDay = tyme.SolarDay.fromYmd(dt.year, dt.month, dt.day);
-    final dayGanZhi = dayGanZhiFromTyme(solarDay); // 日柱干支
+    // 晚子时换日（传统「子初换日」派）：23:00-23:59 起卦按**次日**取日柱、
+    // 旬空、六神起例与日破暗动；关闭时按当日（「子正换日」派）。
+    final isLateZi = dt.hour >= 23 && wanZiShi;
+    final daySource = isLateZi ? solarDay.next(1) : solarDay;
+    final dayGanZhi = dayGanZhiFromTyme(daySource); // 日柱干支（含晚子时换日）
     final monthGanZhi = monthGanZhiFromTyme(solarDay); // 月柱干支（精确节气月）
     // 月建地支以 tyme 精确节气月（立春换寅月）为准：旧实现用公历月近似，
     // 与同屏显示的精确月柱自相矛盾（如公历2月10日显示月建'卯'但月柱'甲寅'）。
@@ -441,7 +460,7 @@ class LiuYaoEngine {
     final monthZhi = preciseMonthZhi.isNotEmpty
         ? preciseMonthZhi
         : monthZhiSimple(dt.month);
-    final dayGzIdx = dayGanZhiIndex(solarDay); // 日干支索引
+    final dayGzIdx = dayGanZhiIndex(daySource); // 日干支索引
     final kongWangList = calcKongWang(dayGzIdx); // 旬空列表
 
     // 标记空亡
@@ -454,8 +473,10 @@ class LiuYaoEngine {
       }
     }
 
-    // 六神（根据日干）
-    _applyLiuShen(yaos, _dayGanIndex(dt));
+    // 六神（根据日干，晚子时换日后取次日日干）
+    _applyLiuShen(yaos, _tianGanCN2.keys
+        .toList()
+        .indexWhere((g) => (_tianGanCN2[g] ?? '') == dayGanZhi[0]));
 
     // 旺衰（根据月令地支五行）
     _applyWangShuaiByZhi(yaos, monthZhi);
@@ -477,7 +498,7 @@ class LiuYaoEngine {
 
     // 变卦：动爻阴阳反转后，必须按**变卦自身的上下卦**重新装纳甲；
     // 六亲仍以本卦卦宫为"我"（传统：变卦六亲随本宫论）。
-    final bianGua = _buildBianGua(yaos, gong);
+    final bianGua = _buildBianGua(yaos, gong, school);
 
     return PaipanResult(
       benGua: gua,
@@ -503,7 +524,8 @@ class LiuYaoEngine {
   /// 4. 六亲以**本卦卦宫五行**为基准重算（变卦六亲随本宫，如乾宫金卦变出
   ///    丑土仍作父母）；
   /// 5. 世应按变卦自身所属八宫标记。
-  static GuaModel? _buildBianGua(List<YaoModel> benYaos, GuaGong benGong) {
+  static GuaModel? _buildBianGua(
+      List<YaoModel> benYaos, GuaGong benGong, LiuyaoSchool school) {
     if (!benYaos.any((y) => y.isMoving)) return null;
 
     // 1) 动爻阴阳反转（只反转结构，不继承本卦的干支/六亲）
@@ -551,12 +573,17 @@ class LiuYaoEngine {
       benYaos[i].huaJinTui = _huaJinTuiOf(from, to);
     }
 
-    // 5) 六亲：以本卦卦宫五行为"我"
-    _applyLiuQin(bianYaos, guaGongWuXing[benGong]!);
-
-    // 6) 变卦名/所属宫/世应（按变卦自身的八宫归属）
+    // 5) 变卦名/所属宫/世应（按变卦自身的八宫归属）
     final name = _hexagramMap[innerTri]![outerTri];
     final palace = _palaceMap[innerTri]![outerTri]!;
+
+    // 6) 变卦六亲的基准随流派：
+    //    · 京房简版（通行）：变卦六亲以**本卦卦宫**为"我"（变卦六亲随本宫）
+    //    · 京房正宗（部分流派）：变卦六亲以**变卦自身卦宫**为"我"
+    final liuQinBase = school == LiuyaoSchool.jingFangJianBan
+        ? guaGongWuXing[benGong]!
+        : guaGongWuXing[palace.$1]!;
+    _applyLiuQin(bianYaos, liuQinBase);
     final shiIdx = palace.$2;
     final yingIdx = palace.$3;
     if (shiIdx >= 0 && shiIdx < 6) bianYaos[shiIdx].isShi = true;
@@ -837,15 +864,6 @@ class LiuYaoEngine {
     LiuShen.baiHu,
     LiuShen.xuanWu,
   ];
-
-  /// 计算排盘时间的日干索引（0甲~9癸）
-  static int _dayGanIndex(DateTime dt) {
-    // 日干索引：基准点 1900-01-01 为甲戌日（日干=甲=0，非甲子日，但日干同为甲），
-    // 此处仅需日干索引用于六神起例，diff % 10 结果正确。
-    final base = DateTime(1900, 1, 1);
-    final diff = dt.difference(base).inDays;
-    return ((diff % 10) + 10) % 10;
-  }
 
   /// 应用六神
   static void _applyLiuShen(List<YaoModel> yaos, int dayGanIdx) {

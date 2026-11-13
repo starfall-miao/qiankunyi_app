@@ -109,12 +109,12 @@ void main() {
   group('大六壬 - 日干寄宫', () {
     test('壬日寄亥宫（非子宫）', () {
       final r = DaLiuRenEngine.byHour(0, 1, dayGan: '壬', dayZhi: '子');
-      expect(r.siKe[1], equals('亥'), reason: '十干寄宫：壬亥');
+      expect(r.siKeXia[0], equals('亥'), reason: '十干寄宫（一课下神）：壬亥');
     });
 
     test('甲日寄寅、癸日寄丑', () {
-      expect(DaLiuRenEngine.byHour(0, 1, dayGan: '甲', dayZhi: '子').siKe[1], '寅');
-      expect(DaLiuRenEngine.byHour(0, 1, dayGan: '癸', dayZhi: '子').siKe[1], '丑');
+      expect(DaLiuRenEngine.byHour(0, 1, dayGan: '甲', dayZhi: '子').siKeXia[0], '寅');
+      expect(DaLiuRenEngine.byHour(0, 1, dayGan: '癸', dayZhi: '子').siKeXia[0], '丑');
     });
   });
 
@@ -166,21 +166,28 @@ void main() {
       }
     });
 
-    test('四课：日干上神/寄宫、日支上神/日支', () {
+    test('四课：日阳/日阴/辰阳/辰阴（上神与下神配对）', () {
       final r = DaLiuRenEngine.byHour(3, 1,
           dayGan: '壬', dayZhi: '午', monthZhiIdx: 2);
-      expect(r.siKe[1], '亥', reason: '壬寄亥宫');
-      expect(r.siKe[3], '午', reason: '四课取日支本身');
-      expect(r.siKe[0], r.tianPan[11], reason: '一课为亥位天盘（日干上神）');
-      expect(r.siKe[2], r.tianPan[daliurenZhi.indexOf('午')],
-          reason: '三课为午位天盘（日支上神）');
+      expect(r.siKeXia[0], '亥', reason: '壬寄亥宫（一课下神）');
+      expect(r.siKeXia[2], '午', reason: '三课下神为日支');
+      expect(r.siKeShang[0], r.tianPan[11], reason: '一课上神=亥位天盘');
+      expect(r.siKeShang[2], r.tianPan[daliurenZhi.indexOf('午')],
+          reason: '三课上神=午位天盘');
+      expect(r.siKeXia[1], r.siKeShang[0], reason: '二课下神=一课上神');
+      expect(r.siKeXia[3], r.siKeShang[2], reason: '四课下神=三课上神');
     });
 
-    test('三传（入门简化法）：初传取日干上神', () {
+    test('三传按九宗门取法：常规法初传必为四课上神之一', () {
       final r = DaLiuRenEngine.byHour(0, 1,
           dayGan: '甲', dayZhi: '子', monthZhiIdx: 2);
-      expect(r.chuChuan, r.siKe[0]);
       expect(r.shiYong.length, 3);
+      expect(r.chuanFa, isNotEmpty);
+      if (!r.chuanFa.contains('昴星') &&
+          !r.chuanFa.contains('别责') &&
+          !r.chuanFa.contains('八专')) {
+        expect(r.siKeShang, contains(r.chuChuan));
+      }
     });
   });
 }
