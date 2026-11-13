@@ -401,6 +401,25 @@ class BaiZiEngine {
     );
   }
 
+  // ──────────── 仅供 UI/测试复用的规则入口（内部实现同一份代码） ────────────
+
+  /// 十神：以 [dayGan] 日干推算 [targetGan] 的十神（比肩/劫财/食神/伤官/
+  /// 偏财/正财/七杀/正官/偏印/正印）
+  static String shiShenOf(String dayGan, String targetGan) =>
+      _calcShiShen(dayGan, targetGan);
+
+  /// 地支藏干（本气/中气/余气；无则值恒为 '无'）
+  static Map<String, String> cangGanOf(String zhi) =>
+      Map<String, String>.from(_cangGanMap[zhi] ?? const {});
+
+  /// 五鼠遁：日干支 + 时辰索引（0=子 … 11=亥）→ 时柱干支
+  static String hourGanZhiOf(String dayGanZhi, int hourIndex) =>
+      _calcHourGanZhi(dayGanZhi, hourIndex);
+
+  /// 五行旺衰（按月支）
+  static Map<String, String> wangShuaiOf(String monthZhi) =>
+      Map<String, String>.from(_calcWuXingWangShuai(monthZhi));
+
   /// 日上起时法（五鼠遁）计算时辰干支
   /// [dayGanZhi] 日干支，如 "甲子"
   /// [hourIndex] 时辰索引 0=子时 … 11=亥时

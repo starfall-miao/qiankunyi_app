@@ -72,7 +72,7 @@ const naYinTable = <NaYin>[
   NaYin('霹雳火','火', '雷火交加，瞬间爆发。命主性情刚烈，机遇来得快去得也快。'),
   NaYin('松柏木','木', '松柏长青，坚韧不拔。命主意志坚定，逆境中见品格。'),
   NaYin('长流水','水', '长河奔流，绵延不绝。命主运势悠长，福泽深厚。'),
-  NaYin('砂石金','金', '砂中淘金，历尽艰辛。命主先苦后甜，经过磨练方显价值。'),
+  NaYin('沙中金','金', '沙中淘金，历尽艰辛。命主先苦后甜，经过磨练方显价值。'),
   NaYin('山下火','火', '山下篝火，温暖人间。命主和善可亲，晚年安泰。'),
   NaYin('平地木','木', '平川之木，舒展从容。命主坦途顺畅，一生平稳。'),
   NaYin('壁上土','土', '墙上之土，装饰点缀。命主善于辅助他人，宜做幕僚。'),
@@ -92,7 +92,13 @@ const naYinTable = <NaYin>[
 /// 根据干支获取纳音（60甲子索引）
 NaYin? getNaYin(int tianGanIndex, int diZhiIndex) {
   if (tianGanIndex < 0 || tianGanIndex > 9 || diZhiIndex < 0 || diZhiIndex > 11) return null;
-  final idx = (tianGanIndex % 10) ~/ 2 * 6 + (diZhiIndex % 12) ~/ 2;
+  // 先还原六十甲子序号 i（满足 i%10=干序号、i%12=支序号），即：
+  //   i = (6*干 - 5*支) mod 60
+  // 再取 i ~/ 2 作为纳音索引（纳音两两一组，共 30 组）。
+  // 旧公式 (干~/2)*6 + (支~/2) 只在甲子~乙丑、甲戌~乙亥等少数干支上偶然正确，
+  // 其余全部错位（如丙寅被算成城头土，应为炉中火），四柱纳音与大运纳音随之全错。
+  final cycleIdx = ((6 * tianGanIndex - 5 * diZhiIndex) % 60 + 60) % 60;
+  final idx = cycleIdx ~/ 2;
   if (idx < 0 || idx >= naYinTable.length) return null;
   return naYinTable[idx];
 }

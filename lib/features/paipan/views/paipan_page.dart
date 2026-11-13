@@ -255,6 +255,15 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         if (_liuyaoMethod == 2) ...[
           const SizedBox(height: 6),
           _buildTimePicker(p, t, b, dark),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              '起卦规则：《梅花易数》通行法 —— 上卦＝（年支序数＋农历月＋农历日）÷8，'
+              '下卦＝（年支序数＋农历月＋农历日＋时辰数）÷8，动爻＝同和数÷6（余 0 作上爻）',
+              style: TextStyle(fontSize: 11, height: 1.5, color: t.withAlpha(140)),
+            ),
+          ),
         ],
         // 数字起卦输入（六爻）：两数定上下卦 + 动爻
         if (_liuyaoMethod == 3) ...[
@@ -542,16 +551,21 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
       PaipanResult r;
       if (_liuyaoMethod == 0) {
         final ys = <YaoModel>[];
+        // 爻序对齐：输入面板自上而下显示「初爻…上爻」，且行 i 写入
+        // _manualYaos[5-i]（即 _manualYaos[0]=上爻、_manualYaos[5]=初爻）。
+        // 引擎约定 ys[0]=初爻（内卦初二三 → 外卦四五六），因此必须按 5-i
+        // 取值、position 用 i 标记，否则整卦上下颠倒（如画天风姤排出天泽履）。
         for (int i = 0; i < 6; i++) {
-          final v = _manualYaos[i];
+          final v = _manualYaos[5 - i];
           ys.add(YaoModel(
             yinYang: (v == _YaoInput.shaoYang || v == _YaoInput.laoYang)
                 ? YaoYinYang.yang : YaoYinYang.yin,
-            position: YaoPosition.values[5 - i],
+            position: YaoPosition.values[i],
             isMoving: v == _YaoInput.laoYin || v == _YaoInput.laoYang,
           ));
         }
-        r = LiuYaoEngine.fromYaos(ys, time: _selectedTime, school: _liuyaoSchool);
+        // 手工摇卦的日辰/月建按点击排盘的当下时刻（面板不提供时间选择）
+        r = LiuYaoEngine.fromYaos(ys, time: DateTime.now(), school: _liuyaoSchool);
       } else if (_liuyaoMethod == 1) {
         r = LiuYaoEngine.manual(school: _liuyaoSchool);
       } else if (_liuyaoMethod == 3) {
