@@ -122,19 +122,56 @@ class DaLiuRenEngine {
     '己': 7, '庚': 8, '辛': 10, '壬': 11, '癸': 1,
   };
 
-  /// 月建地支索引 → 月将索引（0=登明…11=神后）。
-  /// 中气换将：月将支 = 月建支 - 1（模12），即 丑月神后、寅月登明、卯月河魁…
-  /// 而月将索引 k 与月将地支 j 满足 j = (11 - k) % 12，故 k = (10 + m) % 12。
+  /// 中气 → 月将索引（0=登明/亥 … 11=神后/子）。
+  ///
+  /// 大六壬以**中气换将**：雨水后登明、春分后河魁、谷雨后从魁、小满后传送、
+  /// 夏至后小吉、大暑后胜光、处暑后太乙、秋分后天罡、霜降后太冲、
+  /// 小雪后功曹、冬至后大吉、大寒后神后。
+  ///
+  /// 注意：月建（月支）随**节**更换（立春换寅月），中气在月建中段，
+  /// 因此不能用月支直接推月将（会错半个月）。旧实现按公历月取将，偏差更大。
+  static const _zhongQiToYueJiang = <String, int>{
+    '雨水': 0, '春分': 1, '谷雨': 2, '小满': 3, '夏至': 4, '大暑': 5,
+    '处暑': 6, '秋分': 7, '霜降': 8, '小雪': 9, '冬至': 10, '大寒': 11,
+  };
+
+  /// 按起课时间定月将（取最近一个已过的中气）
+  static int yueJiangOf(DateTime dt) {
+    final solar = tyme.SolarDay.fromYmd(dt.year, dt.month, dt.day);
+    // 中气间隔约 15-16 天，向前扫描 32 天必能命中
+    for (var offset = 0; offset <= 32; offset++) {
+      try {
+        final day = solar.next(-offset);
+        final termDay = day.getTermDay();
+        if (termDay.dayIndex != 0) continue;
+        final term = termDay.getSolarTerm();
+        if (!term.isQi()) continue; // 只要中气，跳过节
+        final k = _zhongQiToYueJiang[term.getName()];
+        if (k != null) return k;
+      } catch (_) {
+        // 节气数据异常时继续向前找
+      }
+    }
+    // 兜底：按公历月近似（理论上不会走到）
+    return (dt.month - 1) % 12;
+  }
+
+  /// 月建地支索引 → 月将索引（近似，仅作兜底；正式取将请用 [yueJiangOf]）
   static int yueJiangFromMonthZhi(int monthZhiIdx) =>
       (10 + monthZhiIdx) % 12;
 
   static DaLiuRenResult byHour(int hourIndex, int month,
-      {String dayGan = '甲', String dayZhi = '子', int? monthZhiIdx}) {
-    // 月将：优先按节气月（月建地支）定，中气换将；
-    // 无月建信息时回退到公历月近似（与旧行为一致）。
-    final yueJiang = (monthZhiIdx != null && monthZhiIdx >= 0 && monthZhiIdx < 12)
-        ? yueJiangFromMonthZhi(monthZhiIdx)
-        : (month - 1) % 12;
+      {String dayGan = '甲', String dayZhi = '子', int? monthZhiIdx,
+      int? yueJiangIdx}) {
+    // 月将优先级：调用方按中气直接给出 > 月建近似 > 公历月兜底
+    final int yueJiang;
+    if (yueJiangIdx != null && yueJiangIdx >= 0 && yueJiangIdx < 12) {
+      yueJiang = yueJiangIdx;
+    } else if (monthZhiIdx != null && monthZhiIdx >= 0 && monthZhiIdx < 12) {
+      yueJiang = yueJiangFromMonthZhi(monthZhiIdx);
+    } else {
+      yueJiang = (month - 1) % 12;
+    }
     // 月将地支（登明=亥…神后=子）
     final yueJiangZhi = daliurenZhi[(11 - yueJiang) % 12];
     // 天盘：月将加时，月将落到时支上，其余顺排
@@ -249,7 +286,9 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
   }
 
   void _calc() {
-    // 月将按节气月（月柱地支）取，避免公历月与节气月错位导致月将/天地盘错误
+    // 月将按**中气**换将（雨水后登明…大寒后神后），取起课日最近一个中气
+    final date = DateTime(_year, _month, _day);
+    final yueJiangIdx = DaLiuRenEngine.yueJiangOf(date);
     final solar = tyme.SolarDay.fromYmd(_year, _month, _day);
     final monthGz = monthGanZhiFromTyme(solar);
     final monthZhi = monthGz.length > 1 ? monthGz[1] : '';
@@ -259,6 +298,7 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
       dayGan: _ganCN[_dayGan],
       dayZhi: daliurenZhi[_dayZhi],
       monthZhiIdx: monthZhiIdx >= 0 ? monthZhiIdx : null,
+      yueJiangIdx: yueJiangIdx,
     ));
   }
 

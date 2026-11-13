@@ -2090,8 +2090,31 @@ class _AiChatSectionState extends State<_AiChatSection> {
       sb.writeln('  ${parts.join(' ')}');
     }
     if (result.bianGua != null) {
-      final bn2 = guaNameCN[result.bianGua!.name] ?? result.bianGua!.name.name;
-      sb.writeln('变卦：$bn2');
+      final bian = result.bianGua!;
+      final bn2 = guaNameCN[bian.name] ?? bian.name.name;
+      final bg2 = guaGongCN[bian.gong] ?? '';
+      sb.writeln('变卦：$bn2（$bg2宫；变卦六亲以本卦之宫论）');
+      sb.writeln('变卦六爻（自下而上）：');
+      for (final y in bian.yaos.reversed) {
+        final line = y.yinYang == YaoYinYang.yang ? '———' : '— —';
+        final parts = <String>['${y.positionName}爻 $line'];
+        if (y.isMoving) parts.add('动');
+        if (y.liuQin != LiuQin.none) parts.add(lqCN[y.liuQin] ?? '');
+        if (y.isShi) parts.add('世');
+        if (y.isYing) parts.add('应');
+        sb.writeln('  ${parts.join(' ')}');
+      }
+      // 动爻化出关系（如「官鬼化父母」）：取本卦动爻与变卦同位爻
+      final huaLines = <String>[];
+      for (var i = 0; i < result.benGua.yaos.length; i++) {
+        final by = result.benGua.yaos[i];
+        if (!by.isMoving) continue;
+        final a = lqCN[by.liuQin] ?? '';
+        final b = lqCN[bian.yaos[i].liuQin] ?? '';
+        if (a.isEmpty && b.isEmpty) continue;
+        huaLines.add('${by.positionName}爻 $a化$b');
+      }
+      if (huaLines.isNotEmpty) sb.writeln('动爻化出：${huaLines.join('；')}');
     }
     if (result.huGua != null) {
       final bn3 = guaNameCN[result.huGua!.name] ?? result.huGua!.name.name;
