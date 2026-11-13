@@ -1,3 +1,5 @@
+import 'package:tyme/tyme.dart' as tyme;
+
 // 小六壬排盘引擎
 // 纯 Dart 实现，离线运行
 //
@@ -113,6 +115,22 @@ class XiaoLiuRenEngine {
       resultPos: resultPos,
       method: '月日时',
     );
+  }
+
+  /// 按公历日期起课（内部自动换算为农历月日）。
+  /// 小六壬以农历月日起课（正月起大安），闰月按本月计。
+  static XiaoLiuRenResult byDateTime(DateTime date, int hour) {
+    var month = date.month;
+    var day = date.day;
+    try {
+      final solar = tyme.SolarDay.fromYmd(date.year, date.month, date.day);
+      final lunar = solar.getLunarDay();
+      month = lunar.getMonth().abs();
+      day = lunar.getDay();
+    } catch (_) {
+      // 历法数据异常时回退用公历，保证不崩
+    }
+    return byMonthDayHour(month, day, hour);
   }
 
   /// 从三个数字起课（数字1起大安顺数）
