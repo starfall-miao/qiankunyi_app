@@ -140,4 +140,37 @@ void main() {
       expect(yin.tianPan, isNot(equals(mao.tianPan)));
     });
   });
+
+  group('大六壬 - 天地盘（月将加时）', () {
+    test('月将加于时支，其余地支顺排', () {
+      const hourIdx = 6; // 午时
+      final r = DaLiuRenEngine.byHour(hourIdx, 1,
+          dayGan: '甲', dayZhi: '子', monthZhiIdx: 2); // 寅月：登明亥将
+      final yjZhi = daliurenZhi[(11 - r.yueJiang) % 12];
+      expect(r.tianPan[hourIdx], yjZhi, reason: '时支午上应加月将');
+      final yjIdx = daliurenZhi.indexOf(yjZhi);
+      for (var i = 0; i < 12; i++) {
+        final expectZhi = daliurenZhi[(yjIdx + i - hourIdx + 24) % 12];
+        expect(r.tianPan[i], expectZhi,
+            reason: '地盘${daliurenZhi[i]}上神应为 $expectZhi');
+      }
+    });
+
+    test('四课：日干上神/寄宫、日支上神/日支', () {
+      final r = DaLiuRenEngine.byHour(3, 1,
+          dayGan: '壬', dayZhi: '午', monthZhiIdx: 2);
+      expect(r.siKe[1], '亥', reason: '壬寄亥宫');
+      expect(r.siKe[3], '午', reason: '四课取日支本身');
+      expect(r.siKe[0], r.tianPan[11], reason: '一课为亥位天盘（日干上神）');
+      expect(r.siKe[2], r.tianPan[daliurenZhi.indexOf('午')],
+          reason: '三课为午位天盘（日支上神）');
+    });
+
+    test('三传（入门简化法）：初传取日干上神', () {
+      final r = DaLiuRenEngine.byHour(0, 1,
+          dayGan: '甲', dayZhi: '子', monthZhiIdx: 2);
+      expect(r.chuChuan, r.siKe[0]);
+      expect(r.shiYong.length, 3);
+    });
+  });
 }

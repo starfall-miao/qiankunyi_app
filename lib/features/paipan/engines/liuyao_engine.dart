@@ -9,7 +9,7 @@ import '../models/paipan_result.dart';
 import 'liuyao_date_helper.dart';
 
 /// 64 卦映射表 [下卦索引][上卦索引] → GuaName
-/// 注意：引擎中 u 为下卦/内卦索引，l 为上卦/外卦索引（见 _restoreGua 注释）。
+/// 注意：引擎中下标 u 为下卦/内卦索引，l 为上卦/外卦索引。
 /// 本表行=下卦，列=上卦。数据由京房八宫生成规则核验确认。
 const _hexagramMap = <int, List<GuaName>>{
   // 乾(0)为下卦 — 上卦：乾/兑/离/震/巽/坎/艮/坤
@@ -55,7 +55,7 @@ const _hexagramMap = <int, List<GuaName>>{
 };
 
 /// 八宫归属及世应位置 [下卦索引][上卦索引] → (宫, 世位, 应位)
-/// 注意：引擎中 u 为下卦/内卦索引，l 为上卦/外卦索引（见 _restoreGua 注释）。
+/// 注意：引擎中下标 u 为下卦/内卦索引，l 为上卦/外卦索引。
 /// 本表行=下卦，列=上卦。数据由京房八宫生成规则（一世→二世→…→游魂→归魂）程序化生成并核验。
 final _palaceMap = <int, Map<int, (GuaGong, int, int)>>{
   // 乾(0)为下卦
@@ -240,12 +240,36 @@ const _diZhiName = [
 class LiuYaoEngine {
   static final _random = Random();
 
-  /// 手动摇卦
+  /// 机器摇卦（三枚铜钱法）
+  ///
+  /// 传统概率（每爻以三枚铜钱掷出，背/字组合）：
+  /// - 老阳（三背，阳爻动）1/8
+  /// - 少阳（二背一字，阳爻静）3/8
+  /// - 少阴（一背二字，阴爻静）3/8
+  /// - 老阴（三字，阴爻动）1/8
+  ///
+  /// 即：阳/阴各占 1/2，**动爻概率 1/4**（动爻中老阳/老阴各半）。
+  /// 旧实现用「每爻 1/6 独立随机 + 阴阳各半」，动爻概率偏低且分布不符古法。
   static PaipanResult manual({LiuyaoSchool school = LiuyaoSchool.jingFangJianBan}) {
     final yaos = <YaoModel>[];
     for (int i = 0; i < 6; i++) {
-      final isYang = _random.nextBool();
-      final isMoving = _random.nextInt(6) == 0;
+      // 0 → 老阴(阴,动)；1 → 老阳(阳,动)；2-4 → 少阳(阳,静)；5-7 → 少阴(阴,静)
+      final r = _random.nextInt(8);
+      final bool isYang;
+      final bool isMoving;
+      if (r == 0) {
+        isYang = false;
+        isMoving = true; // 老阴
+      } else if (r == 1) {
+        isYang = true;
+        isMoving = true; // 老阳
+      } else if (r <= 4) {
+        isYang = true;
+        isMoving = false; // 少阳
+      } else {
+        isYang = false;
+        isMoving = false; // 少阴
+      }
       yaos.add(YaoModel(
         yinYang: isYang ? YaoYinYang.yang : YaoYinYang.yin,
         position: YaoPosition.values[i],
@@ -261,23 +285,42 @@ class LiuYaoEngine {
     return _buildResult(yaos, '手工摇卦', dt: time, school: school);
   }
 
-  /// 时间起卦
+  /// 时间起卦（《梅花易数》通行法，与梅花引擎同一规则）
+  ///
+  /// 上卦 =（年支序数 + 农历月 + 农历日）÷ 8 取余
+  /// 下卦 =（年支序数 + 农历月 + 农历日 + 时辰数）÷ 8 取余
+  /// 动爻 = 同下卦之和 ÷ 6 取余（余 0 作上爻）
+  ///
+  /// 修正三处旧缺陷：
+  /// 1. 原用「公历年后两位 + 公历月日」，非通行法（应为农历 + 年支序数）；
+  /// 2. 原 `(和) % 6` 直接把 0 当初爻，而余 0 传统作**上爻**（1/6 的卦错位一爻）；
+  /// 3. 原未把起卦时间传给日辰/月建计算，导致日辰月建取的是"当前时间"。
   static PaipanResult byTime(DateTime time,
       {LiuyaoSchool school = LiuyaoSchool.jingFangJianBan}) {
-    final year = time.year % 100;
-    final month = time.month;
-    final day = time.day;
-    final hour = time.hour;
-    // 时辰数（子1~亥12）：23:00-00:59 归子时；每两小时顺进一位。
-    // 旧式 ((h+1)~/2).clamp(1,12) 在 23 点（子时算成亥）与午前偶数小时
-    // 共 13/24 个小时上算错，直接导致下卦与动爻错误。
-    final shiChen = ((hour + 1) ~/ 2) % 12 + 1;
+    final solar = tyme.SolarDay.fromYmd(time.year, time.month, time.day);
+    final lunar = solar.getLunarDay();
+    // 农历年干支地支序数（子=0）+1 → 子1…亥12
+    final yearBranchIdx = lunar
+        .getLunarMonth()
+        .getLunarYear()
+        .getSixtyCycle()
+        .getEarthBranch()
+        .getIndex();
+    final y = yearBranchIdx + 1;
+    final m = lunar.getMonth().abs(); // 闰月按本月计
+    final d = lunar.getDay();
+    // 时辰数（子1~亥12）：23:00-00:59 归子时，每两小时顺进一位
+    final shiChen = ((time.hour + 1) ~/ 2) % 12 + 1;
 
-    final upperIdx = _toTrigramIndex(year + month + day);
-    final lowerIdx = _toTrigramIndex(shiChen);
-    final movingIdx = (year + month + day + shiChen) % 6;
+    final sum = y + m + d;
+    final upperIdx = _toTrigramIndex(sum);
+    final lowerIdx = _toTrigramIndex(sum + shiChen);
+    final movingRaw = (sum + shiChen) % 6;
+    // 余 0 作上爻（索引 5），余 1-5 为初至五爻
+    final movingIdx = movingRaw == 0 ? 5 : movingRaw - 1;
 
-    return _buildFromTrigrams(upperIdx, lowerIdx, movingIdx, '时间起卦', school: school);
+    return _buildFromTrigrams(upperIdx, lowerIdx, movingIdx, '时间起卦',
+        dt: time, school: school);
   }
 
   /// 数字起卦
@@ -431,47 +474,9 @@ class LiuYaoEngine {
       yingYaoIndex: yingIdx,
     );
 
-    // 变卦：动爻阴阳反转
-    final movingYao = yaos.indexWhere((y) => y.isMoving);
-    GuaModel? bianGua;
-    if (movingYao >= 0) {
-      final bianYaos = yaos.map((y) {
-        if (y.isMoving) {
-          return YaoModel(
-            yinYang: y.yinYang == YaoYinYang.yang ? YaoYinYang.yin : YaoYinYang.yang,
-            position: y.position,
-            isMoving: false,
-            tianGan: y.tianGan,
-            diZhi: y.diZhi,
-            liuQin: y.liuQin,
-            isShi: y.isShi,
-            isYing: y.isYing,
-          );
-        }
-        return YaoModel(
-          yinYang: y.yinYang,
-          position: y.position,
-          tianGan: y.tianGan,
-          diZhi: y.diZhi,
-          liuQin: y.liuQin,
-          isShi: y.isShi,
-          isYing: y.isYing,
-        );
-      }).toList();
-      final restored = _restoreGua(bianYaos);
-      // 重置变卦世应标记：yaos 中的标记与 _restoreGua 计算的 shiYaoIndex 一致
-      for (final y in restored.yaos) {
-        y.isShi = false;
-        y.isYing = false;
-      }
-      if (restored.shiYaoIndex >= 0 && restored.shiYaoIndex < restored.yaos.length) {
-        restored.yaos[restored.shiYaoIndex].isShi = true;
-      }
-      if (restored.yingYaoIndex >= 0 && restored.yingYaoIndex < restored.yaos.length) {
-        restored.yaos[restored.yingYaoIndex].isYing = true;
-      }
-      bianGua = restored;
-    }
+    // 变卦：动爻阴阳反转后，必须按**变卦自身的上下卦**重新装纳甲；
+    // 六亲仍以本卦卦宫为"我"（传统：变卦六亲随本宫论）。
+    final bianGua = _buildBianGua(yaos, gong);
 
     return PaipanResult(
       benGua: gua,
@@ -484,6 +489,75 @@ class LiuYaoEngine {
       dayGanZhi: dayGanZhi,
       kongWang: kongWangList,
       hiddenFuShen: hiddenFuShen,
+    );
+  }
+
+  /// 构造变卦。
+  ///
+  /// 步骤（每一步都会影响后续所有断卦要素，缺一不可）：
+  /// 1. 动爻阴阳反转（可多爻动），静爻保持原象；
+  /// 2. 由反转后的六爻反推变卦的上下卦（内卦=初二三，外卦=四五六）；
+  /// 3. 用**变卦的上下卦**分别取各自的内/外卦纳甲（这是旧实现缺失的一步：
+  ///    旧代码直接把本卦的干支/六亲搬到变卦上，导致变卦纳甲与六亲全错）；
+  /// 4. 六亲以**本卦卦宫五行**为基准重算（变卦六亲随本宫，如乾宫金卦变出
+  ///    丑土仍作父母）；
+  /// 5. 世应按变卦自身所属八宫标记。
+  static GuaModel? _buildBianGua(List<YaoModel> benYaos, GuaGong benGong) {
+    if (!benYaos.any((y) => y.isMoving)) return null;
+
+    // 1) 动爻阴阳反转（只反转结构，不继承本卦的干支/六亲）
+    final bianYaos = List.generate(6, (i) {
+      final y = benYaos[i];
+      return YaoModel(
+        yinYang: y.isMoving
+            ? (y.yinYang == YaoYinYang.yang ? YaoYinYang.yin : YaoYinYang.yang)
+            : y.yinYang,
+        position: y.position,
+        // 保留动爻标记：界面需要标注哪几爻动了
+        isMoving: y.isMoving,
+      );
+    });
+
+    // 2) 反推变卦上下卦
+    final innerMask = _yaosToMask(bianYaos.sublist(0, 3).reversed.toList());
+    final outerMask = _yaosToMask(bianYaos.sublist(3, 6).reversed.toList());
+    var innerTri = -1;
+    var outerTri = -1;
+    for (var t = 0; t < _trigramMasks.length; t++) {
+      if (_trigramMasks[t] == innerMask) innerTri = t;
+      if (_trigramMasks[t] == outerMask) outerTri = t;
+    }
+    if (innerTri < 0 || outerTri < 0) return null;
+
+    // 3) 变卦自身的纳甲装卦
+    final inner = _trigramNaJia[innerTri];
+    final outer = _trigramNaJia[outerTri];
+    for (var i = 0; i < 3; i++) {
+      bianYaos[i].tianGan = _tianGanMap[inner.$1];
+      bianYaos[i].diZhi = _diZhiMap[inner.$2[i]];
+    }
+    for (var i = 0; i < 3; i++) {
+      bianYaos[i + 3].tianGan = _tianGanMap[outer.$3];
+      bianYaos[i + 3].diZhi = _diZhiMap[outer.$4[i]];
+    }
+
+    // 4) 六亲：以本卦卦宫五行为"我"
+    _applyLiuQin(bianYaos, guaGongWuXing[benGong]!);
+
+    // 5) 变卦名/所属宫/世应（按变卦自身的八宫归属）
+    final name = _hexagramMap[innerTri]![outerTri];
+    final palace = _palaceMap[innerTri]![outerTri]!;
+    final shiIdx = palace.$2;
+    final yingIdx = palace.$3;
+    if (shiIdx >= 0 && shiIdx < 6) bianYaos[shiIdx].isShi = true;
+    if (yingIdx >= 0 && yingIdx < 6) bianYaos[yingIdx].isYing = true;
+
+    return GuaModel(
+      name: name,
+      gong: palace.$1,
+      yaos: bianYaos,
+      shiYaoIndex: shiIdx,
+      yingYaoIndex: yingIdx,
     );
   }
 
@@ -560,13 +634,16 @@ class LiuYaoEngine {
     }
   }
 
-  /// 日破/暗动：日辰地支冲爻，旺相为暗动、休囚为日破
+  /// 日破/暗动：日辰地支冲爻，旺相为暗动、休囚为日破。
+  /// 仅论**静爻**：暗动（旺相静爻受日冲而动）、日破（休囚静爻受日冲而破）
+  /// 都是静爻概念；动爻本已发动，受日冲不按暗动/日破标记。
   static void _applyRiPoAnDong(List<YaoModel> yaos, String dayGanZhi) {
     if (dayGanZhi.length < 2) return;
     final dayZhi = dayGanZhi.substring(1);
     const chongMap = {'子':'午','丑':'未','寅':'申','卯':'酉','辰':'戌','巳':'亥'};
     for (final yao in yaos) {
       if (yao.diZhi == null) continue;
+      if (yao.isMoving) continue; // 动爻不论暗动/日破
       final dzName = _diZhiMap.entries
           .firstWhere((e) => e.value == yao.diZhi, orElse: () => MapEntry('', DiZhi.zi))
           .key;
@@ -801,35 +878,4 @@ class LiuYaoEngine {
     }
   }
 
-  // ──────────── 从爻重建卦 ────────────
-
-  /// 从爻列表重建卦（用于变卦）
-  static GuaModel _restoreGua(List<YaoModel> yaos) {
-    final upperMask = _yaosToMask(yaos.sublist(0, 3).reversed.toList());
-    final lowerMask = _yaosToMask(yaos.sublist(3, 6).reversed.toList());
-    for (int u = 0; u < _trigramMasks.length; u++) {
-      if (_trigramMasks[u] != upperMask) continue;
-      for (int l = 0; l < _trigramMasks.length; l++) {
-        if (_trigramMasks[l] != lowerMask) continue;
-        if (u < _hexagramMap.length && l < (_palaceMap[u]?.length ?? 0)) {
-          final name = _hexagramMap[u]![l];
-          final palace = _palaceMap[u]![l]!;
-          return GuaModel(
-            name: name,
-            gong: palace.$1,
-            yaos: yaos,
-            shiYaoIndex: palace.$2,
-            yingYaoIndex: palace.$3,
-          );
-        }
-      }
-    }
-    return GuaModel(
-      name: GuaName.qian,
-      gong: GuaGong.qian,
-      yaos: yaos,
-      shiYaoIndex: 5,
-      yingYaoIndex: 2,
-    );
-  }
 }

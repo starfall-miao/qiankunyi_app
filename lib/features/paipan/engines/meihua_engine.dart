@@ -1,6 +1,8 @@
 // 梅花易数排盘引擎
 // 纯 Dart 实现，所有术数规则硬编码，离线运行
 
+import 'package:tyme/tyme.dart' as tyme;
+
 import '../models/yao_model.dart';
 import '../models/gua_model.dart';
 import '../models/paipan_result.dart';
@@ -92,24 +94,47 @@ class MeihuaEngine {
     return _buildGua(upper, lower, moving, '数字起卦');
   }
 
-  /// 时间起卦
+  /// 时间起卦（《梅花易数》通行法）
+  ///
+  /// 上卦 =（年支序数 + 农历月 + 农历日）÷ 8 取余
+  /// 下卦 =（年支序数 + 农历月 + 农历日 + 时辰数）÷ 8 取余
+  /// 动爻 = 同下卦之和 ÷ 6 取余（余 0 作上爻）
+  ///
+  /// 其中年支序数按**农历年**（春节换年）的干支地支取 子1…亥12；
+  /// 月/日取**农历**（闰月按本月计）；时辰数 子1…亥12（23:00 起为子时）。
+  /// 旧实现用「公历年后两位 + 公历月日」，与原著规则不符，已更正。
   static PaipanResult fromDateTime(DateTime dt) {
-    final y = dt.year % 100;
-    final m = dt.month;
-    final d = dt.day;
-    // 时辰数（子1~亥12）：23点归子时，每两小时顺进一位。
-    // 旧式 ((h+1)~/2).clamp(1,12) 在 23 点与午前偶数小时算错时辰。
+    final solar = tyme.SolarDay.fromYmd(dt.year, dt.month, dt.day);
+    final lunar = solar.getLunarDay();
+    // 农历年干支 → 地支序数（子=0 → +1 得 子1…亥12）
+    final yearBranchIdx =
+        lunar.getLunarMonth().getLunarYear().getSixtyCycle().getEarthBranch().getIndex();
+    final y = yearBranchIdx + 1;
+    // 农历月：闰月以负数表示，按本月计（取绝对值）
+    final m = lunar.getMonth().abs();
+    final d = lunar.getDay();
+    // 时辰数（子1~亥12）：23:00-00:59 归子时，每两小时顺进一位
     final h = ((dt.hour + 1) ~/ 2) % 12 + 1;
-    final upper = _numToTrigram(y + m + d);
-    final lower = _numToTrigram(y + m + d + h);
-    final movingRaw = (y + m + d + h) % 6;
+
+    final sum = y + m + d;
+    final upper = _numToTrigram(sum);
+    final lower = _numToTrigram(sum + h);
+    final movingRaw = (sum + h) % 6;
     final moving = movingRaw == 0 ? 5 : movingRaw - 1;
     return _buildGua(upper, lower, moving, '时间起卦');
   }
 
   /// 物象起卦：直接指定上下卦和动爻
+  ///
+  /// 入参防御：上下卦索引限定 0-7（乾兑离震巽坎艮坤），动爻限定 0-5；
+  /// 越界时收敛到合法范围，避免调用方传错直接抛 RangeError 崩溃。
   static PaipanResult fromTrigrams(int upperTri, int lowerTri, [int movingYao = 0]) {
-    return _buildGua(upperTri, lowerTri, movingYao, '物象起卦');
+    return _buildGua(
+      upperTri.clamp(0, 7),
+      lowerTri.clamp(0, 7),
+      movingYao.clamp(0, 5),
+      '物象起卦',
+    );
   }
 
   /// 核心：构建排盘结果

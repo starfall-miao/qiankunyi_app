@@ -18,11 +18,13 @@ void main() {
       }
     });
 
-    test('贵人按昼夜阴阳：子时昼用阳贵', () {
-      // 甲日昼（子时=0 <6）阳贵 = 丑
-      expect(DaLiuRenEngine.calcGuiRen('甲', 0), '丑');
-      // 甲日夜（午时=6 >=6）阴贵 = 未
-      expect(DaLiuRenEngine.calcGuiRen('甲', 6), '未');
+    test('贵人按昼夜阴阳：卯至申用阳贵、酉至寅用阴贵', () {
+      // 甲日昼（卯时=3 ~ 申时=8）阳贵 = 丑
+      expect(DaLiuRenEngine.calcGuiRen('甲', 3), '丑'); // 卯时
+      expect(DaLiuRenEngine.calcGuiRen('甲', 8), '丑'); // 申时
+      // 甲日夜（酉时=9 ~ 寅时=2）阴贵 = 未
+      expect(DaLiuRenEngine.calcGuiRen('甲', 9), '未'); // 酉时
+      expect(DaLiuRenEngine.calcGuiRen('甲', 0), '未'); // 子时
     });
 
     test('四课含日干支寄宫', () {

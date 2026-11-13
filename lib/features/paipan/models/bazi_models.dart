@@ -1,6 +1,8 @@
 /// 八字排盘数据模型
 library;
 
+import '../../reference/data/reference_data.dart';
+
 /// 四柱（年月日时）
 class SiZhu {
   /// 干支字符串，如 "甲子"
@@ -176,24 +178,14 @@ class BaziResult {
     );
   }
 
-  /// 纳音计算
+  /// 纳音计算：统一委托 reference_data.getNaYin（单一实现，避免两处公式分叉）
   static String? _calcNaYin(String gan, String zhi) {
     const ganList = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
     const zhiList = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
     final ganIdx = ganList.indexOf(gan);
     final zhiIdx = zhiList.indexOf(zhi);
     if (ganIdx < 0 || zhiIdx < 0) return null;
-    // 六十甲子纳音索引：(天干/2)*6 + (地支/2)
-    final idx = (ganIdx % 10) ~/ 2 * 6 + (zhiIdx % 12) ~/ 2;
-    const naYinNames = [
-      '海中金','炉中火','大林木','路旁土','剑锋金','山头火',
-      '涧下水','城头土','白蜡金','杨柳木','泉中水','屋上土',
-      '霹雳火','松柏木','长流水','砂石金','山下火','平地木',
-      '壁上土','金箔金','覆灯火','天河水','大驿土','钗钏金',
-      '桑柘木','大溪水','沙中土','天上火','石榴木','大海水',
-    ];
-    if (idx < 0 || idx >= naYinNames.length) return null;
-    return naYinNames[idx];
+    return getNaYin(ganIdx, zhiIdx)?.naYin;
   }
 
   /// 地支中文名
