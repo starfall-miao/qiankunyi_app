@@ -13,6 +13,7 @@ import '../../../shared/widgets/save_image_dialog.dart';
 import '../../calendar/views/calendar_picker_dialog.dart';
 import '../../reference/data/reference_data.dart';
 import '../../reference/data/bazi_reference_data.dart';
+import '../../settings/settings_provider.dart';
 import '../providers/paipan_provider.dart';
 import '../providers/bazi_provider.dart';
 import '../../cases/providers/case_provider.dart';
@@ -309,8 +310,12 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                 color: t.withAlpha(150),
                 borderRadius: BorderRadius.circular(6),
                 children: const [
-                  Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text('京房简版')),
-                  Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text('京房正宗')),
+                  Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text('简版（变卦六亲随本宫）')),
+                  Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text('正宗（变卦六亲随变卦宫）')),
                 ],
               ),
             ),
@@ -397,7 +402,9 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                 ],
                 _dateTag(
                   '派',
-                  pr.liuyaoResult!.school == LiuyaoSchool.jingFangJianBan ? '京房简版' : '京房正宗',
+                  pr.liuyaoResult!.school == LiuyaoSchool.jingFangJianBan
+                      ? '简版·变卦六亲随本宫'
+                      : '正宗·变卦六亲随变卦宫',
                   p, t,
                 ),
               ],
@@ -523,7 +530,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                 if (lr.kongWang != null) '空 旬空:${lr.kongWang!.join(" ")}',
                 if (lr.fuShen.isNotEmpty)
                   '藏爻 ${lr.fuShen.map((f) => f.label).join(" ")}',
-                '派 ${lr.school == LiuyaoSchool.jingFangJianBan ? "京房简版" : "京房正宗"}',
+                '派 ${lr.school == LiuyaoSchool.jingFangJianBan ? "简版" : "正宗"}',
               ],
               benGua: lr.benGua,
               bianGua: lr.bianGua,
@@ -547,6 +554,8 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
     if (_isLoading) return; // 防止重复点击
     setState(() => _isLoading = true);
     _animCtrl.reset();
+    // 晚子时换日（设置项，默认开启）：23:00 后起卦按次日取日柱/旬空/六神
+    final wanZiShi = context.read<SettingsProvider>().wanZiShi;
 
     try {
       PaipanResult r;
@@ -566,9 +575,12 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
           ));
         }
         // 手工摇卦的日辰/月建按点击排盘的当下时刻（面板不提供时间选择）
-        r = LiuYaoEngine.fromYaos(ys, time: DateTime.now(), school: _liuyaoSchool);
+        r = LiuYaoEngine.fromYaos(ys,
+            time: DateTime.now(),
+            school: _liuyaoSchool,
+            wanZiShi: wanZiShi);
       } else if (_liuyaoMethod == 1) {
-        r = LiuYaoEngine.manual(school: _liuyaoSchool);
+        r = LiuYaoEngine.manual(school: _liuyaoSchool, wanZiShi: wanZiShi);
       } else if (_liuyaoMethod == 3) {
         // 数字起卦：两数定上下卦 + 动爻（1-6）
         final a = int.tryParse(_numACtrl.text.trim());
@@ -582,9 +594,11 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
           return;
         }
         final c = int.parse(cText);
-        r = LiuYaoEngine.byNumbers(a, b, c, school: _liuyaoSchool);
+        r = LiuYaoEngine.byNumbers(a, b, c,
+            school: _liuyaoSchool, wanZiShi: wanZiShi);
       } else {
-        r = LiuYaoEngine.byTime(_selectedTime, school: _liuyaoSchool);
+        r = LiuYaoEngine.byTime(_selectedTime,
+            school: _liuyaoSchool, wanZiShi: wanZiShi);
       }
 
       // 模拟短加载延迟（增强仪式感）
@@ -1561,6 +1575,10 @@ class _BaziPageState extends State<BaziPage> {
   DateTime? _birth;
   bool _isMale = true;
   int _hourIndex = 6; // 默认为午时 (索引6)
+  /// 精确出生时刻（可选）：设置后用于交节判定与早晚子判定
+  TimeOfDay? _birthTime;
+  /// 子时归属：true=晚子（23:00-23:59，算次日），false=早子（00:00-00:59）
+  bool _lateZi = true;
 
   static const _hourOptions = [
     '子时\n23-01', '丑时\n01-03', '寅时\n03-05', '卯时\n05-07',
@@ -1756,6 +1774,91 @@ class _BaziPageState extends State<BaziPage> {
                       );
                     }),
                   ),
+                  const SizedBox(height: 8),
+                  // 精确时刻（可选）：用于交节时刻分界与早晚子判定
+                  Row(children: [
+                    Icon(Icons.schedule, size: 15, color: t.withAlpha(150)),
+                    const SizedBox(width: 6),
+                    Text('精确时刻',
+                        style: TextStyle(fontSize: 12, color: t.withAlpha(180))),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      onPressed: () async {
+                        final picked = await showTimePicker(
+                          context: context,
+                          initialTime: _birthTime ?? const TimeOfDay(hour: 12, minute: 0),
+                          helpText: '出生时刻（可选，精确到分）',
+                        );
+                        if (picked == null) return;
+                        setState(() {
+                          _birthTime = picked;
+                          // 按精确时刻同步时辰：23-00 归子时，其余每两小时进位
+                          final h = picked.hour;
+                          _hourIndex = (((h + 1) ~/ 2) % 12);
+                          _lateZi = h >= 23;
+                        });
+                      },
+                      child: Text(
+                        _birthTime == null
+                            ? '未设置（按时辰推算）'
+                            : '${_birthTime!.hour.toString().padLeft(2, '0')}:'
+                                '${_birthTime!.minute.toString().padLeft(2, '0')}',
+                        style: TextStyle(fontSize: 12, color: p),
+                      ),
+                    ),
+                    if (_birthTime != null)
+                      InkWell(
+                        onTap: () => setState(() => _birthTime = null),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(Icons.close, size: 14, color: t.withAlpha(120)),
+                        ),
+                      ),
+                  ]),
+                  // 子时归属（仅子时显示）：晚子算次日 / 早子算当日
+                  if (_hourIndex == 0) ...[
+                    const SizedBox(height: 4),
+                    Row(children: [
+                      Text('子时归属',
+                          style: TextStyle(fontSize: 12, color: t.withAlpha(180))),
+                      const SizedBox(width: 8),
+                      ChoiceChip(
+                        label: Text('晚子 23-24（算次日）',
+                            style: TextStyle(fontSize: 11, color: _lateZi ? p : t)),
+                        selected: _lateZi,
+                        onSelected: (_) => setState(() => _lateZi = true),
+                        selectedColor: p.withAlpha(40),
+                        backgroundColor:
+                            isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
+                        side: BorderSide(
+                            color: _lateZi ? p : b.withAlpha(80),
+                            width: _lateZi ? 1.5 : 1),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      const SizedBox(width: 6),
+                      ChoiceChip(
+                        label: Text('早子 0-1（算当日）',
+                            style: TextStyle(fontSize: 11, color: !_lateZi ? p : t)),
+                        selected: !_lateZi,
+                        onSelected: (_) => setState(() => _lateZi = false),
+                        selectedColor: p.withAlpha(40),
+                        backgroundColor:
+                            isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF9F6F2),
+                        side: BorderSide(
+                            color: !_lateZi ? p : b.withAlpha(80),
+                            width: !_lateZi ? 1.5 : 1),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ]),
+                  ],
                   const SizedBox(height: 12),
 
                   // 性别
@@ -2375,10 +2478,25 @@ class _BaziPageState extends State<BaziPage> {
 
   /// 开始八字排盘（含日志记录）
   Future<void> _startPaipan(BaziProvider bp) async {
-    _log.info('八字排盘', '开始排盘: 出生${_birth!.year}-${_birth!.month}-${_birth!.day} '
-        '性别${_isMale ? "男" : "女"} 时辰索引$_hourIndex');
+    // 精确时刻（可选）+ 晚子时换日（设置项）
+    final wanZiShi = context.read<SettingsProvider>().wanZiShi;
+    final precise = _birthTime != null;
+    final birth = precise
+        ? DateTime(_birth!.year, _birth!.month, _birth!.day,
+            _birthTime!.hour, _birthTime!.minute)
+        : _birth!;
+    _log.info('八字排盘', '开始排盘: 出生${birth.year}-${birth.month}-${birth.day} '
+        '性别${_isMale ? "男" : "女"} 时辰索引$_hourIndex'
+        '${precise ? " 精确时刻${_birthTime!.hour}:${_birthTime!.minute}" : ""}');
     try {
-      await bp.calc(birth: _birth!, isMale: _isMale, hourIndex: _hourIndex);
+      await bp.calc(
+        birth: birth,
+        isMale: _isMale,
+        hourIndex: _hourIndex,
+        preciseTime: precise,
+        wanZiShi: wanZiShi,
+        isLateZi: _lateZi,
+      );
       _log.info('八字排盘', '排盘完成');
     } catch (e) {
       _log.error('八字排盘失败', '$e');

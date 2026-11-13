@@ -156,6 +156,93 @@ void main() {
     });
   });
 
+  group('交节精确时刻（立春/节气日）', () {
+    /// 用 tyme 直接取交节时刻（独立于引擎）
+    tyme.SolarTime termTime(int year, String name) =>
+        tyme.SolarTerm.fromName(year, name).getJulianDay().getSolarTime();
+
+    test('立春当日交节前后年柱/月柱切换（2024 立春）', () {
+      final t = termTime(2024, '立春');
+      final before = t.getJulianDay().getDay() - 1.0 / 24; // 交节前 1 小时
+      String two(int v) => v.toString().padLeft(2, '0');
+      final fmt = (double jd) {
+        final st = tyme.JulianDay(jd).getSolarTime();
+        return DateTime(st.getYear(), st.getMonth(), st.getDay(),
+            st.getHour(), st.getMinute());
+      };
+      final beforeDt = fmt(before);
+      final afterDt = fmt(t.getJulianDay().getDay() + 1.0 / 24);
+
+      final rBefore = BaiZiEngine.calc(
+          birth: beforeDt, isMale: true, hourIndex: 6, preciseTime: true);
+      final rAfter = BaiZiEngine.calc(
+          birth: afterDt, isMale: true, hourIndex: 6, preciseTime: true);
+
+      expect(rBefore.yearZhu.ganZhi, '癸卯', reason: '交节前仍属癸卯年');
+      expect(rBefore.monthZhu.ganZhi, '乙丑', reason: '交节前仍属丑月');
+      expect(rAfter.yearZhu.ganZhi, '甲辰', reason: '交节后属甲辰年');
+      expect(rAfter.monthZhu.ganZhi, '丙寅', reason: '交节后属寅月');
+      // 日柱不因交节而改变（同一天）
+      expect(rBefore.dayZhu.ganZhi, rAfter.dayZhu.ganZhi);
+      // 用 preciseTime=false 时按日粒度（当天即换柱）
+      final rLoose = BaiZiEngine.calc(
+          birth: beforeDt, isMale: true, hourIndex: 6, preciseTime: false);
+      expect(rLoose.yearZhu.ganZhi, '甲辰', reason: '无精确时刻时按日粒度换柱');
+      // 未使用变量告警规避
+      expect(two(1), '01');
+    });
+
+    test('非交节日不受精确时刻影响', () {
+      final a = BaiZiEngine.calc(
+          birth: DateTime(2024, 6, 15, 3), isMale: true, hourIndex: 2, preciseTime: true);
+      final b = BaiZiEngine.calc(
+          birth: DateTime(2024, 6, 15, 9), isMale: true, hourIndex: 2, preciseTime: true);
+      expect(a.yearZhu.ganZhi, b.yearZhu.ganZhi);
+      expect(a.monthZhu.ganZhi, b.monthZhu.ganZhi);
+    });
+  });
+
+  group('晚子时换日（23:00-23:59 出生）', () {
+    final solar = tyme.SolarDay.fromYmd(2024, 5, 10);
+    final sameDay = solar.getSixtyCycleDay().getSixtyCycle().getName();
+    final nextDay = solar.next(1).getSixtyCycleDay().getSixtyCycle().getName();
+
+    test('开启换日：日柱取次日、时柱用次日日干起子时', () {
+      final r = BaiZiEngine.calc(
+        birth: DateTime(2024, 5, 10, 23, 30),
+        isMale: true,
+        hourIndex: 0,
+        preciseTime: true,
+        wanZiShi: true,
+      );
+      expect(r.dayZhu.ganZhi, nextDay);
+      expect(r.hourZhu.ganZhi, _hourGz(nextDay[0], 0));
+    });
+
+    test('关闭换日：按当日（子正换日派）', () {
+      final r = BaiZiEngine.calc(
+        birth: DateTime(2024, 5, 10, 23, 30),
+        isMale: true,
+        hourIndex: 0,
+        preciseTime: true,
+        wanZiShi: false,
+      );
+      expect(r.dayZhu.ganZhi, sameDay);
+      expect(r.hourZhu.ganZhi, _hourGz(sameDay[0], 0));
+    });
+
+    test('早子时（00:30）不换日', () {
+      final r = BaiZiEngine.calc(
+        birth: DateTime(2024, 5, 11, 0, 30),
+        isMale: true,
+        hourIndex: 0,
+        preciseTime: true,
+        wanZiShi: true,
+      );
+      expect(r.dayZhu.ganZhi, nextDay);
+    });
+  });
+
   group('大运（顺逆与起运）', () {
     /// 检查大运干支是否自月柱起顺/逆连续排列
     void expectDirection(BaziResult r, {required bool forward}) {

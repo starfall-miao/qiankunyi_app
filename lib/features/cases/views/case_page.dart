@@ -516,7 +516,15 @@ class _CasePageState extends State<CasePage> {
       // 大六壬：{"daLiuRen": {...}}
       if (map.containsKey('daLiuRen')) {
         final r = map['daLiuRen'] as Map<String, dynamic>;
-        final siKe = (r['siKe'] as List?)?.join(' / ') ?? '';
+        final shang = (r['siKeShang'] ?? r['siKe']) as List?;
+        final xia = r['siKeXia'] as List?;
+        final siKe = (shang == null)
+            ? ''
+            : [
+                for (var i = 0; i < shang.length; i++)
+                  '${i + 1}课 ${shang[i]}'
+                      '${(xia != null && i < xia.length) ? '/${xia[i]}' : ''}'
+              ].join(' / ');
         final shiYong = (r['shiYong'] as List?)?.join(' → ') ?? '';
         // 月将以地支名表示（如"申将"）；yueJiang 为 int 索引（0-11），
         // 直接插值会显示成"月将：8"这类无意义数字，改用 yueJiangZhi。
@@ -525,8 +533,9 @@ class _CasePageState extends State<CasePage> {
         return '大六壬排盘\n'
             '月将：$yueJiangName\n'
             '四课：$siKe\n'
-            '三传：$shiYong\n'
-            '贵人临${r['guiRen'] ?? ''}';
+            '三传：$shiYong（取传：${r['chuanFa'] ?? ''}）\n'
+            '贵人：${r['guiRen'] ?? ''}'
+            '${(r['guiRenGong'] ?? '') != '' ? '（临${r['guiRenGong']}位）' : ''}';
       }
     } catch (_) {}
     return null;
@@ -2018,10 +2027,25 @@ class _AiChatSectionState extends State<_AiChatSection> {
       }
       if (map.containsKey('daLiuRen')) {
         final r = map['daLiuRen'] as Map<String, dynamic>;
-        final siKe = (r['siKe'] as List?)?.join('、') ?? '';
+        final shang = (r['siKeShang'] ?? r['siKe']) as List?;
+        final xia = r['siKeXia'] as List?;
+        final siKe = (shang == null)
+            ? ''
+            : [
+                for (var i = 0; i < shang.length; i++)
+                  '${i + 1}课 ${shang[i]}'
+                      '${(xia != null && i < xia.length) ? '/${xia[i]}' : ''}'
+              ].join('　');
         final shiYong = (r['shiYong'] as List?)?.join('→') ?? '';
-        return '大六壬：四课$siKe　三传$shiYong　'
-            '贵人临${r['guiRen'] ?? ''}　月将${r['yueJiangZhi'] ?? ''}';
+        final chuanFa = r['chuanFa'] ?? '';
+        final shunBu = r['shunBu'];
+        final gui = r['guiRen'] ?? '';
+        final guiGong = r['guiRenGong'] ?? '';
+        return '大六壬：四课$siKe\n'
+            '三传$shiYong（取传：$chuanFa）\n'
+            '贵人$gui${guiGong.isNotEmpty ? '（临$guiGong位' : ''}'
+            '${shunBu != null ? '，天将${shunBu == true ? '顺布' : '逆布'}）' : '）'}\n'
+            '月将${r['yueJiangZhi'] ?? ''}';
       }
     } catch (_) {}
     return '';
@@ -3762,10 +3786,25 @@ class _AiChatScreenshotTemplate extends StatelessWidget {
       }
       if (map.containsKey('daLiuRen')) {
         final r = map['daLiuRen'] as Map<String, dynamic>;
-        final siKe = (r['siKe'] as List?)?.join('、') ?? '';
+        final shang = (r['siKeShang'] ?? r['siKe']) as List?;
+        final xia = r['siKeXia'] as List?;
+        final siKe = (shang == null)
+            ? ''
+            : [
+                for (var i = 0; i < shang.length; i++)
+                  '${i + 1}课 ${shang[i]}'
+                      '${(xia != null && i < xia.length) ? '/${xia[i]}' : ''}'
+              ].join('　');
         final shiYong = (r['shiYong'] as List?)?.join('→') ?? '';
-        return '大六壬：四课$siKe　三传$shiYong　'
-            '贵人临${r['guiRen'] ?? ''}　月将${r['yueJiangZhi'] ?? ''}';
+        final chuanFa = r['chuanFa'] ?? '';
+        final shunBu = r['shunBu'];
+        final gui = r['guiRen'] ?? '';
+        final guiGong = r['guiRenGong'] ?? '';
+        return '大六壬：四课$siKe\n'
+            '三传$shiYong（取传：$chuanFa）\n'
+            '贵人$gui${guiGong.isNotEmpty ? '（临$guiGong位' : ''}'
+            '${shunBu != null ? '，天将${shunBu == true ? '顺布' : '逆布'}）' : '）'}\n'
+            '月将${r['yueJiangZhi'] ?? ''}';
       }
     } catch (_) {}
     return '';

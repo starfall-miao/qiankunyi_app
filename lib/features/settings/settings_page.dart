@@ -478,7 +478,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
           const Divider(height: 16),
-          _buildSwitchRow('晚子时', '23:00-00:59 时柱归次日子时', sp.wanZiShi, (v) {
+          _buildSwitchRow('晚子时换日', '开启后 23:00-23:59 起卦/出生按「次日」取日柱与时柱（子初换日派）；关闭则按当日（子正换日派）', sp.wanZiShi, (v) {
             sp.wanZiShi = v;
           }),
           const Divider(height: 16),

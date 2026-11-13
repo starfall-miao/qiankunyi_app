@@ -308,6 +308,66 @@ void main() {
     });
   });
 
+  // ───────────────────── 4之三. 流派差异（变卦六亲基准） ─────────────────────
+  group('六爻流派：变卦六亲基准', () {
+    test('简版（默认）：变卦六亲随本卦宫', () {
+      // 乾为天（乾宫金）动初爻 → 变卦天风姤（乾宫一世）
+      // 两者同宫，看不出差异；改用 坤为地（坤宫土）动初爻 → 变卦地雷复（坤宫一世，亦同宫）
+      // 取 乾为天动上爻 → 变卦泽天夬（坤宫五世）：本卦乾宫金、变卦坤宫土
+      final r = _paipan(1, 1, moving: 5);
+      expect(guaNameCN[r.benGua.name], '乾为天');
+      expect(guaNameCN[r.bianGua!.name], '泽天夬');
+      // 简版默认：六亲按本卦宫（乾=金）
+      for (final y in r.bianGua!.yaos) {
+        final zhi = _zhiOf(y);
+        expect(_liuQinCN[y.liuQin], _liuQin('金', _zhiWuXing[zhi]!));
+      }
+    });
+
+    test('正宗：变卦六亲随变卦本宫', () {
+      final yaos = List.generate(
+        6,
+        (i) => YaoModel(
+          yinYang: YaoYinYang.yang,
+          position: YaoPosition.values[i],
+          isMoving: i == 5, // 上爻动
+        ),
+      );
+      final r = LiuYaoEngine.fromYaos(yaos,
+          time: DateTime(2024, 3, 20, 12),
+          school: LiuyaoSchool.jingFangZhengZong);
+      expect(guaNameCN[r.bianGua!.name], '泽天夬');
+      expect(_gongCN(r.bianGua!.gong), '坤');
+      for (final y in r.bianGua!.yaos) {
+        final zhi = _zhiOf(y);
+        expect(_liuQinCN[y.liuQin], _liuQin('土', _zhiWuXing[zhi]!),
+            reason: '正宗流派下变卦六亲应按变卦宫（坤土）论');
+      }
+    });
+
+    test('两种流派的变卦卦名/纳甲/世应一致，仅六亲基准不同', () {
+      for (var moving = 0; moving < 6; moving++) {
+        final a = _paipan(1, 1, moving: moving);
+        final yaos = List.generate(
+          6,
+          (i) => YaoModel(
+            yinYang: YaoYinYang.yang,
+            position: YaoPosition.values[i],
+            isMoving: i == moving,
+          ),
+        );
+        final b = LiuYaoEngine.fromYaos(yaos,
+            time: DateTime(2024, 3, 20, 12),
+            school: LiuyaoSchool.jingFangZhengZong);
+        expect(b.bianGua!.name, a.bianGua!.name);
+        expect(b.bianGua!.shiYaoIndex, a.bianGua!.shiYaoIndex);
+        for (var i = 0; i < 6; i++) {
+          expect(_zhiOf(b.bianGua!.yaos[i]), _zhiOf(a.bianGua!.yaos[i]));
+        }
+      }
+    });
+  });
+
   // ───────────────────── 5. 变卦（384 组合） ─────────────────────
   group('变卦装卦（64 卦 × 6 动爻）', () {
     test('384 种动爻组合的变卦名/纳甲/六亲/世应均正确', () {
@@ -697,6 +757,43 @@ void main() {
     });
   });
 
+  // ───────────────────── 10之三. 晚子时换日 ─────────────────────
+  group('晚子时换日（23:00-23:59）', () {
+    final t = DateTime(2024, 5, 10, 23, 30);
+    final solar = tyme.SolarDay.fromYmd(t.year, t.month, t.day);
+    final sameDay = solar.getSixtyCycleDay().getSixtyCycle().getName();
+    final nextDay = solar.next(1).getSixtyCycleDay().getSixtyCycle().getName();
+
+    test('开启换日（默认）：日柱、旬空、六神按次日', () {
+      final r = LiuYaoEngine.byTime(t, wanZiShi: true);
+      expect(r.dayGanZhi, nextDay, reason: '23 点后应取次日日柱');
+      // 旬空按次日旬首
+      final idx = _jiaZi60().indexOf(nextDay);
+      final shouZhi = _zhis.indexOf(_jiaZi60()[idx - (idx % 10)][1]);
+      final expectKong = [_zhis[(shouZhi + 10) % 12], _zhis[(shouZhi + 11) % 12]]..sort();
+      expect(((r.kongWang ?? []).toList()..sort()).join(), expectKong.join());
+      // 六神起例按次日日干
+      final gan = nextDay[0];
+      final startIdx = _liushenCycle.indexOf(_liushenStart(gan));
+      for (var i = 0; i < 6; i++) {
+        expect(_liushenCN(r.benGua.yaos[i].liuShen),
+            _liushenCycle[(startIdx + i) % 6],
+            reason: '第${i + 1}爻六神应依次日日干起例');
+      }
+    });
+
+    test('关闭换日：按当日', () {
+      final r = LiuYaoEngine.byTime(t, wanZiShi: false);
+      expect(r.dayGanZhi, sameDay);
+    });
+
+    test('非子时不受影响', () {
+      final r1 = LiuYaoEngine.byTime(DateTime(2024, 5, 10, 12), wanZiShi: true);
+      final r2 = LiuYaoEngine.byTime(DateTime(2024, 5, 10, 12), wanZiShi: false);
+      expect(r1.dayGanZhi, r2.dayGanZhi);
+    });
+  });
+
   // ───────────────────── 11. 时间起卦（梅花通行法） ─────────────────────
   group('时间起卦（年支+农历月日+时辰数）', () {
     test('六爻与梅花时间起卦规则一致且与独立推算相符', () {
@@ -739,9 +836,11 @@ void main() {
         expect(movingList.length, 1, reason: '时间起卦应恰有一个动爻');
         expect(movingList.first.key, movingIdx,
             reason: '$time 动爻应为第${movingIdx + 1}爻');
-        // 日辰/月建必须取自起卦时间而非"当前时间"
-        final gz = solar.getSixtyCycleDay().getSixtyCycle().getName();
-        expect(liuyao.dayGanZhi, gz, reason: '$time 日辰应等于当日日柱');
+        // 日辰/月建必须取自起卦时间而非"当前时间"；
+        // 23:00 后按晚子时换日（默认）取次日日柱
+        final daySolar = time.hour >= 23 ? solar.next(1) : solar;
+        final gz = daySolar.getSixtyCycleDay().getSixtyCycle().getName();
+        expect(liuyao.dayGanZhi, gz, reason: '$time 日辰应等于当日（晚子时换日后）日柱');
       }
     });
 
