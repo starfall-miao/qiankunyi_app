@@ -55,6 +55,7 @@ class YaoModel {
   bool isKongWang; // 旬空
   bool isRiPo;     // 日破（日辰冲休囚之爻）
   bool isAnDong;   // 暗动（日辰冲旺相之爻）
+  bool isYuePo;    // 月破（月建冲克之爻，静动皆可论）
   List<String> sanHeJu;
 
   YaoModel({
@@ -75,6 +76,7 @@ class YaoModel {
     this.isKongWang = false,
     this.isRiPo = false,
     this.isAnDong = false,
+    this.isYuePo = false,
     this.sanHeJu = const [],
   });
 
@@ -102,6 +104,7 @@ class YaoModel {
     'isKongWang': isKongWang,
     'isRiPo': isRiPo,
     'isAnDong': isAnDong,
+    'isYuePo': isYuePo,
     'sanHeJu': sanHeJu,
   };
 
@@ -123,6 +126,7 @@ class YaoModel {
     isKongWang: j['isKongWang'] as bool? ?? false,
     isRiPo: j['isRiPo'] as bool? ?? false,
     isAnDong: j['isAnDong'] as bool? ?? false,
+    isYuePo: j['isYuePo'] as bool? ?? false,
     sanHeJu: (j['sanHeJu'] as List?)?.cast<String>() ?? [],
   );
 }

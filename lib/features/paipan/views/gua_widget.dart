@@ -268,8 +268,21 @@ class GuaWidget extends StatelessWidget {
     return const SizedBox.shrink();
   }
 
-  /// 日破/暗动标记
+  /// 月破/日破/暗动标记（月破优先展示：月破影响大于日破）
   Widget _buildRiPoAnDongMark(YaoModel yao, ThemeData theme) {
+    if (yao.isYuePo) {
+      return Padding(
+        padding: const EdgeInsets.only(left: 4),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+          decoration: BoxDecoration(
+            color: const Color(0xFFB71C1C).withAlpha(25),
+            borderRadius: BorderRadius.circular(3),
+          ),
+          child: const Text('月破', style: TextStyle(fontSize: 10, color: Color(0xFFB71C1C))),
+        ),
+      );
+    }
     if (yao.isRiPo) {
       return Padding(
         padding: const EdgeInsets.only(left: 4),

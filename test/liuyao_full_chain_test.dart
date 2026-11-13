@@ -526,6 +526,57 @@ void main() {
     });
   });
 
+  // ───────────────────── 9. 月破 ─────────────────────
+  group('月破（月建冲爻）', () {
+    test('子月：乾为天的午爻为月破，其余不受冲', () {
+      // 2023-12-20 大雪后属子月
+      final r = LiuYaoEngine.fromYaos(
+        List.generate(
+          6,
+          (i) => YaoModel(
+              yinYang: YaoYinYang.yang, position: YaoPosition.values[i]),
+        ),
+        time: DateTime(2023, 12, 20, 12),
+      );
+      expect(r.monthZhi, '子');
+      for (final y in r.benGua.yaos) {
+        final zhi = _zhiOf(y);
+        expect(y.isYuePo, zhi == '午',
+            reason: '子月冲午：仅午爻应标月破（$zhi 实际 ${y.isYuePo}）');
+      }
+    });
+
+    test('寅月：申爻为月破', () {
+      final r = LiuYaoEngine.fromYaos(
+        List.generate(
+          6,
+          (i) => YaoModel(
+              yinYang: YaoYinYang.yang, position: YaoPosition.values[i]),
+        ),
+        time: DateTime(2024, 2, 20, 12), // 寅月
+      );
+      expect(r.monthZhi, '寅');
+      final shenYao = r.benGua.yaos.firstWhere((y) => _zhiOf(y) == '申');
+      expect(shenYao.isYuePo, isTrue);
+      final wuYao = r.benGua.yaos.firstWhere((y) => _zhiOf(y) == '午');
+      expect(wuYao.isYuePo, isFalse);
+    });
+
+    test('月破随序列化往返保留', () {
+      final r = LiuYaoEngine.fromYaos(
+        List.generate(
+          6,
+          (i) => YaoModel(
+              yinYang: YaoYinYang.yang, position: YaoPosition.values[i]),
+        ),
+        time: DateTime(2023, 12, 20, 12),
+      );
+      final back = PaipanResult.fromJson(r.toJson());
+      final wu = back.benGua.yaos.firstWhere((y) => _zhiOf(y) == '午');
+      expect(wu.isYuePo, isTrue);
+    });
+  });
+
   // ───────────────────── 9. 伏神（藏爻） ─────────────────────
   group('伏神（本宫首卦借入缺爻六亲）', () {
     test('天风姤（乾宫）缺妻财 → 伏神为妻财寅木', () {

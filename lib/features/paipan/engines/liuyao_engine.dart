@@ -463,7 +463,8 @@ class LiuYaoEngine {
     // 刑冲合害
     _calcRelations(yaos);
 
-    // 日破/暗动（日辰冲爻）
+    // 月破（月建冲爻）、日破/暗动（日辰冲爻）
+    _applyYuePo(yaos, monthZhi);
     _applyRiPoAnDong(yaos, dayGanZhi);
 
     final gua = GuaModel(
@@ -631,6 +632,22 @@ class LiuYaoEngine {
       if (yao.diZhi == null) continue;
       final yaoWuXing = _diZhiWuXing[yao.diZhi]!;
       yao.liuQin = _calcLiuQin(gongWuXing, yaoWuXing);
+    }
+  }
+
+  /// 月破：月建地支冲爻支（如子月见午爻、寅月见申爻）。
+  /// 月破是地支与月建的关系，不论动静皆可标记；月破之爻多主伤病、离散、
+  /// 事难成（得日辰生扶或动而他爻生扶可解）。
+  static void _applyYuePo(List<YaoModel> yaos, String monthZhi) {
+    if (monthZhi.length != 1) return;
+    const chongMap = {'子':'午','丑':'未','寅':'申','卯':'酉','辰':'戌','巳':'亥'};
+    final zhiOf = Map.fromEntries(
+        _diZhiMap.entries.map((e) => MapEntry(e.value, e.key)));
+    for (final yao in yaos) {
+      if (yao.diZhi == null) continue;
+      final zhi = zhiOf[yao.diZhi];
+      if (zhi == null) continue;
+      yao.isYuePo = chongMap[monthZhi] == zhi;
     }
   }
 

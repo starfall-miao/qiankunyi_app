@@ -2087,6 +2087,9 @@ class _AiChatSectionState extends State<_AiChatSection> {
       if (y.isShi) parts.add('世');
       if (y.isYing) parts.add('应');
       if (y.isKongWang) parts.add('旬空');
+      if (y.isYuePo) parts.add('月破');
+      if (y.isRiPo) parts.add('日破');
+      if (y.isAnDong) parts.add('暗动');
       sb.writeln('  ${parts.join(' ')}');
     }
     if (result.bianGua != null) {
