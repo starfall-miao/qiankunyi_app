@@ -308,62 +308,33 @@ void main() {
     });
   });
 
-  // ───────────────────── 4之三. 流派差异（变卦六亲基准） ─────────────────────
-  group('六爻流派：变卦六亲基准', () {
-    test('简版（默认）：变卦六亲随本卦宫', () {
-      // 乾为天（乾宫金）动初爻 → 变卦天风姤（乾宫一世）
-      // 两者同宫，看不出差异；改用 坤为地（坤宫土）动初爻 → 变卦地雷复（坤宫一世，亦同宫）
-      // 取 乾为天动上爻 → 变卦泽天夬（坤宫五世）：本卦乾宫金、变卦坤宫土
-      final r = _paipan(1, 1, moving: 5);
-      expect(guaNameCN[r.benGua.name], '乾为天');
-      expect(guaNameCN[r.bianGua!.name], '泽天夬');
-      // 简版默认：六亲按本卦宫（乾=金）
-      for (final y in r.bianGua!.yaos) {
-        final zhi = _zhiOf(y);
-        expect(_liuQinCN[y.liuQin], _liuQin('金', _zhiWuXing[zhi]!));
-      }
-    });
-
-    test('正宗：变卦六亲随变卦本宫', () {
+  // ───────────────────── 4之三. 流派（统一简版） ─────────────────────
+  group('六爻流派：统一按简版规则', () {
+    test('变卦六亲恒以本卦宫为准（两种 school 取值结果一致）', () {
+      // 「京房正宗」具体取法已无从考证，统一按简版：变卦六亲随本卦宫。
+      // 乾为天（乾宫金）动上爻 → 泽天夬（坤宫五世）；六亲仍按乾宫金论。
       final yaos = List.generate(
         6,
         (i) => YaoModel(
           yinYang: YaoYinYang.yang,
           position: YaoPosition.values[i],
-          isMoving: i == 5, // 上爻动
+          isMoving: i == 5,
         ),
       );
-      final r = LiuYaoEngine.fromYaos(yaos,
+      final r1 = LiuYaoEngine.fromYaos(yaos,
+          time: DateTime(2024, 3, 20, 12),
+          school: LiuyaoSchool.jingFangJianBan);
+      final r2 = LiuYaoEngine.fromYaos(yaos,
           time: DateTime(2024, 3, 20, 12),
           school: LiuyaoSchool.jingFangZhengZong);
-      expect(guaNameCN[r.bianGua!.name], '泽天夬');
-      expect(_gongCN(r.bianGua!.gong), '坤');
-      for (final y in r.bianGua!.yaos) {
-        final zhi = _zhiOf(y);
-        expect(_liuQinCN[y.liuQin], _liuQin('土', _zhiWuXing[zhi]!),
-            reason: '正宗流派下变卦六亲应按变卦宫（坤土）论');
-      }
-    });
-
-    test('两种流派的变卦卦名/纳甲/世应一致，仅六亲基准不同', () {
-      for (var moving = 0; moving < 6; moving++) {
-        final a = _paipan(1, 1, moving: moving);
-        final yaos = List.generate(
-          6,
-          (i) => YaoModel(
-            yinYang: YaoYinYang.yang,
-            position: YaoPosition.values[i],
-            isMoving: i == moving,
-          ),
-        );
-        final b = LiuYaoEngine.fromYaos(yaos,
-            time: DateTime(2024, 3, 20, 12),
-            school: LiuyaoSchool.jingFangZhengZong);
-        expect(b.bianGua!.name, a.bianGua!.name);
-        expect(b.bianGua!.shiYaoIndex, a.bianGua!.shiYaoIndex);
-        for (var i = 0; i < 6; i++) {
-          expect(_zhiOf(b.bianGua!.yaos[i]), _zhiOf(a.bianGua!.yaos[i]));
-        }
+      expect(guaNameCN[r1.bianGua!.name], '泽天夬');
+      expect(guaNameCN[r2.bianGua!.name], '泽天夬');
+      for (var i = 0; i < 6; i++) {
+        final zhi = _zhiOf(r1.bianGua!.yaos[i]);
+        final expectLq = _liuQin('金', _zhiWuXing[zhi]!); // 本卦乾宫金
+        expect(_liuQinCN[r1.bianGua!.yaos[i].liuQin], expectLq);
+        expect(_liuQinCN[r2.bianGua!.yaos[i].liuQin], expectLq,
+            reason: '流派选择不应改变变卦六亲（统一简版）');
       }
     });
   });
@@ -661,6 +632,91 @@ void main() {
       final r = _paipan(1, 1); // 乾为天：父母/兄弟/官鬼/子孙齐（无妻财？）
       // 乾为天六亲：子水子孙、寅木妻财、辰土父母、午火官鬼、申金兄弟、戌土父母 → 齐全
       expect(r.hiddenFuShen, isEmpty);
+    });
+  });
+
+  // ───────────────────── 9之四. 神煞与纳音 ─────────────────────
+  group('神煞（日干/日支十煞）', () {
+    /// 找一个指定日柱（用 tyme 独立推算）
+    DateTime findDay(String gz) {
+      var t = DateTime(2024, 1, 1, 12);
+      for (var i = 0; i < 400; i++) {
+        final solar = tyme.SolarDay.fromYmd(t.year, t.month, t.day);
+        if (solar.getSixtyCycleDay().getSixtyCycle().getName() == gz) return t;
+        t = t.add(const Duration(days: 1));
+      }
+      throw StateError('未找到 $gz 日');
+    }
+
+    test('甲子日乾为天：将星/驿马/禄神/华盖标在对应爻上', () {
+      final day = findDay('甲子');
+      final r = LiuYaoEngine.fromYaos(
+        List.generate(
+          6,
+          (i) => YaoModel(
+              yinYang: YaoYinYang.yang, position: YaoPosition.values[i]),
+        ),
+        time: day,
+      );
+      expect(r.dayGanZhi, '甲子');
+      // 乾为天六爻地支：子 寅 辰 午 申 戌
+      const expectSha = <String, List<String>>{
+        '子': ['将星'],
+        '寅': ['驿马', '禄神'],
+        '辰': ['华盖'],
+        '午': [],
+        '申': [],
+        '戌': [],
+      };
+      for (final y in r.benGua.yaos) {
+        final zhi = _zhiOf(y);
+        expect(y.shenSha.toSet(), equals((expectSha[zhi] ?? const <String>[]).toSet()),
+            reason: '甲子日 $zhi 爻神煞应为 ${expectSha[zhi]}，实际 ${y.shenSha}');
+      }
+      expect(r.shenSha, contains('将星（初爻）'));
+      expect(r.shenSha, contains('驿马（二爻）'));
+      expect(r.shenSha, contains('禄神（二爻）'));
+      expect(r.shenSha, contains('华盖（三爻）'));
+    });
+
+    test('甲午日：将星在午、驿马在申、华盖在戌', () {
+      final day = findDay('甲午');
+      final r = LiuYaoEngine.fromYaos(
+        List.generate(
+          6,
+          (i) => YaoModel(
+              yinYang: YaoYinYang.yang, position: YaoPosition.values[i]),
+        ),
+        time: day,
+      );
+      final byZhi = {for (final y in r.benGua.yaos) _zhiOf(y): y.shenSha};
+      expect(byZhi['午'], contains('将星')); // 寅午戌将星在午
+      expect(byZhi['申'], contains('驿马')); // 寅午戌马在申
+      expect(byZhi['戌'], contains('华盖')); // 寅午戌华盖在戌
+      expect(byZhi['寅'], contains('禄神')); // 甲禄在寅
+    });
+  });
+
+  group('纳音（每爻干支）', () {
+    test('乾为天六爻纳音与六十甲子表一致', () {
+      final r = _paipan(1, 1);
+      const expectNaYin = {
+        '甲子': '海中金', '甲寅': '大溪水', '甲辰': '覆灯火',
+        '壬午': '杨柳木', '壬申': '剑锋金', '壬戌': '大海水',
+      };
+      for (final y in r.benGua.yaos) {
+        final gz = '${_ganOf(y)}${_zhiOf(y)}';
+        expect(y.naYin, expectNaYin[gz], reason: '$gz 纳音应为 ${expectNaYin[gz]}');
+      }
+      // 世爻（上爻 壬戌）纳音
+      expect(r.naYin, '大海水');
+    });
+
+    test('纳音与神煞随序列化往返保留', () {
+      final r = _paipan(1, 1);
+      final back = PaipanResult.fromJson(r.toJson());
+      expect(back.benGua.yaos[0].naYin, '海中金');
+      expect(back.naYin, '大海水');
     });
   });
 

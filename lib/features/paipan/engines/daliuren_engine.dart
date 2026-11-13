@@ -84,6 +84,12 @@ class DaLiuRenResult {
   /// 十二天将：按**地盘**第 i 支所临天将
   final List<String> tianJiang;
 
+  /// 四课生克关系（下贼上「贼」/ 上克下「克」/ 无「—」）
+  final List<String> keRelation;
+
+  /// 取传说明（如「三课下贼上，以三课上神为初传」）
+  final String quChuanNote;
+
   final String method;
 
   DaLiuRenResult({
@@ -103,6 +109,8 @@ class DaLiuRenResult {
     required this.shunBu,
     required this.tianJiang,
     required this.method,
+    this.keRelation = const [],
+    this.quChuanNote = '',
   });
 
   /// 兼容旧字段：四课（上神/下神交替，旧版顺序 [一课, 二课, 三课, 四课] 的上神）
@@ -125,6 +133,8 @@ class DaLiuRenResult {
         'zhongChuan': zhongChuan,
         'moChuan': moChuan,
         'chuanFa': chuanFa,
+        'keRelation': keRelation,
+        'quChuanNote': quChuanNote,
         'method': method,
       };
 }
@@ -244,6 +254,20 @@ class DaLiuRenEngine {
       keShang[2], // 四课下神：三课上神
     ];
 
+    // ── 四课生克关系（下贼上 / 上克下）──
+    final keRelation = <String>[];
+    for (var i = 0; i < 4; i++) {
+      final shangWx = _zhiWx[keShang[i]]!;
+      final xiaWx = _zhiWx[keXia[i]]!;
+      if (_ke[xiaWx] == shangWx) {
+        keRelation.add('贼'); // 下贼上
+      } else if (_ke[shangWx] == xiaWx) {
+        keRelation.add('克'); // 上克下
+      } else {
+        keRelation.add('—');
+      }
+    }
+
     // ── 起三传 ──
     final chuan = _quChuan(
       keShang: keShang,
@@ -284,6 +308,8 @@ class DaLiuRenEngine {
       zhongChuan: chuan.zhong,
       moChuan: chuan.mo,
       chuanFa: chuan.fa,
+      keRelation: keRelation,
+      quChuanNote: chuan.note,
       guiRen: guiRen,
       guiRenGong: daliurenZhi[gong],
       shunBu: shunBu,
@@ -311,7 +337,8 @@ class DaLiuRenEngine {
 
     // 常规传法：中传取初传上神、末传取中传上神
     _ChuanFa normal(String chu, String fa) =>
-        _ChuanFa(fa, chu, tian(chu), tian(tian(chu)));
+        _ChuanFa(fa, chu, tian(chu), tian(tian(chu)),
+            '$fa：以所取之神为初传，中传取其地盘上神，末传再取中传上神');
 
     // ── 伏吟：天盘与地盘完全重合（月将加时后月将仍在本位）──
     final isFuYin =
@@ -320,7 +347,9 @@ class DaLiuRenEngine {
       final chu = ganYang ? keShang[0] : keShang[2];
       final zhong = _xing(chu);
       final mo = _xing(zhong);
-      return _ChuanFa('伏吟法', chu, zhong, mo);
+      return _ChuanFa('伏吟法', chu, zhong, mo,
+          '伏吟（天地盘重合）：${ganYang ? '阳日取干上神' : '阴日取支上神'}为初传，'
+          '中传取初传之刑，末传取中传之刑（自刑者取冲）');
     }
 
     // ── 返吟：天盘与地盘全冲 ──
@@ -343,11 +372,13 @@ class DaLiuRenEngine {
           chu,
           keShang[2], // 中传取支上神
           keShang[0], // 末传取干上神
+          '返吟（天地盘全冲）有克：仍按贼克法取初传，中传取支上神、末传取干上神',
         );
       }
       // 无克：井栏射（驿马为初传）
       final ma = _yiMa(dayZhi);
-      return _ChuanFa('返吟法（井栏射·驿马）', ma, keShang[2], keShang[0]);
+      return _ChuanFa('返吟法（井栏射·驿马）', ma, keShang[2], keShang[0],
+          '返吟无克：取日支驿马（$ma）为初传（井栏射），中传支上神、末传干上神');
     }
 
     // ── 贼克（含比用、涉害）──
@@ -404,22 +435,26 @@ class DaLiuRenEngine {
       final chu = ganYang
           ? tian(tianPan[_z(keShang[0])]) // 阳日：干上神顺行三位
           : daliurenZhi[((_z(keShang[2]) - 2) + 12) % 12]; // 阴日：支上神逆数三位
-      return _ChuanFa('八专法', chu, keShang[0], keShang[0]);
+      return _ChuanFa('八专法', chu, keShang[0], keShang[0],
+          '八专（日干寄宫与日支同位，仅两课）：${ganYang ? '阳日自干上神顺数三位' : '阴日自支上神逆数三位'}为初传，中末传皆取干上神');
     }
     if (distinctXia.length == 3) {
       // 别责：四课不全（三课）
       final chu = ganYang
           ? tian(_heGanJiGong(dayGan)) // 阳日：干合之寄宫上神
           : tian(_liuHe(dayZhi)); // 阴日：日支六合之上神
-      return _ChuanFa('别责法', chu, keShang[0], keShang[0]);
+      return _ChuanFa('别责法', chu, keShang[0], keShang[0],
+          '别责（四课不全三课，无克无遥）：${ganYang ? '阳日取日干五合之寄宫上神' : '阴日取日支六合之上神'}为初传，中末传皆取干上神');
     }
 
     // ── 昴星 ──
     final chu = ganYang ? tian('酉') : tian('卯');
     if (ganYang) {
-      return _ChuanFa('昴星法（虎视）', chu, keShang[2], keShang[0]);
+      return _ChuanFa('昴星法（虎视）', chu, keShang[2], keShang[0],
+          '昴星（无克无遥，阳日）：取酉上神为初传，中传取支上神、末传取干上神（虎视格）');
     }
-    return _ChuanFa('昴星法（冬蛇掩目）', chu, keShang[0], keShang[2]);
+    return _ChuanFa('昴星法（冬蛇掩目）', chu, keShang[0], keShang[2],
+        '昴星（无克无遥，阴日）：取卯上神为初传，中传取干上神、末传取支上神（冬蛇掩目格）');
   }
 
   /// 比用/涉害：多个候选课时取与日干同阴阳者；仍多个则取涉害深者
@@ -489,7 +524,9 @@ class _ChuanFa {
   final String chu;
   final String zhong;
   final String mo;
-  const _ChuanFa(this.fa, this.chu, this.zhong, this.mo);
+  final String note;
+
+  const _ChuanFa(this.fa, this.chu, this.zhong, this.mo, [this.note = '']);
 }
 
 /// 比用/涉害选择结果

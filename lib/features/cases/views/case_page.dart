@@ -2084,6 +2084,8 @@ class _AiChatSectionState extends State<_AiChatSection> {
       if (y.isRiPo) parts.add('日破');
       if (y.isAnDong) parts.add('暗动');
       if (y.huaJinTui != null) parts.add(y.huaJinTui!.label);
+      if (y.naYin != null) parts.add('纳音${y.naYin}');
+      if (y.shenSha.isNotEmpty) parts.add('神煞${y.shenSha.join("、")}');
       sb.writeln('  ${parts.join(' ')}');
     }
     if (result.bianGua != null) {
@@ -2129,7 +2131,10 @@ class _AiChatSectionState extends State<_AiChatSection> {
       sb.writeln('旬空：${result.kongWang!.join('、')}');
     }
     if (result.shenSha.isNotEmpty) {
-      sb.writeln('神煞：${result.shenSha.join('、')}');
+      sb.writeln('神煞（按日辰）：${result.shenSha.join('、')}');
+    }
+    if (result.naYin != null) {
+      sb.writeln('世爻纳音：${result.naYin}');
     }
     return sb.toString();
   }

@@ -246,6 +246,30 @@ class MeihuaEngine {
     );
   }
 
+  /// 八卦名与五行（索引 0乾…7坤）
+  static const _triNames = ['乾', '兑', '离', '震', '巽', '坎', '艮', '坤'];
+  static const _triWx = ['金', '金', '火', '木', '木', '水', '土', '土'];
+
+  /// 取卦的上下卦信息（供界面标注）：上卦/下卦的卦名与五行
+  static ({String upperName, String upperWx, String lowerName, String lowerWx})
+      trigramInfo(GuaModel gua) {
+    final lowerIdx = _yaoMask(gua.yaos.sublist(0, 3));
+    final upperIdx = _yaoMask(gua.yaos.sublist(3, 6));
+    return (
+      upperName: _triNames[upperIdx],
+      upperWx: _triWx[upperIdx],
+      lowerName: _triNames[lowerIdx],
+      lowerWx: _triWx[lowerIdx],
+    );
+  }
+
+  /// 动爻信息：第几爻（1-6）与所在卦（true=上卦）
+  static ({int index, bool inUpper})? movingYaoInfo(GuaModel gua) {
+    final i = gua.yaos.indexWhere((y) => y.isMoving);
+    if (i < 0) return null;
+    return (index: i, inUpper: i >= 3);
+  }
+
   /// 获取体用生克关系描述
   static String getTiYong(PaipanResult result) {
     final yaos = result.benGua.yaos;

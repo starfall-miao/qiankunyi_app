@@ -338,137 +338,123 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
               child: Padding(
               padding: const EdgeInsets.all(14),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                // 大标题（保存图片/分享更醒目）
+                // ── 标题 ──
                 Row(children: [
                   Icon(Icons.auto_awesome, size: 16, color: p),
                   const SizedBox(width: 6),
                   Text('大六壬排盘',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: p)),
                   const Spacer(),
-                  Text('${_ganCN[_dayGan]}${daliurenZhi[_dayZhi]}日',
+                  Text('${_ganCN[_dayGan]}${daliurenZhi[_dayZhi]}日 · ${_hours[_result!.hourIndex]}',
                       style: TextStyle(fontSize: 11, color: t.withAlpha(140))),
                 ]),
-                const SizedBox(height: 8),
-                Text('月将：${daliurenYueJiang[_result!.yueJiang]}（临${_result!.yueJiangZhi} · ${_result!.method}）',
-                    style: const TextStyle(fontSize: 13)),
-                const SizedBox(height: 2),
-                Text('贵人：${_result!.guiRen}（临地盘${_result!.guiRenGong}位，'
-                    '天将${_result!.shunBu ? "顺布" : "逆布"}）',
-                    style: TextStyle(fontSize: 11.5, color: t.withAlpha(160))),
-                const SizedBox(height: 8),
-                // 天地盘：月将加时，天盘十二支
-                Text('天地盘（月将加时）', style: TextStyle(fontSize: 13, color: t.withAlpha(150))),
-                const SizedBox(height: 6),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: bg,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: b.withAlpha(80)),
-                  ),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('月将 ${daliurenYueJiang[_result!.yueJiang]}（${_result!.yueJiangZhi}）加于 ${_hours[_result!.hourIndex]}',
-                        style: const TextStyle(fontSize: 11.5)),
-                    const SizedBox(height: 8),
-                    // 地盘/天盘对照网格
-                    _tianPanGrid(_result!.tianPan, _result!.yueJiangZhi, p, t, b),
-                    const SizedBox(height: 6),
-                    // 天地盘信息解释
-                    Text('🛰 天地盘说明：地盘固定十二支（子北午南），天盘由月将顺加而成。'
-                        '月将 ${_result!.yueJiangZhi} 落于时支 ${daliurenZhi[_result!.hourIndex]}，'
-                        '天盘随十二支顺布。断课以天盘神将临地盘支位定吉凶。',
-                        style: TextStyle(fontSize: 10.5, height: 1.6, color: t.withAlpha(150))),
-                  ]),
-                ),
-                const SizedBox(height: 8),
-                const SizedBox(height: 8),
-                Text('四课（一课日阳 · 二课日阴 · 三课辰阳 · 四课辰阴）',
-                    style: TextStyle(fontSize: 12.5, color: t.withAlpha(150))),
-                const SizedBox(height: 6),
+                const SizedBox(height: 10),
+
+                // ══ 一、起课 ══
+                _sectionTitle('一、起课', '月将加时起课，先定月将、贵人、昼夜', p, t),
+                _infoCard(bg, b, children: [
+                  _infoLine('干支', '${_ganCN[_dayGan]}${daliurenZhi[_dayZhi]}日 · ${_hours[_result!.hourIndex]}（${_hourRange(_result!.hourIndex)}）', t),
+                  _infoLine('月将', '${daliurenYueJiang[_result!.yueJiang]}（${_result!.yueJiangZhi}将）加于 ${daliurenZhi[_result!.hourIndex]}（${_result!.method}）', t),
+                  _infoLine('昼夜贵人', '${_isDayHour(_result!.hourIndex) ? "昼占（卯-申）用阳贵" : "夜占（酉-寅）用阴贵"} → 贵人临 ${_result!.guiRen}', t),
+                  _infoLine('天将布法', '贵人所临地盘 ${_result!.guiRenGong} 位为${_result!.guiRenGong == '子' || _isYangGong(_result!.guiRenGong) ? "阳位→顺布" : "阴位→逆布"}', t),
+                  _infoLine('课体', '${_result!.chuanFa}｜四课关系：${[
+                    for (var i = 0; i < _result!.keRelation.length; i++)
+                      '${i + 1}课${_result!.keRelation[i]}'
+                  ].join(' ')}', t),
+                ]),
+                const SizedBox(height: 12),
+
+                // ══ 二、天地盘 ══
+                _sectionTitle('二、天地盘（十二宫）', '下为地盘定位，上为天盘加临，右侧为所临天将', p, t),
+                _tianPanBoard(_result!, p, t, bg, b),
+                const SizedBox(height: 12),
+
+                // ══ 三、四课 ══
+                _sectionTitle('三、四课', '一课日阳 · 二课日阴 · 三课辰阳 · 四课辰阴（贼=下克上，克=上克下）', p, t),
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    _ke('一课·日阳神', _result!.siKeShang[0], p, t, bg, b,
-                        info: '日干阳神：自身现状、主导',
-                        subtitle: '下 ${_result!.siKeXia[0]}'),
-                    _ke('二课·日阴神', _result!.siKeShang[1], p, t, bg, b,
-                        info: '日干阴神：自身内在/同盟',
-                        subtitle: '下 ${_result!.siKeXia[1]}'),
-                    _ke('三课·辰阳神', _result!.siKeShang[2], p, t, bg, b,
-                        info: '日支阳神：所测之事与环境',
-                        subtitle: '下 ${_result!.siKeXia[2]}'),
-                    _ke('四课·辰阴神', _result!.siKeShang[3], p, t, bg, b,
-                        info: '日支阴神：事之内情/他人',
-                        subtitle: '下 ${_result!.siKeXia[3]}'),
+                    for (var i = 0; i < 4; i++)
+                      _ke(
+                        ['一课·日阳', '二课·日阴', '三课·辰阳', '四课·辰阴'][i],
+                        _result!.siKeShang[i],
+                        p, t, bg, b,
+                        info: [
+                          '日干阳神：自身现状、主导',
+                          '日干阴神：自身内在/同盟',
+                          '日支阳神：所测之事与环境',
+                          '日支阴神：事之内情/他人',
+                        ][i],
+                        subtitle: '下 ${_result!.siKeXia[i]}'
+                            '${_result!.keRelation[i] != '—' ? ' · ${_result!.keRelation[i]}' : ''}',
+                      ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
+
+                // ══ 四、三传 ══
                 Row(children: [
-                  Text('三传（初事始 · 中事中 · 末事终）',
-                      style: TextStyle(fontSize: 12.5, color: t.withAlpha(150))),
-                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _sectionTitle('四、三传',
+                        '初传为事之始 · 中传为发展 · 末传为归宿', p, t, tight: true),
+                  ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: p.withAlpha(20),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Text('取传：${_result!.chuanFa}',
-                        style: TextStyle(fontSize: 10, color: p)),
+                    child: Text(_result!.chuanFa,
+                        style: TextStyle(fontSize: 10.5, color: p)),
                   ),
                 ]),
                 const SizedBox(height: 6),
                 Row(children: [
-                  _chuan('初传', _result!.chuChuan, p, t, bg, b,
-                      info: '事之始：起因、开端'),
-                  const SizedBox(width: 8),
-                  _chuan('中传', _result!.zhongChuan, p, t, bg, b,
-                      info: '事之中：发展过程'),
-                  const SizedBox(width: 8),
-                  _chuan('末传', _result!.moChuan, p, t, bg, b,
-                      info: '事之终：结果、归宿'),
+                  for (final e in [
+                    ('初传', _result!.chuChuan, '事之始：起因、开端'),
+                    ('中传', _result!.zhongChuan, '事之中：发展过程'),
+                    ('末传', _result!.moChuan, '事之终：结果、归宿'),
+                  ]) ...[
+                    Expanded(child: _chuan(e.$1, e.$2, p, t, bg, b, info: e.$3)),
+                    if (e.$1 != '末传') const SizedBox(width: 8),
+                  ],
                 ]),
-                const SizedBox(height: 8),
-                Text('三传天将详解（对应事之始/中/终）',
-                    style: TextStyle(fontSize: 13, color: t.withAlpha(150))),
                 const SizedBox(height: 6),
-                // 只展示三传所临天将（初/中/末），避免全量冗余
-                Column(children: [
-                  _chuanGeneral('初传', _result!.chuChuan, _result!, t),
+                Text('三传所临天将：${_chuanTianJiang('初', _result!.chuChuan, _result!)}　'
+                    '${_chuanTianJiang('中', _result!.zhongChuan, _result!)}　'
+                    '${_chuanTianJiang('末', _result!.moChuan, _result!)}',
+                    style: TextStyle(fontSize: 11.5, height: 1.5, color: t.withAlpha(200))),
+                if (_result!.quChuanNote.isNotEmpty) ...[
                   const SizedBox(height: 4),
-                  _chuanGeneral('中传', _result!.zhongChuan, _result!, t),
-                  const SizedBox(height: 4),
-                  _chuanGeneral('末传', _result!.moChuan, _result!, t),
-                ]),
-                const SizedBox(height: 8),
-                // 贵人与十二天将排布
-                Text('贵人与天将', style: TextStyle(fontSize: 13, color: t.withAlpha(150))),
-                const SizedBox(height: 6),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: bg,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: b.withAlpha(80)),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: p.withAlpha(10),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text('取传：${_result!.quChuanNote}',
+                        style: TextStyle(fontSize: 10.5, height: 1.6, color: t.withAlpha(170))),
                   ),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('贵人临 ${_result!.guiRen}（${_hours[_result!.hourIndex]} ${
-                        _result!.hourIndex < 6 ? "昼·阳贵" : "夜·阴贵"}）',
-                        style: const TextStyle(fontSize: 11.5)),
-                    const SizedBox(height: 6),
-                    // 只展示三传对应天将（不凑数）
-                    Text('三传天将：${_chuanTianJiang('初传', _result!.chuChuan, _result!)}　'
-                        '${_chuanTianJiang('中传', _result!.zhongChuan, _result!)}　'
-                        '${_chuanTianJiang('末传', _result!.moChuan, _result!)}',
-                        style: const TextStyle(fontSize: 11.5, height: 1.5)),
-                    const SizedBox(height: 4),
-                    Text('（天将随贵人支顺布，此处仅列三传所临天将，详见详解）',
-                        style: TextStyle(fontSize: 10, color: t.withAlpha(110))),
-                  ]),
-                ),
+                ],
+                const SizedBox(height: 12),
+
+                // ══ 五、断课提示 ══
+                _sectionTitle('五、断课提示', '以下为常见取象要点，仅供入门参考', p, t),
+                _infoCard(bg, b, children: [
+                  for (final hint in _duanKeHints(_result!))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('· ', style: TextStyle(fontSize: 11.5, color: p)),
+                        Expanded(
+                          child: Text(hint,
+                              style: TextStyle(fontSize: 11, height: 1.6, color: t.withAlpha(190))),
+                        ),
+                      ]),
+                    ),
+                ]),
               ]),
             ),
           ),
@@ -664,71 +650,199 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
   }
 
   /// 传统天地盘：12 个框填十二地支（地盘固定），再填天盘（月将加时）
-  Widget _tianPanGrid(List<String> tianPan, String yueJiangZhi,
-      Color p, Color t, Color b) {
-    final hourZhi = daliurenZhi[_result?.hourIndex ?? 0];
-    // 3 行 × 4 列展示 12 宫（子丑寅卯…顺时针），每格：地盘支 + 天盘支
+  // ══════════ 盘面布局辅助 ══════════
+
+  /// 小节标题（带序号）：主标题 + 灰字说明
+  Widget _sectionTitle(String title, String desc, Color p, Color t,
+      {bool tight = false}) {
     return Column(
-      children: List.generate(3, (row) => Row(
-        children: List.generate(4, (col) {
-          final i = row * 4 + col;
-          if (i >= 12) return const Expanded(child: SizedBox());
-          final diZhi = daliurenZhi[i];
-          final tianZhi = tianPan[i];
-          final isYueJiang = tianZhi == yueJiangZhi; // 月将
-          final isHour = diZhi == hourZhi;           // 时辰
-          return Expanded(
-            child: Container(
-              margin: const EdgeInsets.all(2),
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              decoration: BoxDecoration(
-                color: isYueJiang ? p.withAlpha(30) : (isHour ? t.withAlpha(14) : t.withAlpha(6)),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                    color: isYueJiang ? p : b.withAlpha(50), width: 1),
-              ),
-              child: Column(children: [
-                Text(diZhi,
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: isHour ? p : t)),
-                const SizedBox(height: 2),
-                Text(tianZhi,
-                    style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: isYueJiang ? FontWeight.bold : FontWeight.normal,
-                        color: isYueJiang ? p : t.withAlpha(160))),
-              ]),
-            ),
-          );
-        }),
-      )),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          Container(width: 3, height: 13, color: p),
+          const SizedBox(width: 6),
+          Text(title,
+              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: t)),
+        ]),
+        if (!tight) ...[
+          const SizedBox(height: 2),
+          Padding(
+            padding: const EdgeInsets.only(left: 9),
+            child: Text(desc,
+                style: TextStyle(fontSize: 10, height: 1.4, color: t.withAlpha(120))),
+          ),
+        ],
+        const SizedBox(height: 6),
+      ],
     );
   }
 
-  /// 某传所临天将详解（初/中/末 → 天将名+吉凶+含义）
-  Widget _chuanGeneral(String label, String zhi, DaLiuRenResult r, Color t) {
-    final idx = daliurenZhi.indexOf(zhi);
-    final gi = idx >= 0 ? idx : 0;
-    final g = daliurenGenerals[gi];
-    final isGood = g.$2 == '吉';
-    final gc = isGood ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
+  Widget _infoCard(Color bg, Color b, {required List<Widget> children}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: gc.withAlpha(10),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: gc.withAlpha(40)),
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: b.withAlpha(80)),
       ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
+    );
+  }
+
+  Widget _infoLine(String label, String value, Color t) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('$label $zhi·${g.$1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: gc)),
-        const SizedBox(width: 8),
-        Expanded(child: Text(g.$3, style: TextStyle(fontSize: 11, height: 1.4, color: t.withAlpha(180)))),
+        SizedBox(
+          width: 62,
+          child: Text(label,
+              style: TextStyle(fontSize: 11, color: t.withAlpha(130))),
+        ),
+        Expanded(
+          child: Text(value,
+              style: TextStyle(fontSize: 11.5, height: 1.5, color: t.withAlpha(210))),
+        ),
       ]),
     );
   }
+
+  /// 时辰对应的 24 小时区间
+  String _hourRange(int h) {
+    const ranges = ['23-01', '01-03', '03-05', '05-07', '07-09', '09-11',
+      '11-13', '13-15', '15-17', '17-19', '19-21', '21-23'];
+    return ranges[h];
+  }
+
+  /// 昼占：卯至申（索引 3-8）
+  bool _isDayHour(int h) => h >= 3 && h <= 8;
+
+  /// 地支阴阳（子丑寅卯辰巳为阳位）
+  bool _isYangGong(String zhi) {
+    final idx = daliurenZhi.indexOf(zhi);
+    return idx >= 0 && idx % 2 == 0;
+  }
+
+  /// 天地盘十二宫（地盘 / 天盘 / 天将），标注时支宫与贵人宫
+  Widget _tianPanBoard(DaLiuRenResult r, Color p, Color t, Color bg, Color b) {
+    final hourIdx = r.hourIndex;
+    final guiGong = daliurenZhi.indexOf(r.guiRenGong);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: b.withAlpha(80)),
+      ),
+      child: LayoutBuilder(
+        builder: (ctx, constraints) {
+          final cols = constraints.maxWidth >= 520 ? 6 : 4;
+          return Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            children: [
+              for (var i = 0; i < 12; i++)
+                SizedBox(
+                  width: (constraints.maxWidth - (cols - 1) * 4) / cols - 1,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 3),
+                    decoration: BoxDecoration(
+                      color: i == hourIdx
+                          ? p.withAlpha(28)
+                          : (i == guiGong ? const Color(0xFF6A1B9A).withAlpha(18) : Colors.transparent),
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(
+                        color: i == hourIdx
+                            ? p
+                            : (i == guiGong
+                                ? const Color(0xFF6A1B9A).withAlpha(120)
+                                : b.withAlpha(60)),
+                        width: i == hourIdx || i == guiGong ? 1.2 : 0.6,
+                      ),
+                    ),
+                    child: Column(children: [
+                      Text('地${daliurenZhi[i]}',
+                          style: TextStyle(fontSize: 9, color: t.withAlpha(130))),
+                      Text(r.tianPan[i],
+                          style: TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.bold, color: p)),
+                      Text(r.tianJiang[i],
+                          style: TextStyle(fontSize: 9.5, color: t.withAlpha(190))),
+                      if (i == hourIdx)
+                        Text('时',
+                            style: TextStyle(fontSize: 8, color: p)),
+                      if (i == guiGong)
+                        const Text('贵',
+                            style: TextStyle(fontSize: 8, color: Color(0xFF6A1B9A))),
+                    ]),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// 断课提示（规则化要点，非断语结论）
+  List<String> _duanKeHints(DaLiuRenResult r) {
+    final hints = <String>[];
+    // 课体
+    if (r.chuanFa.contains('伏吟')) {
+      hints.add('伏吟课：天地盘重合，主静、主迟滞，事多原地不动或旧事重提，宜守不宜进。');
+    } else if (r.chuanFa.contains('返吟')) {
+      hints.add('返吟课：天地盘全冲，主动、主反复，事多变故、来回翻覆，宜静观其变。');
+    } else if (r.chuanFa.contains('八专')) {
+      hints.add('八专课：日干寄宫与日支同位，主私情、暧昧，事多牵连自身。');
+    } else if (r.chuanFa.contains('别责')) {
+      hints.add('别责课：四课不全，主事不顺、须借外力方成。');
+    } else if (r.chuanFa.contains('昴星')) {
+      hints.add('昴星课：无克无遥，主事由他动、被动应对，宜守。');
+    } else if (r.chuanFa.contains('涉害')) {
+      hints.add('涉害课：克多而取涉害深者为用，主事涉多方纠葛，须细辨主次。');
+    } else if (r.chuanFa.contains('比用')) {
+      hints.add('比用课：多课相克而取与日干比者为用，主事有同类相争，择其近者。');
+    } else if (r.chuanFa.contains('贼克')) {
+      hints.add('贼克课：以克取用，主事有约束冲击，忌硬碰、宜化解。');
+    } else if (r.chuanFa.contains('遥克')) {
+      hints.add('遥克课：无近克而取遥克，主事隔位相制，影响间接。');
+    }
+    // 三传天将吉凶统计
+    var jiCount = 0;
+    var xiongCount = 0;
+    String generalOf(String chuan) {
+      final diPos = daliurenZhi.indexOf(chuan);
+      if (diPos < 0) return '';
+      return r.tianJiang[diPos];
+    }
+
+    final generals = [generalOf(r.chuChuan), generalOf(r.zhongChuan), generalOf(r.moChuan)];
+    for (final g in generals) {
+      final info = daliurenGenerals.where((e) => e.$1 == g);
+      if (info.isEmpty) continue;
+      if (info.first.$2 == '吉') {
+        jiCount++;
+      } else {
+        xiongCount++;
+      }
+    }
+    hints.add('三传天将：${generals.join(' → ')}（吉 $jiCount / 凶 $xiongCount）'
+        '${jiCount > xiongCount ? '，吉多凶少，事可为' : (xiongCount > jiCount ? '，凶多吉少，宜谨慎' : '，吉凶相当')}。');
+    // 贵人
+    hints.add('贵人临地盘 ${r.guiRenGong} 位（${r.guiRen}）：'
+        '${_isYangGong(r.guiRenGong) ? '阳位顺布，贵人明助' : '阴位逆布，贵人暗助'}；'
+        '所临之宫即为贵人所主之事类。');
+    // 时支与月将
+    hints.add('月将 ${r.yueJiangZhi} 加临 ${daliurenZhi[r.hourIndex]} 时：'
+        '时支 ${daliurenZhi[r.hourIndex]} 为事之应期支，'
+        '初传 ${r.chuChuan} 与末传 ${r.moChuan} 的生克可看事之始终。');
+    return hints;
+  }
+
+
+
+
 
   /// 地支详解弹窗（点击三传/四课触发）
   void _showZhiDetail(String label, String zhi, {String? info}) {

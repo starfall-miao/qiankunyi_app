@@ -284,45 +284,6 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         ],
         const SizedBox(height: 8),
 
-        // 流派选择
-        Row(
-          children: [
-            Icon(Icons.school_outlined, size: 14, color: p.withAlpha(180)),
-            const SizedBox(width: 4),
-            Text('流派: ', style: TextStyle(fontSize: 12, color: t.withAlpha(200))),
-            Expanded(
-              child: ToggleButtons(
-                isSelected: [
-                  _liuyaoSchool == LiuyaoSchool.jingFangJianBan,
-                  _liuyaoSchool == LiuyaoSchool.jingFangZhengZong,
-                ],
-                onPressed: (i) {
-                  setState(() {
-                    _liuyaoSchool = i == 0
-                        ? LiuyaoSchool.jingFangJianBan
-                        : LiuyaoSchool.jingFangZhengZong;
-                  });
-                },
-                constraints: const BoxConstraints(minWidth: 80, minHeight: 28),
-                textStyle: TextStyle(fontSize: 12, color: t),
-                selectedColor: p,
-                fillColor: p.withAlpha(20),
-                color: t.withAlpha(150),
-                borderRadius: BorderRadius.circular(6),
-                children: const [
-                  Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Text('简版（变卦六亲随本宫）')),
-                  Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Text('正宗（变卦六亲随变卦宫）')),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-
         // 手工摇——爻位选择面板（国风卦签风格）
         if (_liuyaoMethod == 0) ..._buildManualPanel(p, t, b, c, dark),
 
@@ -377,7 +338,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
               ],
             ),
           ),
-          // ── 月令/日令/空亡/流派信息 ──
+          // ── 月令/日令/空亡/神煞信息 ──
           Container(
             padding: const EdgeInsets.all(8),
             margin: const EdgeInsets.only(bottom: 8),
@@ -386,27 +347,28 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: p.withAlpha(30)),
             ),
-            child: Row(
+            // 标签较多（月/日/空/煞/音）时用 Wrap 换行，避免窄屏溢出
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 4,
               children: [
-                if (pr.liuyaoResult!.monthGanZhi != null) ...[
+                if (pr.liuyaoResult!.monthGanZhi != null)
                   _dateTag('月', pr.liuyaoResult!.monthGanZhi!, p, t),
-                  const SizedBox(width: 8),
-                ],
-                if (pr.liuyaoResult!.dayGanZhi != null) ...[
+                if (pr.liuyaoResult!.dayGanZhi != null)
                   _dateTag('日', pr.liuyaoResult!.dayGanZhi!, p, t),
-                  const SizedBox(width: 8),
-                ],
-                if (pr.liuyaoResult!.kongWang != null) ...[
+                if (pr.liuyaoResult!.kongWang != null)
                   _dateTag('空', '旬空: ${pr.liuyaoResult!.kongWang!.join(" ")}', p, t),
-                  const SizedBox(width: 8),
-                ],
-                _dateTag(
-                  '派',
-                  pr.liuyaoResult!.school == LiuyaoSchool.jingFangJianBan
-                      ? '简版·变卦六亲随本宫'
-                      : '正宗·变卦六亲随变卦宫',
-                  p, t,
-                ),
+                if (pr.liuyaoResult!.shenSha.isNotEmpty)
+                  _dateTag(
+                      '煞',
+                      pr.liuyaoResult!.shenSha
+                          .map((e) => e.split('（').first)
+                          .toSet()
+                          .join(' '),
+                      p,
+                      t),
+                if (pr.liuyaoResult!.naYin != null)
+                  _dateTag('音', '世纳音: ${pr.liuyaoResult!.naYin}', p, t),
               ],
             ),
           ),
@@ -530,7 +492,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                 if (lr.kongWang != null) '空 旬空:${lr.kongWang!.join(" ")}',
                 if (lr.fuShen.isNotEmpty)
                   '藏爻 ${lr.fuShen.map((f) => f.label).join(" ")}',
-                '派 ${lr.school == LiuyaoSchool.jingFangJianBan ? "简版" : "正宗"}',
+                if (lr.shenSha.isNotEmpty) '煞 ${lr.shenSha.join(" ")}',
               ],
               benGua: lr.benGua,
               bianGua: lr.bianGua,
@@ -1238,15 +1200,24 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
         LayoutBuilder(
           builder: (ctx2, constraints) {
             final isWide = constraints.maxWidth >= 340;
+            String triDesc(GuaModel g) {
+              final info = MeihuaEngine.trigramInfo(g);
+              return '上${info.upperName}${info.upperWx}·下${info.lowerName}${info.lowerWx}';
+            }
+
+            final mv = MeihuaEngine.movingYaoInfo(result.benGua);
             final cards = <Widget>[
-              _miniGuaCard('本卦', result.benGua, p, t, c, dark),
+              _miniGuaCard('本卦${mv != null ? '（${mv.inUpper ? '上' : '下'}卦动）' : ''}',
+                  result.benGua, p, t, c, dark, subtitle: triDesc(result.benGua)),
               if (result.bianGua != null) ...[
                 const SizedBox(width: 8),
-                _miniGuaCard('变卦', result.bianGua!, p, t, c, dark),
+                _miniGuaCard('变卦（结局）', result.bianGua!, p, t, c, dark,
+                    subtitle: triDesc(result.bianGua!)),
               ],
               if (result.huGua != null) ...[
                 const SizedBox(width: 8),
-                _miniGuaCard('互卦', result.huGua!, p, t, c, dark),
+                _miniGuaCard('互卦（过程）', result.huGua!, p, t, c, dark,
+                    subtitle: triDesc(result.huGua!)),
               ],
             ];
 
@@ -1267,7 +1238,11 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
           },
         ),
 
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
+
+        // ── 卦象标注：上下卦五行 / 动爻 / 体用归属 ──
+        _buildMeihuaAnnotation(result, p, t, b, c, dark),
+        const SizedBox(height: 12),
 
         // ── 体用生克 ──
         if (result.benGua.yaos.length >= 6) ...[
@@ -1367,7 +1342,8 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
   }
 
   /// 迷你卦卡 — 用于梅花三卦并排
-  Widget _miniGuaCard(String label, GuaModel gua, Color p, Color t, Color c, bool dark) {
+  Widget _miniGuaCard(String label, GuaModel gua, Color p, Color t, Color c,
+      bool dark, {String? subtitle}) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1388,7 +1364,95 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
           style: TextStyle(fontSize: 11, color: t.withAlpha(200)),
           textAlign: TextAlign.center,
         ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 1),
+          Text(subtitle,
+              style: TextStyle(fontSize: 9, color: t.withAlpha(130)),
+              textAlign: TextAlign.center),
+        ],
       ],
+    );
+  }
+
+  /// 梅花卦象标注：上/下卦五行、动爻、体用归属、三卦定位
+  Widget _buildMeihuaAnnotation(PaipanResult result, Color p, Color t,
+      Color b, Color c, bool dark) {
+    final ben = MeihuaEngine.trigramInfo(result.benGua);
+    final mv = MeihuaEngine.movingYaoInfo(result.benGua);
+    const posCN = ['初', '二', '三', '四', '五', '上'];
+
+    // 体用：动爻所在卦为用，另一卦为体
+    String? tiSide, yongSide;
+    String tiDesc = '', yongDesc = '';
+    if (mv != null) {
+      tiSide = mv.inUpper ? '下卦' : '上卦';
+      yongSide = mv.inUpper ? '上卦' : '下卦';
+      tiDesc = mv.inUpper
+          ? '${ben.lowerName}（${ben.lowerWx}）'
+          : '${ben.upperName}（${ben.upperWx}）';
+      yongDesc = mv.inUpper
+          ? '${ben.upperName}（${ben.upperWx}）'
+          : '${ben.lowerName}（${ben.lowerWx}）';
+    }
+
+    Widget row(String label, String value, {Color? color}) => Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            SizedBox(
+              width: 46,
+              child: Text(label,
+                  style: TextStyle(fontSize: 11, color: t.withAlpha(130))),
+            ),
+            Expanded(
+              child: Text(value,
+                  style: TextStyle(
+                      fontSize: 11.5,
+                      height: 1.5,
+                      color: color ?? t.withAlpha(210))),
+            ),
+          ]),
+        );
+
+    final huInfo = result.huGua == null
+        ? null
+        : MeihuaEngine.trigramInfo(result.huGua!);
+    final bianInfo = result.bianGua == null
+        ? null
+        : MeihuaEngine.trigramInfo(result.bianGua!);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: c,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: b.withAlpha(90)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(Icons.label_outline, size: 13, color: p),
+          const SizedBox(width: 4),
+          Text('卦象标注',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: t)),
+        ]),
+        const SizedBox(height: 6),
+        row('本卦', '上卦 ${ben.upperName}（${ben.upperWx}）　下卦 ${ben.lowerName}（${ben.lowerWx}）'),
+        if (mv != null)
+          row('动爻', '${posCN[mv.index]}爻（${mv.inUpper ? '上' : '下'}卦）→ 该卦为用、另一卦为体',
+              color: p)
+        else
+          row('动爻', '无动爻（静卦），不分体用'),
+        if (mv != null) ...[
+          row('体（自身）', '$tiSide $tiDesc', color: const Color(0xFF2E7D32)),
+          row('用（所测）', '$yongSide $yongDesc［动］', color: const Color(0xFFB71C1C)),
+        ],
+        if (huInfo != null)
+          row('互卦（过程）',
+              '上${huInfo.upperName}（${huInfo.upperWx}）　下${huInfo.lowerName}（${huInfo.lowerWx}）'),
+        if (bianInfo != null)
+          row('变卦（结局）',
+              '上${bianInfo.upperName}（${bianInfo.upperWx}）　下${bianInfo.lowerName}（${bianInfo.lowerWx}）'),
+      ]),
     );
   }
 

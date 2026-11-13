@@ -71,6 +71,10 @@ class YaoModel {
   bool isYuePo;    // 月破（月建冲克之爻，静动皆可论）
   /// 化进神/化退神（仅动爻，依据本爻与变爻地支是否顺进/逆退判定）
   HuaJinTui? huaJinTui;
+  /// 该爻干支的六十甲子纳音（如「甲子」→「海中金」）
+  String? naYin;
+  /// 该爻所带神煞（天乙贵人/驿马/桃花/华盖/将星/劫煞/亡神/羊刃/禄神/文昌）
+  List<String> shenSha;
   List<String> sanHeJu;
 
   YaoModel({
@@ -93,6 +97,8 @@ class YaoModel {
     this.isAnDong = false,
     this.isYuePo = false,
     this.huaJinTui,
+    this.naYin,
+    this.shenSha = const [],
     this.sanHeJu = const [],
   });
 
@@ -122,6 +128,8 @@ class YaoModel {
     'isAnDong': isAnDong,
     'isYuePo': isYuePo,
     'huaJinTui': huaJinTui?.name,
+    'naYin': naYin,
+    'shenSha': shenSha,
     'sanHeJu': sanHeJu,
   };
 
@@ -144,6 +152,8 @@ class YaoModel {
     isRiPo: j['isRiPo'] as bool? ?? false,
     isAnDong: j['isAnDong'] as bool? ?? false,
     isYuePo: j['isYuePo'] as bool? ?? false,
+    naYin: j['naYin'] as String?,
+    shenSha: (j['shenSha'] as List?)?.cast<String>() ?? const [],
     huaJinTui: () {
       final raw = j['huaJinTui'];
       if (raw is String) {
