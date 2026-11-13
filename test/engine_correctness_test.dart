@@ -119,12 +119,22 @@ void main() {
   });
 
   group('大六壬 - 月将（中气换将）', () {
-    test('月建地支 → 月将索引映射', () {
-      // 寅月登明(0)、卯月河魁(1)、丑月神后(11)、子月大吉(10)
-      expect(DaLiuRenEngine.yueJiangFromMonthZhi(2), equals(0), reason: '寅月登明');
-      expect(DaLiuRenEngine.yueJiangFromMonthZhi(3), equals(1), reason: '卯月河魁');
-      expect(DaLiuRenEngine.yueJiangFromMonthZhi(1), equals(11), reason: '丑月神后');
-      expect(DaLiuRenEngine.yueJiangFromMonthZhi(0), equals(10), reason: '子月大吉');
+    test('按最近已过中气定月将', () {
+      // 2024 年各中气与月将：雨水后登明(0)、春分后河魁(1)、谷雨后从魁(2)…
+      expect(DaLiuRenEngine.yueJiangOf(DateTime(2024, 2, 20)), 0, reason: '雨水后登明');
+      expect(DaLiuRenEngine.yueJiangOf(DateTime(2024, 3, 25)), 1, reason: '春分后河魁');
+      expect(DaLiuRenEngine.yueJiangOf(DateTime(2024, 4, 25)), 2, reason: '谷雨后从魁');
+      expect(DaLiuRenEngine.yueJiangOf(DateTime(2024, 6, 25)), 4, reason: '夏至后小吉');
+      expect(DaLiuRenEngine.yueJiangOf(DateTime(2024, 9, 25)), 7, reason: '秋分后天罡');
+      expect(DaLiuRenEngine.yueJiangOf(DateTime(2024, 12, 25)), 10, reason: '冬至后大吉');
+      expect(DaLiuRenEngine.yueJiangOf(DateTime(2024, 1, 25)), 11, reason: '大寒后神后');
+    });
+
+    test('立春后、雨水前仍属上一中气的月将（不能按节气月推）', () {
+      // 2024-02-10 已在寅月（立春 2/4），但雨水在 2/19 → 月将仍是神后(11)
+      expect(DaLiuRenEngine.yueJiangOf(DateTime(2024, 2, 10)), 11);
+      // 立春前（2024-01-20 仍属丑月）同样是神后
+      expect(DaLiuRenEngine.yueJiangOf(DateTime(2024, 1, 20)), 11);
     });
 
     test('寅月起课月将临亥', () {
