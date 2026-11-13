@@ -42,6 +42,17 @@ void main() {
       expect(r.resultPalm.name, '速喜');
     });
 
+    test('按公历日期起课时自动换算农历月日', () {
+      // 2024-02-10 为农历正月初一：起课月应为 1（正月），月落位大安(0)
+      final r = XiaoLiuRenEngine.byDateTime(DateTime(2024, 2, 10), 0);
+      expect(r.month, 1, reason: '农历正月初一');
+      expect(r.monthPos, 0, reason: '正月落位大安');
+      // 2024-01-15 为农历腊月初五（月=12），月落位 (12-1)%6 = 5 → 空亡
+      final r2 = XiaoLiuRenEngine.byDateTime(DateTime(2024, 1, 15), 0);
+      expect(r2.month, 12);
+      expect(r2.monthPos, 5);
+    });
+
     test('随机起课结果在六掌诀范围内', () {
       final r = XiaoLiuRenEngine.random();
       expect(r.resultPos, inInclusiveRange(0, 5));

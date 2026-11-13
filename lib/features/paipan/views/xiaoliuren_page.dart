@@ -50,7 +50,10 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
     XiaoLiuRenResult r;
     switch (_method) {
       case 0:
-        r = XiaoLiuRenEngine.byMonthDayHour(_month, _day, _hour);
+        // 小六壬以**农历**月日起课（正月起大安、月上起日、日上起时）；
+        // 引擎内部把所选公历日期换算为农历（旧实现直接用公历月日，会错位）
+        r = XiaoLiuRenEngine.byDateTime(
+            DateTime(_year, _month, _day), _hour);
         break;
       case 1:
         r = XiaoLiuRenEngine.random();
@@ -202,7 +205,7 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
       ..writeln('━━━━━━━━━━━━━━')
       ..writeln('最终落位：${palm.name}（${palm.goodBad}）')
       ..writeln('五行：${palm.element} · 方位：${palm.direction}')
-      ..writeln('起课：${r.month}月${r.day}日 ${['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][r.hour]}时 · ${r.method}')
+      ..writeln('起课：农历${r.month}月${r.day}日 ${['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][r.hour]}时 · ${r.method}')
       ..writeln('━━━━━━━━━━━━━━')
       ..writeln('象义：${palm.meaning}')
       ..writeln('断语：${palm.advice}')
@@ -565,7 +568,7 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
             const SizedBox(height: 4),
             Text(palm.advice, style: const TextStyle(fontSize: 13, height: 1.6)),
             const SizedBox(height: 10),
-            Text('起课：${r.month}月${r.day}日 ${['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][r.hour]}时 · ${r.method}',
+            Text('起课：农历${r.month}月${r.day}日 ${['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][r.hour]}时 · ${r.method}',
                 style: const TextStyle(fontSize: 11, color: Colors.grey)),
           ]),
         ),
