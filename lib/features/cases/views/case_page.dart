@@ -18,6 +18,7 @@ import '../../../shared/widgets/gua_screenshot_template.dart';
 import '../../../shared/widgets/save_image_dialog.dart';
 import '../../paipan/models/bazi_models.dart';
 import '../../paipan/models/gua_model.dart';
+import '../../paipan/engines/meihua_engine.dart';
 import '../../paipan/models/paipan_result.dart';
 import '../../paipan/models/yao_model.dart';
 import '../../paipan/views/gua_widget.dart';
@@ -803,7 +804,9 @@ class _CasePageState extends State<CasePage> {
                   const SizedBox(height: 6),
                   GuaWidget(gua: result.huGua!, showFooter: false),
                 ],
-                if (result.benGua.yaos.length >= 6) ...[
+                // 体用是梅花易数术语（六爻无体用），仅梅花卦例展示
+                if (c.caseType == CaseType.meihua &&
+                    result.benGua.yaos.length >= 6) ...[
                   const SizedBox(height: 16),
                   _buildTiYongDetail(result, t, isDark),
                 ],
@@ -857,8 +860,8 @@ class _CasePageState extends State<CasePage> {
                                     '日 ${result.dayGanZhi}',
                                   if (result.kongWang != null)
                                     '空 旬空:${result.kongWang!.join(" ")}',
-                                  if (result.hiddenFuShen.isNotEmpty)
-                                    '藏爻 ${result.hiddenFuShen.join(" ")}',
+                                  if (result.fuShen.isNotEmpty)
+                                    '藏爻 ${result.fuShen.map((f) => f.describe).join("；")}',
                                   '派 ${result.school == LiuyaoSchool.jingFangJianBan ? "京房简版" : "京房正宗"}',
                                 ],
                                 benGua: result.benGua,
@@ -1531,11 +1534,10 @@ class _CasePageState extends State<CasePage> {
   }
 
   Widget _buildTiYongDetail(PaipanResult result, Color t, bool isDark) {
-    // 简版体用生克
-    final tiYao = result.benGua.yaos[result.benGua.shiYaoIndex];
-    final tiWx = result.benGua.wuXing;
-    final yongWx = _diZhiWuXing(tiYao.diZhi);
-    final relation = _shengKeRelation(tiWx, yongWx);
+    // 梅花体用：动爻所在卦为用、另一卦为体（旧实现用「卦五行 vs 世爻地支五行」，
+    // 既非梅花规则也不适用于六爻，属误用，已改为调用梅花引擎的正式实现）
+    final relation = MeihuaEngine.getTiYong(result);
+    final bianRelation = MeihuaEngine.getBianTiYong(result);
 
     return Container(
       width: double.infinity,
@@ -1550,49 +1552,16 @@ class _CasePageState extends State<CasePage> {
         children: [
           Text('体用生克', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: t)),
           const SizedBox(height: 8),
-          Text(relation, style: TextStyle(fontSize: 13, color: t)),
+          Text(relation, style: TextStyle(fontSize: 13, height: 1.6, color: t)),
+          if (result.bianGua != null) ...[
+            const SizedBox(height: 6),
+            Text(bianRelation, style: TextStyle(fontSize: 13, height: 1.6, color: t)),
+          ],
         ],
       ),
     );
   }
 
-  WuXing _diZhiWuXing(DiZhi? dz) {
-    switch (dz) {
-      case DiZhi.zi: return WuXing.shui;
-      case DiZhi.chou: return WuXing.tu;
-      case DiZhi.yin: return WuXing.mu;
-      case DiZhi.mao: return WuXing.mu;
-      case DiZhi.chen: return WuXing.tu;
-      case DiZhi.si: return WuXing.huo;
-      case DiZhi.wu: return WuXing.huo;
-      case DiZhi.wei: return WuXing.tu;
-      case DiZhi.shen: return WuXing.jin;
-      case DiZhi.you: return WuXing.jin;
-      case DiZhi.xu: return WuXing.tu;
-      case DiZhi.hai: return WuXing.shui;
-      default: return WuXing.tu;
-    }
-  }
-
-  final _wxCN = <WuXing, String>{WuXing.jin: '金', WuXing.mu: '木', WuXing.shui: '水', WuXing.huo: '火', WuXing.tu: '土'};
-
-  String _shengKeRelation(WuXing a, WuXing b) {
-    if (a == b) return '体用同五行（$_wxCN[a]），比和，吉。';
-    // 生克关系简化：生我者吉，我生者泄，克我者凶，我克者耗
-    final sheng = <WuXing, WuXing>{
-      WuXing.mu: WuXing.huo, WuXing.huo: WuXing.tu,
-      WuXing.tu: WuXing.jin, WuXing.jin: WuXing.shui, WuXing.shui: WuXing.mu,
-    };
-    final ke = <WuXing, WuXing>{
-      WuXing.mu: WuXing.tu, WuXing.tu: WuXing.shui,
-      WuXing.shui: WuXing.huo, WuXing.huo: WuXing.jin, WuXing.jin: WuXing.mu,
-    };
-    if (sheng[a] == b) return '体${_wxCN[a]}生用${_wxCN[b]}，泄气，事有耗散。';
-    if (sheng[b] == a) return '用${_wxCN[b]}生体${_wxCN[a]}，吉，有进益之喜。';
-    if (ke[a] == b) return '体${_wxCN[a]}克用${_wxCN[b]}，虽胜有劳，事费力。';
-    if (ke[b] == a) return '用${_wxCN[b]}克体${_wxCN[a]}，凶，事多阻逆。';
-    return '体生用，泄气；用生体，吉。';
-  }
 
   /// 编辑卦例对话框
   void _showEditDialog(BuildContext context, CaseModel c) {
@@ -2090,6 +2059,7 @@ class _AiChatSectionState extends State<_AiChatSection> {
       if (y.isYuePo) parts.add('月破');
       if (y.isRiPo) parts.add('日破');
       if (y.isAnDong) parts.add('暗动');
+      if (y.huaJinTui != null) parts.add(y.huaJinTui!.label);
       sb.writeln('  ${parts.join(' ')}');
     }
     if (result.bianGua != null) {
@@ -2122,6 +2092,12 @@ class _AiChatSectionState extends State<_AiChatSection> {
     if (result.huGua != null) {
       final bn3 = guaNameCN[result.huGua!.name] ?? result.huGua!.name.name;
       sb.writeln('互卦：$bn3');
+    }
+    // 梅花易数结果无纳甲/六亲：补体用分析（本卦体用 + 变卦体用）
+    final isMeihua = result.benGua.yaos.every((y) => y.liuQin == LiuQin.none);
+    if (isMeihua) {
+      sb.writeln(MeihuaEngine.getTiYong(result));
+      if (result.bianGua != null) sb.writeln(MeihuaEngine.getBianTiYong(result));
     }
     if (result.monthGanZhi != null) sb.writeln('月令（月建）：${result.monthGanZhi}');
     if (result.dayGanZhi != null) sb.writeln('日辰：${result.dayGanZhi}');
@@ -3760,7 +3736,8 @@ class _AiChatScreenshotTemplate extends StatelessWidget {
           '互卦：${guaNameCN[r.huGua!.name] ?? r.huGua!.name.name}',
         if (r.kongWang != null && r.kongWang!.isNotEmpty)
           '空亡：${r.kongWang!.join('、')}',
-        if (r.hiddenFuShen.isNotEmpty) '藏爻：${r.hiddenFuShen.join('、')}',
+        if (r.fuShen.isNotEmpty)
+          '藏爻：${r.fuShen.map((f) => f.describe).join('；')}',
         if (r.dayGanZhi != null) '日辰：${r.dayGanZhi}',
       ];
       return buf.join('　');

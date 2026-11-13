@@ -209,6 +209,8 @@ class GuaWidget extends StatelessWidget {
             if (ds.showShiYing) _buildShiYingMark(yao, theme),
             // 日破/暗动标记
             _buildRiPoAnDongMark(yao, theme),
+            // 化进神/化退神标记（仅动爻）
+            _buildHuaJinTuiMark(yao),
             const Spacer(),
             // 刑冲合害标记
             if (ds.showXingChong) _buildSpecialMarks(yao, theme),
@@ -266,6 +268,26 @@ class GuaWidget extends StatelessWidget {
       );
     }
     return const SizedBox.shrink();
+  }
+
+  /// 化进神/化退神标记（仅动爻）
+  Widget _buildHuaJinTuiMark(YaoModel yao) {
+    final h = yao.huaJinTui;
+    if (h == null) return const SizedBox.shrink();
+    final isJin = h == HuaJinTui.jin;
+    final color = isJin ? const Color(0xFF00695C) : const Color(0xFF6D4C41);
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+        decoration: BoxDecoration(
+          color: color.withAlpha(25),
+          borderRadius: BorderRadius.circular(3),
+        ),
+        child: Text(isJin ? '化进' : '化退',
+            style: TextStyle(fontSize: 10, color: color)),
+      ),
+    );
   }
 
   /// 月破/日破/暗动标记（月破优先展示：月破影响大于日破）
