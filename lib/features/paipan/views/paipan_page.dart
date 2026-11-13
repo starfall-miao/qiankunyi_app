@@ -429,7 +429,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
             ),
           ),
           // ── 藏爻（伏神） ──
-          if (pr.liuyaoResult!.hiddenFuShen.isNotEmpty) ...[
+          if (pr.liuyaoResult!.fuShen.isNotEmpty) ...[
             const SizedBox(height: 8),
             Container(
               width: double.infinity,
@@ -444,7 +444,7 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    '藏爻（伏神）：${pr.liuyaoResult!.hiddenFuShen.join('　')}',
+                    '藏爻（伏神）：${pr.liuyaoResult!.fuShen.map((f) => f.describe).join('　')}',
                     style: TextStyle(fontSize: 12, color: t.withAlpha(190)),
                   ),
                 ),
@@ -521,7 +521,8 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
                 if (lr.monthGanZhi != null) '月 ${lr.monthGanZhi}',
                 if (lr.dayGanZhi != null) '日 ${lr.dayGanZhi}',
                 if (lr.kongWang != null) '空 旬空:${lr.kongWang!.join(" ")}',
-                if (lr.hiddenFuShen.isNotEmpty) '藏爻 ${lr.hiddenFuShen.join(" ")}',
+                if (lr.fuShen.isNotEmpty)
+                  '藏爻 ${lr.fuShen.map((f) => f.label).join(" ")}',
                 '派 ${lr.school == LiuyaoSchool.jingFangJianBan ? "京房简版" : "京房正宗"}',
               ],
               benGua: lr.benGua,
@@ -1503,13 +1504,27 @@ class _PaipanPageState extends State<PaipanPage> with SingleTickerProviderStateM
               style: TextStyle(
                 fontSize: 15, fontWeight: FontWeight.bold, color: txtC)),
           ),
+          // 变卦体用（事之结局）：只有存在变卦时才有意义
+          if (result.bianGua != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: txtC.withAlpha(12),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                MeihuaEngine.getBianTiYong(result),
+                style: TextStyle(fontSize: 12, height: 1.5, color: txtC),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
-
-
-
 
 }
 /// 八字排盘页面

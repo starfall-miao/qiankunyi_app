@@ -287,6 +287,48 @@ class MeihuaEngine {
     return '体卦：$tiGua(${_wxName(tiWx)}) 用卦：$yongGua(${_wxName(yongWx)}) — $relation';
   }
 
+  /// 变卦体用：动爻所在的卦「化出」的卦为用卦，另一卦仍为体卦（体卦不变）。
+  ///
+  /// 梅花断法：本卦看体用生克 → 互卦看过程 → **变卦看结果**。变卦中用卦已
+  /// 变为新卦，体卦不变，两者生克即事之结局（用生体/体克用为吉，用克体为凶）。
+  static String getBianTiYong(PaipanResult result) {
+    final bian = result.bianGua;
+    if (bian == null) return '无变卦，不论变卦体用';
+    final movingIdx = result.benGua.yaos.indexWhere((y) => y.isMoving);
+    if (movingIdx == -1) return '无动爻，不论变卦体用';
+
+    // 动爻在下卦 → 化出的是下卦（用），体为上卦；反之体为下卦
+    final movingInLower = movingIdx < 3;
+    final yongIdx = movingInLower
+        ? _yaoMask(bian.yaos.sublist(0, 3))
+        : _yaoMask(bian.yaos.sublist(3, 6));
+    final tiIdx = movingInLower
+        ? _yaoMask(bian.yaos.sublist(3, 6))
+        : _yaoMask(bian.yaos.sublist(0, 3));
+
+    final tiWx = _triWuXing(tiIdx);
+    final yongWx = _triWuXing(yongIdx);
+
+    String relation;
+    if (tiWx == yongWx) {
+      relation = '体用比和，事终顺遂';
+    } else if (_sheng(tiWx) == yongWx) {
+      relation = '体生用，事后耗损、付出多于所得';
+    } else if (_sheng(yongWx) == tiWx) {
+      relation = '用生体，事终有进益、得助';
+    } else if (_ke(tiWx) == yongWx) {
+      relation = '体克用，事可成但费心力';
+    } else {
+      relation = '用克体，事终不利、多阻';
+    }
+
+    final bianName = guaNameCNLocal(bian.name);
+    return '变卦体用（$bianName）：用卦(${_wxName(yongWx)}) 体卦(${_wxName(tiWx)}) — $relation';
+  }
+
+  /// 卦名中文：统一使用 gua_model.dart 的 guaNameCN（单一来源）
+  static String guaNameCNLocal(GuaName name) => guaNameCN[name] ?? name.name;
+
   /// 八卦五行
   static WuXing _triWuXing(int triIdx) {
     const wx = [

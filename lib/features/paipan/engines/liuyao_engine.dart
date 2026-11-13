@@ -428,7 +428,7 @@ class LiuYaoEngine {
     _applyLiuQin(yaos, guaGongWuXing[gong]!);
 
     // 藏爻/伏神：本卦缺失的六亲，自本宫首卦（八纯卦）借入
-    final hiddenFuShen = _calcFuShen(yaos, gong, guaGongWuXing[gong]!);
+    final fuShen = _calcFuShen(yaos, gong, guaGongWuXing[gong]!);
 
     // ───── 月令/日令/空亡（基于 tyme4dart） ─────
     final solarDay = tyme.SolarDay.fromYmd(dt.year, dt.month, dt.day);
@@ -489,7 +489,7 @@ class LiuYaoEngine {
       monthGanZhi: monthGanZhi,
       dayGanZhi: dayGanZhi,
       kongWang: kongWangList,
-      hiddenFuShen: hiddenFuShen,
+      fuShen: fuShen,
     );
   }
 
@@ -542,10 +542,19 @@ class LiuYaoEngine {
       bianYaos[i + 3].diZhi = _diZhiMap[outer.$4[i]];
     }
 
-    // 4) 六亲：以本卦卦宫五行为"我"
+    // 4) 化进神/化退神（仅动爻：比较本爻与变爻地支是否同五行顺进/逆退）
+    for (var i = 0; i < 6; i++) {
+      if (!benYaos[i].isMoving) continue;
+      final from = benYaos[i].diZhi;
+      final to = bianYaos[i].diZhi;
+      if (from == null || to == null) continue;
+      benYaos[i].huaJinTui = _huaJinTuiOf(from, to);
+    }
+
+    // 5) 六亲：以本卦卦宫五行为"我"
     _applyLiuQin(bianYaos, guaGongWuXing[benGong]!);
 
-    // 5) 变卦名/所属宫/世应（按变卦自身的八宫归属）
+    // 6) 变卦名/所属宫/世应（按变卦自身的八宫归属）
     final name = _hexagramMap[innerTri]![outerTri];
     final palace = _palaceMap[innerTri]![outerTri]!;
     final shiIdx = palace.$2;
@@ -573,25 +582,9 @@ class LiuYaoEngine {
     return mask;
   }
 
-  /// 八纯卦（本宫首卦）六爻地支（京房纳甲，自初爻起）
-  static const _palaceShouGuaDz = <GuaGong, List<DiZhi>>{
-    GuaGong.qian: [DiZhi.zi, DiZhi.yin, DiZhi.chen, DiZhi.wu, DiZhi.shen, DiZhi.xu],
-    GuaGong.dui: [DiZhi.si, DiZhi.mao, DiZhi.chou, DiZhi.hai, DiZhi.you, DiZhi.wei],
-    GuaGong.li: [DiZhi.mao, DiZhi.chou, DiZhi.hai, DiZhi.you, DiZhi.wei, DiZhi.si],
-    GuaGong.zhen: [DiZhi.zi, DiZhi.yin, DiZhi.chen, DiZhi.wu, DiZhi.shen, DiZhi.xu],
-    GuaGong.xun: [DiZhi.chou, DiZhi.hai, DiZhi.you, DiZhi.wei, DiZhi.si, DiZhi.mao],
-    GuaGong.kan: [DiZhi.yin, DiZhi.chen, DiZhi.wu, DiZhi.shen, DiZhi.xu, DiZhi.zi],
-    GuaGong.gen: [DiZhi.chen, DiZhi.wu, DiZhi.shen, DiZhi.xu, DiZhi.zi, DiZhi.yin],
-    GuaGong.kun: [DiZhi.wei, DiZhi.si, DiZhi.mao, DiZhi.chou, DiZhi.hai, DiZhi.you],
-  };
-
   static const _liuQinCN = {
     LiuQin.parent: '父母', LiuQin.brother: '兄弟', LiuQin.officer: '官鬼',
     LiuQin.wife: '妻财', LiuQin.child: '子孙',
-  };
-  static const _wuXingCN = {
-    WuXing.jin: '金', WuXing.mu: '木', WuXing.shui: '水',
-    WuXing.huo: '火', WuXing.tu: '土',
   };
   static const _diZhiCN2 = {
     DiZhi.zi: '子', DiZhi.chou: '丑', DiZhi.yin: '寅', DiZhi.mao: '卯',
@@ -599,32 +592,63 @@ class LiuYaoEngine {
     DiZhi.shen: '申', DiZhi.you: '酉', DiZhi.xu: '戌', DiZhi.hai: '亥',
   };
 
-  /// 计算藏爻（伏神）：本卦缺失的六亲，自本宫首卦借入
-  static List<String> _calcFuShen(
+  /// 计算伏神（藏爻）：本卦缺失的六亲，自本宫首卦（八纯卦）借入。
+  ///
+  /// 传统规则：取本宫首卦中该六亲之爻为伏神，伏于本卦**同一爻位**之下；
+  /// 本卦该爻位的爻为「飞神」。故此处保存：六亲、伏神干支、所伏爻位、
+  /// 飞神六亲与干支（便于断卦时看「伏神受飞神生克」）。
+  /// 同一六亲在首卦出现两次时取先出现者（初爻侧）。
+  static List<FuShenInfo> _calcFuShen(
       List<YaoModel> yaos, GuaGong gong, WuXing gongWx) {
-    // 本卦已有的六亲
     final present = <LiuQin>{};
     for (final y in yaos) {
       if (y.liuQin != LiuQin.none) present.add(y.liuQin);
     }
-    final allLiuQin = [LiuQin.parent, LiuQin.brother, LiuQin.officer, LiuQin.wife, LiuQin.child];
+    final allLiuQin = [
+      LiuQin.parent, LiuQin.brother, LiuQin.officer, LiuQin.wife, LiuQin.child,
+    ];
     final missing = allLiuQin.where((l) => !present.contains(l)).toList();
     if (missing.isEmpty) return const [];
 
-    final shouDz = _palaceShouGuaDz[gong] ?? const [];
-    final result = <String>[];
+    // 本宫首卦 = 该宫八纯卦，纳甲即本卦的八卦纳甲表（八纯卦上下卦同）
+    final triIdx = GuaGong.values.indexOf(gong);
+    if (triIdx < 0 || triIdx >= _trigramNaJia.length) return const [];
+    final najia = _trigramNaJia[triIdx];
+
+    String ganOf(int i) => i < 3 ? najia.$1 : najia.$3;
+    String zhiOf(int i) => i < 3 ? najia.$2[i] : najia.$4[i - 3];
+
+    final result = <FuShenInfo>[];
     for (final lq in missing) {
-      // 在本宫首卦中找该六亲
-      for (final dz in shouDz) {
-        final dzWx = _diZhiWuXing[dz]!;
-        if (_calcLiuQin(gongWx, dzWx) == lq) {
-          result.add('${_liuQinCN[lq]} ${_diZhiCN2[dz]}${_wuXingCN[dzWx]}');
-          break;
-        }
+      for (var i = 0; i < 6; i++) {
+        final zhi = zhiOf(i);
+        final dzWx = _diZhiWuXing[_diZhiMap[zhi]!]!;
+        if (_calcLiuQin(gongWx, dzWx) != lq) continue;
+        final fei = yaos[i];
+        final feiZhi = fei.diZhi == null ? '' : _diZhiCN2[fei.diZhi!]!;
+        final feiGan = fei.tianGan == null
+            ? ''
+            : _tianGanCN2[fei.tianGan!] ?? '';
+        result.add(FuShenInfo(
+          liuQin: _liuQinCN[lq]!,
+          ganZhi: '${ganOf(i)}$zhi',
+          yaoIndex: i,
+          feiShenLiuQin:
+              fei.liuQin == LiuQin.none ? '' : (_liuQinCN[fei.liuQin] ?? ''),
+          feiShenGanZhi: '$feiGan$feiZhi',
+        ));
+        break;
       }
     }
     return result;
   }
+
+  /// 天干枚举 → 中文
+  static const _tianGanCN2 = <TianGan, String>{
+    TianGan.jia: '甲', TianGan.yi: '乙', TianGan.bing: '丙',
+    TianGan.ding: '丁', TianGan.wu: '戊', TianGan.ji: '己',
+    TianGan.geng: '庚', TianGan.xin: '辛', TianGan.ren: '壬', TianGan.gui: '癸',
+  };
 
   /// 六亲排布
   static void _applyLiuQin(List<YaoModel> yaos, WuXing gongWuXing) {
@@ -633,6 +657,30 @@ class LiuYaoEngine {
       final yaoWuXing = _diZhiWuXing[yao.diZhi]!;
       yao.liuQin = _calcLiuQin(gongWuXing, yaoWuXing);
     }
+  }
+
+  /// 化进神/化退神判定。
+  ///
+  /// 规则：本爻与变爻**同五行**且地支按下列顺序顺进为进神，逆退为退神：
+  /// 亥→子（水）、寅→卯（木）、巳→午（火）、申→酉（金）、
+  /// 丑→辰→未→戌→丑（土，四库顺行）。
+  /// 不同五行或同五行但非相邻顺逆者，不做化进/化退标记。
+  static HuaJinTui? _huaJinTuiOf(DiZhi from, DiZhi to) {
+    const jinPairs = <(DiZhi, DiZhi)>[
+      (DiZhi.hai, DiZhi.zi),
+      (DiZhi.yin, DiZhi.mao),
+      (DiZhi.si, DiZhi.wu),
+      (DiZhi.shen, DiZhi.you),
+      (DiZhi.chou, DiZhi.chen),
+      (DiZhi.chen, DiZhi.wei),
+      (DiZhi.wei, DiZhi.xu),
+      (DiZhi.xu, DiZhi.chou),
+    ];
+    for (final p in jinPairs) {
+      if (p.$1 == from && p.$2 == to) return HuaJinTui.jin;
+      if (p.$1 == to && p.$2 == from) return HuaJinTui.tui;
+    }
+    return null;
   }
 
   /// 月破：月建地支冲爻支（如子月见午爻、寅月见申爻）。

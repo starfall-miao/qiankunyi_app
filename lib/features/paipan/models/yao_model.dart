@@ -23,6 +23,19 @@ enum LiuShen {
   xuanWu,     // 玄武
 }
 
+/// 化进神 / 化退神（仅动爻有意义）
+///
+/// 化进神：变爻与本爻同五行且地支顺进（亥→子、寅→卯、巳→午、申→酉、
+/// 丑→辰、辰→未、未→戌、戌→丑），主力量增强、事情往有利方向推进；
+/// 化退神：反向（子→亥、卯→寅…），主力量衰退、事情退步。
+enum HuaJinTui {
+  jin('化进神'),
+  tui('化退神');
+
+  final String label;
+  const HuaJinTui(this.label);
+}
+
 /// 旺衰等级
 enum WangShuaiLevel {
   wang(3, '旺'),
@@ -56,6 +69,8 @@ class YaoModel {
   bool isRiPo;     // 日破（日辰冲休囚之爻）
   bool isAnDong;   // 暗动（日辰冲旺相之爻）
   bool isYuePo;    // 月破（月建冲克之爻，静动皆可论）
+  /// 化进神/化退神（仅动爻，依据本爻与变爻地支是否顺进/逆退判定）
+  HuaJinTui? huaJinTui;
   List<String> sanHeJu;
 
   YaoModel({
@@ -77,6 +92,7 @@ class YaoModel {
     this.isRiPo = false,
     this.isAnDong = false,
     this.isYuePo = false,
+    this.huaJinTui,
     this.sanHeJu = const [],
   });
 
@@ -105,6 +121,7 @@ class YaoModel {
     'isRiPo': isRiPo,
     'isAnDong': isAnDong,
     'isYuePo': isYuePo,
+    'huaJinTui': huaJinTui?.name,
     'sanHeJu': sanHeJu,
   };
 
@@ -127,6 +144,15 @@ class YaoModel {
     isRiPo: j['isRiPo'] as bool? ?? false,
     isAnDong: j['isAnDong'] as bool? ?? false,
     isYuePo: j['isYuePo'] as bool? ?? false,
+    huaJinTui: () {
+      final raw = j['huaJinTui'];
+      if (raw is String) {
+        for (final v in HuaJinTui.values) {
+          if (v.name == raw) return v;
+        }
+      }
+      return null;
+    }(),
     sanHeJu: (j['sanHeJu'] as List?)?.cast<String>() ?? [],
   );
 }

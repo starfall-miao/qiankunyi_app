@@ -579,20 +579,98 @@ void main() {
 
   // ───────────────────── 9. 伏神（藏爻） ─────────────────────
   group('伏神（本宫首卦借入缺爻六亲）', () {
-    test('天风姤（乾宫）缺妻财 → 伏神为妻财寅木', () {
+    test('天风姤（乾宫）缺妻财 → 伏神妻财甲寅，伏于二爻子孙辛亥下', () {
       final r = _paipan(1, 5); // 上乾下巽 = 天风姤
       expect(guaNameCN[r.benGua.name], '天风姤');
       final present = r.benGua.yaos.map((y) => _liuQinCN[y.liuQin]).toSet();
       expect(present.contains('妻财'), isFalse, reason: '姤卦无妻财，应伏神借入');
-      expect(r.hiddenFuShen, isNotEmpty);
-      expect(r.hiddenFuShen.first, contains('妻财'));
-      expect(r.hiddenFuShen.first, contains('寅'));
+      expect(r.fuShen, isNotEmpty);
+      final f = r.fuShen.first;
+      expect(f.liuQin, '妻财');
+      // 乾宫首卦=乾为天：甲子、甲寅、甲辰、壬午、壬申、壬戌。寅木金克木=妻财
+      expect(f.ganZhi, '甲寅', reason: '伏神取本宫首卦纳甲干支');
+      expect(f.yaoIndex, 1, reason: '伏于二爻');
+      expect(f.yaoPositionCN, '二爻');
+      // 飞神 = 本卦同爻位（二爻 辛亥；亥水在乾宫金 → 子孙）
+      expect(f.feiShenLiuQin, '子孙');
+      expect(f.feiShenGanZhi, '辛亥');
+      expect(f.describe, contains('伏于二爻'));
     });
 
     test('六亲齐全的卦无伏神', () {
       final r = _paipan(1, 1); // 乾为天：父母/兄弟/官鬼/子孙齐（无妻财？）
       // 乾为天六亲：子水子孙、寅木妻财、辰土父母、午火官鬼、申金兄弟、戌土父母 → 齐全
       expect(r.hiddenFuShen, isEmpty);
+    });
+  });
+
+  // ───────────────────── 9之二. 化进神/化退神 ─────────────────────
+  group('化进神 / 化退神', () {
+    // 进神对（同五行顺进）：亥→子、寅→卯、巳→午、申→酉、丑→辰、辰→未、未→戌、戌→丑
+    const jinPairs = <List<String>>[
+      ['亥', '子'], ['寅', '卯'], ['巳', '午'], ['申', '酉'],
+      ['丑', '辰'], ['辰', '未'], ['未', '戌'], ['戌', '丑'],
+    ];
+    String? expectHua(String from, String to) {
+      for (final p in jinPairs) {
+        if (p[0] == from && p[1] == to) return 'jin';
+        if (p[0] == to && p[1] == from) return 'tui';
+      }
+      return null;
+    }
+
+    test('384 组合的化进/化退标记与独立规则一致，且仅动爻有标记', () {
+      final wrong = <String>[];
+      var jinCount = 0;
+      var tuiCount = 0;
+      for (var upper = 1; upper <= 8; upper++) {
+        for (var lower = 1; lower <= 8; lower++) {
+          for (var moving = 0; moving < 6; moving++) {
+            final r = _paipan(upper, lower, moving: moving);
+            final bian = r.bianGua!;
+            for (var i = 0; i < 6; i++) {
+              final actual = r.benGua.yaos[i].huaJinTui?.name;
+              if (i != moving) {
+                if (actual != null) {
+                  wrong.add('${guaNameCN[r.benGua.name]} 第${i + 1}爻非动爻却有化$actual');
+                }
+                continue;
+              }
+              final expected = expectHua(_zhiOf(r.benGua.yaos[i]), _zhiOf(bian.yaos[i]));
+              if (actual != expected) {
+                wrong.add('${guaNameCN[r.benGua.name]} 动${i + 1}爻 '
+                    '${_zhiOf(r.benGua.yaos[i])}→${_zhiOf(bian.yaos[i])}: '
+                    '期望 $expected 实际 $actual');
+              }
+              if (expected == 'jin') jinCount++;
+              if (expected == 'tui') tuiCount++;
+            }
+          }
+        }
+      }
+      expect(wrong, isEmpty, reason: wrong.take(20).join('\n'));
+      expect(jinCount, greaterThan(0), reason: '384 组合中应出现化进神');
+      expect(tuiCount, greaterThan(0), reason: '384 组合中应出现化退神');
+    });
+
+    test('化进/化退随序列化往返保留', () {
+      // 找一个确有化进的组合
+      PaipanResult? hit;
+      for (var upper = 1; upper <= 8 && hit == null; upper++) {
+        for (var lower = 1; lower <= 8 && hit == null; lower++) {
+          for (var moving = 0; moving < 6; moving++) {
+            final r = _paipan(upper, lower, moving: moving);
+            if (r.benGua.yaos[moving].huaJinTui == HuaJinTui.jin) {
+              hit = r;
+              break;
+            }
+          }
+        }
+      }
+      expect(hit, isNotNull);
+      final back = PaipanResult.fromJson(hit!.toJson());
+      final idx = back.benGua.yaos.indexWhere((y) => y.isMoving);
+      expect(back.benGua.yaos[idx].huaJinTui, HuaJinTui.jin);
     });
   });
 
@@ -691,6 +769,32 @@ void main() {
     test('体用：屯卦四爻动（用为上卦坎水、体为下卦震木）→ 用生体', () {
       final r = MeihuaEngine.fromTrigrams(5, 3, 3);
       expect(MeihuaEngine.getTiYong(r), contains('用生体'));
+    });
+
+    test('变卦体用：屯卦初爻动 → 变卦水地比，用卦坤土克体卦坎水', () {
+      final r = MeihuaEngine.fromTrigrams(5, 3, 0);
+      final txt = MeihuaEngine.getBianTiYong(r);
+      expect(txt, contains('水地比'));
+      expect(txt, contains('用克体'), reason: '土克水 → 用克体');
+    });
+
+    test('变卦体用：屯卦四爻动 → 变卦泽雷随，用卦兑金克体卦震木', () {
+      final r = MeihuaEngine.fromTrigrams(5, 3, 3);
+      final txt = MeihuaEngine.getBianTiYong(r);
+      expect(txt, contains('泽雷随'));
+      expect(txt, contains('用克体'));
+    });
+
+    test('无动爻时不给变卦体用结论', () {
+      final r = MeihuaEngine.fromTrigrams(5, 3, 0);
+      // 去掉动爻的情形由本卦无动爻构造：直接用 fromTrigrams 无法构造，
+      // 这里验证无变卦时返回提示语
+      final noBian = PaipanResult(
+        benGua: r.benGua,
+        paipanTime: r.paipanTime,
+        method: r.method,
+      );
+      expect(MeihuaEngine.getBianTiYong(noBian), contains('无变卦'));
     });
 
     test('梅花变卦：屯卦初爻动 → 下卦震翻初爻为坤，得上坎下坤（水地比）', () {
