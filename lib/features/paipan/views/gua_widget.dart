@@ -211,6 +211,10 @@ class GuaWidget extends StatelessWidget {
             _buildRiPoAnDongMark(yao, theme),
             // 化进神/化退神标记（仅动爻）
             _buildHuaJinTuiMark(yao),
+            // 纳音（每爻干支）
+            if (ds.showNaYin && yao.naYin != null) _buildNaYinMark(yao),
+            // 神煞（按日干/日支）
+            if (ds.showShenSha) _buildShenShaMarks(yao),
             const Spacer(),
             // 刑冲合害标记
             if (ds.showXingChong) _buildSpecialMarks(yao, theme),
@@ -287,6 +291,37 @@ class GuaWidget extends StatelessWidget {
         child: Text(isJin ? '化进' : '化退',
             style: TextStyle(fontSize: 10, color: color)),
       ),
+    );
+  }
+
+  /// 纳音小字（如「海中金」）
+  Widget _buildNaYinMark(YaoModel yao) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(yao.naYin!,
+          style: const TextStyle(fontSize: 9, color: Color(0xFF8D6E63))),
+    );
+  }
+
+  /// 神煞标记（如「驿马」「天乙」；空间有限时最多显示两个）
+  Widget _buildShenShaMarks(YaoModel yao) {
+    if (yao.shenSha.isEmpty) return const SizedBox.shrink();
+    final shown = yao.shenSha.take(2).toList();
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Row(children: [
+        for (final sha in shown)
+          Container(
+            margin: const EdgeInsets.only(right: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+            decoration: BoxDecoration(
+              color: const Color(0xFF6A1B9A).withAlpha(20),
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: Text(sha,
+                style: const TextStyle(fontSize: 9, color: Color(0xFF6A1B9A))),
+          ),
+      ]),
     );
   }
 

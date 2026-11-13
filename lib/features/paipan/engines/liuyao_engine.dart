@@ -6,6 +6,7 @@ import 'package:tyme/tyme.dart' as tyme;
 import '../models/yao_model.dart';
 import '../models/gua_model.dart';
 import '../models/paipan_result.dart';
+import '../../reference/data/reference_data.dart' show getNaYin;
 import 'liuyao_date_helper.dart';
 
 /// 64 卦映射表 [下卦索引][上卦索引] → GuaName
@@ -439,7 +440,8 @@ class LiuYaoEngine {
       yaos[i + 3].diZhi = _diZhiMap[outer.$4[i]];
     }
 
-    // 六亲排布
+    // 纳音（每爻干支）与六亲排布
+    _applyNaYin(yaos);
     _applyLiuQin(yaos, guaGongWuXing[gong]!);
 
     // 藏爻/伏神：本卦缺失的六亲，自本宫首卦（八纯卦）借入
@@ -484,7 +486,8 @@ class LiuYaoEngine {
     // 刑冲合害
     _calcRelations(yaos);
 
-    // 月破（月建冲爻）、日破/暗动（日辰冲爻）
+    // 神煞（按日干/日支）、月破（月建冲爻）、日破/暗动（日辰冲爻）
+    final shenShaSummary = _applyShenSha(yaos, dayGanZhi);
     _applyYuePo(yaos, monthZhi);
     _applyRiPoAnDong(yaos, dayGanZhi);
 
@@ -511,6 +514,9 @@ class LiuYaoEngine {
       dayGanZhi: dayGanZhi,
       kongWang: kongWangList,
       fuShen: fuShen,
+      shenSha: shenShaSummary,
+      // 纳音：取世爻之纳音（世爻代表自身，六爻断卦常参看）
+      naYin: yaos.length > shiIdx && shiIdx >= 0 ? yaos[shiIdx].naYin : null,
     );
   }
 
@@ -526,6 +532,9 @@ class LiuYaoEngine {
   /// 5. 世应按变卦自身所属八宫标记。
   static GuaModel? _buildBianGua(
       List<YaoModel> benYaos, GuaGong benGong, LiuyaoSchool school) {
+    // 流派说明：「京房正宗」的具体取法已无从考证（用户所学亦为简版），
+    // 故统一按简版（通行）规则：变卦六亲随**本卦宫**。枚举保留仅为
+    // 兼容历史卦例数据的 school 字段。
     if (!benYaos.any((y) => y.isMoving)) return null;
 
     // 1) 动爻阴阳反转（只反转结构，不继承本卦的干支/六亲）
@@ -577,13 +586,8 @@ class LiuYaoEngine {
     final name = _hexagramMap[innerTri]![outerTri];
     final palace = _palaceMap[innerTri]![outerTri]!;
 
-    // 6) 变卦六亲的基准随流派：
-    //    · 京房简版（通行）：变卦六亲以**本卦卦宫**为"我"（变卦六亲随本宫）
-    //    · 京房正宗（部分流派）：变卦六亲以**变卦自身卦宫**为"我"
-    final liuQinBase = school == LiuyaoSchool.jingFangJianBan
-        ? guaGongWuXing[benGong]!
-        : guaGongWuXing[palace.$1]!;
-    _applyLiuQin(bianYaos, liuQinBase);
+    // 6) 变卦六亲：以**本卦卦宫**为"我"（变卦六亲随本宫，六爻通行法）
+    _applyLiuQin(bianYaos, guaGongWuXing[benGong]!);
     final shiIdx = palace.$2;
     final yingIdx = palace.$3;
     if (shiIdx >= 0 && shiIdx < 6) bianYaos[shiIdx].isShi = true;
@@ -708,6 +712,104 @@ class LiuYaoEngine {
       if (p.$1 == to && p.$2 == from) return HuaJinTui.tui;
     }
     return null;
+  }
+
+  /// 每爻纳音：由该爻干支查六十甲子纳音（与八字同一实现，单一来源）
+  static void _applyNaYin(List<YaoModel> yaos) {
+    final ganList = _tianGanCN2.keys.toList();
+    for (final yao in yaos) {
+      if (yao.tianGan == null || yao.diZhi == null) continue;
+      final ganIdx = ganList.indexOf(yao.tianGan!);
+      final zhiIdx = _diZhiIndex[yao.diZhi] ?? -1;
+      if (ganIdx < 0 || zhiIdx < 0) continue;
+      yao.naYin = getNaYin(ganIdx, zhiIdx)?.naYin;
+    }
+  }
+
+  /// 神煞：按**日干**与**日支**推算，标在命中之爻上，并汇总到结果
+  ///
+  /// 六爻用神煞多以日辰为准（部分流派兼看年月），此处取日辰十煞：
+  /// 天乙贵人、文昌、羊刃、禄神（按日干）；驿马、桃花、华盖、将星、
+  /// 劫煞、亡神（按日支三合）。
+  static Map<String, List<String>> _shenShaMap(String dayGanZhi) {
+    if (dayGanZhi.length < 2) return const {};
+    final gan = dayGanZhi[0];
+    final zhi = dayGanZhi[1];
+
+    // 日干所主之神
+    const guiRen = <String, List<String>>{
+      '甲': ['丑', '未'], '戊': ['丑', '未'], '庚': ['丑', '未'],
+      '乙': ['子', '申'], '己': ['子', '申'],
+      '丙': ['亥', '酉'], '丁': ['亥', '酉'],
+      '壬': ['卯', '巳'], '癸': ['卯', '巳'],
+      '辛': ['午', '寅'],
+    };
+    const wenChang = <String, String>{
+      '甲': '巳', '乙': '午', '丙': '申', '丁': '酉', '戊': '申',
+      '己': '酉', '庚': '亥', '辛': '子', '壬': '寅', '癸': '卯',
+    };
+    const yangRen = <String, String>{
+      '甲': '卯', '乙': '辰', '丙': '午', '丁': '未', '戊': '午',
+      '己': '未', '庚': '酉', '辛': '戌', '壬': '子', '癸': '丑',
+    };
+    const luShen = <String, String>{
+      '甲': '寅', '乙': '卯', '丙': '巳', '丁': '午', '戊': '巳',
+      '己': '午', '庚': '申', '辛': '酉', '壬': '亥', '癸': '子',
+    };
+
+    // 日支三合所主之神
+    const groups = <String, List<String>>{
+      '申子辰': ['寅', '酉', '辰', '子', '巳', '亥'], // 驿马 桃花 华盖 将星 劫煞 亡神
+      '寅午戌': ['申', '卯', '戌', '午', '亥', '巳'],
+      '巳酉丑': ['亥', '午', '丑', '酉', '寅', '申'],
+      '亥卯未': ['巳', '子', '未', '卯', '申', '寅'],
+    };
+    const groupNames = ['驿马', '桃花', '华盖', '将星', '劫煞', '亡神'];
+
+    final map = <String, List<String>>{};
+    void add(String name, String zhi) {
+      (map[name] ??= <String>[]).add(zhi);
+    }
+
+    final gui = guiRen[gan];
+    if (gui != null) {
+      map['天乙贵人'] = List<String>.from(gui);
+    }
+    if (wenChang[gan] != null) add('文昌', wenChang[gan]!);
+    if (yangRen[gan] != null) add('羊刃', yangRen[gan]!);
+    if (luShen[gan] != null) add('禄神', luShen[gan]!);
+    for (final e in groups.entries) {
+      if (!e.key.contains(zhi)) continue;
+      for (var i = 0; i < groupNames.length; i++) {
+        add(groupNames[i], e.value[i]);
+      }
+      break;
+    }
+    return map;
+  }
+
+  /// 应用神煞（标在爻上）+ 返回汇总（「神煞名（爻位）」）
+  static List<String> _applyShenSha(
+      List<YaoModel> yaos, String dayGanZhi) {
+    final map = _shenShaMap(dayGanZhi);
+    if (map.isEmpty) return const [];
+    const posCN = ['初', '二', '三', '四', '五', '上'];
+    final summary = <String>[];
+    for (final yao in yaos) {
+      if (yao.diZhi == null) continue;
+      final zhi = _diZhiCN2[yao.diZhi!]!;
+      final hits = <String>[];
+      map.forEach((name, zhis) {
+        if (zhis.contains(zhi)) hits.add(name);
+      });
+      if (hits.isEmpty) continue;
+      yao.shenSha = hits;
+      final pos = posCN[yao.position.index];
+      for (final h in hits) {
+        summary.add('$h（$pos爻）');
+      }
+    }
+    return summary;
   }
 
   /// 月破：月建地支冲爻支（如子月见午爻、寅月见申爻）。
