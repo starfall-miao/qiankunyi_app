@@ -387,7 +387,9 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
                           '日支阴神：事之内情/他人',
                         ][i],
                         subtitle: '下 ${_result!.siKeXia[i]}'
-                            '${_result!.keRelation[i] != '—' ? ' · ${_result!.keRelation[i]}' : ''}',
+                            '${_result!.keRelation[i] != '—' ? ' · ${_result!.keRelation[i]}' : ''}'
+                            ' · ${_result!.keLiuQin[i]}',
+                        badge: DaLiuRenEngine.tianJiangOf(_result!, _result!.siKeShang[i]),
                       ),
                   ],
                 ),
@@ -411,20 +413,21 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
                 ]),
                 const SizedBox(height: 6),
                 Row(children: [
-                  for (final e in [
-                    ('初传', _result!.chuChuan, '事之始：起因、开端'),
-                    ('中传', _result!.zhongChuan, '事之中：发展过程'),
-                    ('末传', _result!.moChuan, '事之终：结果、归宿'),
-                  ]) ...[
-                    Expanded(child: _chuan(e.$1, e.$2, p, t, bg, b, info: e.$3)),
-                    if (e.$1 != '末传') const SizedBox(width: 8),
+                  for (var i = 0; i < 3; i++) ...[
+                    Expanded(
+                      child: _chuan(
+                        ['初传', '中传', '末传'][i],
+                        _result!.shiYong[i],
+                        p, t, bg, b,
+                        info: ['事之始：起因、开端', '事之中：发展过程', '事之终：结果、归宿'][i],
+                        general: _chuanTianJiang(
+                            ['初', '中', '末'][i], _result!.shiYong[i], _result!),
+                        liuQin: _result!.chuanLiuQin[i],
+                      ),
+                    ),
+                    if (i < 2) const SizedBox(width: 8),
                   ],
                 ]),
-                const SizedBox(height: 6),
-                Text('三传所临天将：${_chuanTianJiang('初', _result!.chuChuan, _result!)}　'
-                    '${_chuanTianJiang('中', _result!.zhongChuan, _result!)}　'
-                    '${_chuanTianJiang('末', _result!.moChuan, _result!)}',
-                    style: TextStyle(fontSize: 11.5, height: 1.5, color: t.withAlpha(200))),
                 if (_result!.quChuanNote.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Container(
@@ -845,49 +848,165 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
 
 
   /// 地支详解弹窗（点击三传/四课触发）
-  void _showZhiDetail(String label, String zhi, {String? info}) {
+  void _showZhiDetail(String label, String zhi,
+      {String? info, String? general, String? liuQin}) {
     final d = daliurenZhiDetail[zhi];
+    final r = _result;
+
+    // ── 本次课中的信息 ──
+    final ctxRows = <Widget>[];
+    if (r != null) {
+      final dayGan = _ganCN[_dayGan];
+      final dayGanWx = const {
+        '甲': '木', '乙': '木', '丙': '火', '丁': '火', '戊': '土',
+        '己': '土', '庚': '金', '辛': '金', '壬': '水', '癸': '水',
+      }[dayGan]!;
+      final zhiWx = const {
+        '子': '水', '丑': '土', '寅': '木', '卯': '木', '辰': '土', '巳': '火',
+        '午': '火', '未': '土', '申': '金', '酉': '金', '戌': '土', '亥': '水',
+      }[zhi]!;
+      final qin = liuQin ?? DaLiuRenEngine.liuQinOf(dayGan, zhi);
+      final jiang = (general != null && general.isNotEmpty)
+          ? general
+          : DaLiuRenEngine.tianJiangOf(r, zhi);
+      final diPos = daliurenZhi.indexOf(zhi);
+      final tianPos = r.tianPan.indexOf(zhi);
+
+      // 与日干的生克
+      const sheng = {'木': '火', '火': '土', '土': '金', '金': '水', '水': '木'};
+      const ke = {'木': '土', '土': '水', '水': '火', '火': '金', '金': '木'};
+      String rela;
+      if (dayGanWx == zhiWx) {
+        rela = '比和（同$zhiWx）';
+      } else if (sheng[dayGanWx] == zhiWx) {
+        rela = '日干$dayGanWx生$zhiWx（我生，泄气）';
+      } else if (sheng[zhiWx] == dayGanWx) {
+        rela = '$zhiWx生日干$dayGanWx（生我，受益）';
+      } else if (ke[dayGanWx] == zhiWx) {
+        rela = '日干$dayGanWx克$zhiWx（我克，所掌之事）';
+      } else {
+        rela = '$zhiWx克日干$dayGanWx（克我，受制）';
+      }
+
+      // 在本课中的角色
+      final roles = <String>[];
+      for (var i = 0; i < 4; i++) {
+        if (r.siKeShang[i] == zhi) roles.add('${i + 1}课上神');
+        if (r.siKeXia[i] == zhi) roles.add('${i + 1}课下神');
+      }
+      for (var i = 0; i < 3; i++) {
+        if (r.shiYong[i] == zhi) roles.add(['初传', '中传', '末传'][i]);
+      }
+      if (r.guiRen == zhi) roles.add('贵人');
+
+      // 与其他三传支的刑冲合
+      const chong = {
+        '子': '午', '午': '子', '丑': '未', '未': '丑', '寅': '申', '申': '寅',
+        '卯': '酉', '酉': '卯', '辰': '戌', '戌': '辰', '巳': '亥', '亥': '巳',
+      };
+      const he = {
+        '子': '丑', '丑': '子', '寅': '亥', '亥': '寅', '卯': '戌', '戌': '卯',
+        '辰': '酉', '酉': '辰', '巳': '申', '申': '巳', '午': '未', '未': '午',
+      };
+      final relations = <String>[];
+      for (final other in r.shiYong) {
+        if (other == zhi) continue;
+        if (chong[zhi] == other) relations.add('与$other相冲');
+        if (he[zhi] == other) relations.add('与$other六合');
+      }
+
+      ctxRows.addAll([
+        _kv('六亲', '$qin（以日干$dayGan${dayGanWx}为我）'),
+        if (jiang.isNotEmpty) _kv('所临天将', jiang),
+        _kv('与日干', rela),
+        if (roles.isNotEmpty) _kv('本课角色', roles.join('、')),
+        _kv('天地盘',
+            '地盘${daliurenZhi[diPos]}位${tianPos >= 0 ? ' · 天盘临地盘${daliurenZhi[tianPos]}宫' : ''}'),
+        if (relations.isNotEmpty) _kv('与他支', relations.join('、')),
+      ]);
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('$label · $zhi'),
         content: SingleChildScrollView(
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
             if (info != null) ...[
-              Text(info, style: const TextStyle(fontSize: 13, height: 1.5, fontWeight: FontWeight.w600)),
+              Text(info,
+                  style: const TextStyle(
+                      fontSize: 13, height: 1.5, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               const Divider(height: 1),
               const SizedBox(height: 8),
             ],
+            // 本次课中的具体信息
+            if (ctxRows.isNotEmpty) ...[
+              const Text('📌 本次课中',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              ...ctxRows,
+              const SizedBox(height: 8),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+            ],
+            // 地支固有属性
             if (d == null)
               const Text('暂无详解')
             else ...[
               Text('五行：${d.$1} · 方位：${d.$2}',
                   style: const TextStyle(fontSize: 13)),
               const SizedBox(height: 8),
-              const Text('🪧 类象', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              const Text('🪧 类象',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
               const SizedBox(height: 3),
               Text(d.$3, style: const TextStyle(fontSize: 13, height: 1.6)),
               const SizedBox(height: 8),
-              const Text('👥 人事', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              const Text('👥 人事',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
               const SizedBox(height: 3),
               Text(d.$4, style: const TextStyle(fontSize: 13, height: 1.6)),
               const SizedBox(height: 8),
-              const Text('⚖️ 吉凶', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              const Text('⚖️ 吉凶',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
               const SizedBox(height: 3),
               Text(d.$5, style: const TextStyle(fontSize: 13)),
             ],
           ]),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('关闭')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('关闭')),
         ],
       ),
     );
   }
 
+  /// 详解弹窗内的一行「标签：值」
+  Widget _kv(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(
+          width: 62,
+          child: Text(label,
+              style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600)),
+        ),
+        Expanded(
+          child: Text(value,
+              style: const TextStyle(fontSize: 12.5, height: 1.5)),
+        ),
+      ]),
+    );
+  }
+
+
+
   Widget _ke(String label, String zhi, Color p, Color t, Color bg, Color b,
-      {String? info, String? subtitle}) {
+      {String? info, String? subtitle, String? badge}) {
     return GestureDetector(
       onTap: () => _showZhiDetail(label, zhi, info: info),
       child: Container(
@@ -898,6 +1017,18 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
           Text(label, style: TextStyle(fontSize: 10, color: t.withAlpha(130))),
           const SizedBox(height: 2),
           Text(zhi, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: p)),
+          if (badge != null && badge.isNotEmpty) ...[
+            const SizedBox(height: 1),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
+              decoration: BoxDecoration(
+                color: p.withAlpha(24),
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: Text(badge,
+                  style: TextStyle(fontSize: 9, color: p)),
+            ),
+          ],
           if (subtitle != null) ...[
             const SizedBox(height: 1),
             Text(subtitle,
@@ -910,20 +1041,44 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
     );
   }
 
-  Widget _chuan(String label, String zhi, Color p, Color t, Color bg, Color b, {String? info}) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => _showZhiDetail(label, zhi, info: info),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8), border: Border.all(color: b.withAlpha(80))),
-          child: Column(children: [
-            Text(label, style: TextStyle(fontSize: 11, color: t.withAlpha(130))),
-            const SizedBox(height: 2),
-            Text(zhi, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: p)),
-            Icon(Icons.touch_app, size: 11, color: p.withAlpha(120)),
-          ]),
-        ),
+  Widget _chuan(String label, String zhi, Color p, Color t, Color bg, Color b,
+      {String? info, String? general, String? liuQin}) {
+    return GestureDetector(
+      onTap: () => _showZhiDetail(
+        label,
+        zhi,
+        info: info,
+        general: general,
+        liuQin: liuQin,
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: b.withAlpha(80))),
+        child: Column(children: [
+          Text(label, style: TextStyle(fontSize: 11, color: t.withAlpha(130))),
+          const SizedBox(height: 2),
+          Text(zhi,
+              style: TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.bold, color: p)),
+          if (general != null && general.isNotEmpty) ...[
+            const SizedBox(height: 1),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
+              decoration: BoxDecoration(
+                color: p.withAlpha(24),
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: Text(general, style: TextStyle(fontSize: 9, color: p)),
+            ),
+          ],
+          if (liuQin != null && liuQin.isNotEmpty)
+            Text(liuQin,
+                style: TextStyle(fontSize: 9, color: t.withAlpha(160))),
+          Icon(Icons.touch_app, size: 11, color: p.withAlpha(120)),
+        ]),
       ),
     );
   }

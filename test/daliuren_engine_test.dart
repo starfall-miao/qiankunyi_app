@@ -195,6 +195,67 @@ void main() {
     });
   });
 
+  group('六亲（以日干为我）', () {
+    const ganWx = {
+      '甲': '木', '乙': '木', '丙': '火', '丁': '火', '戊': '土',
+      '己': '土', '庚': '金', '辛': '金', '壬': '水', '癸': '水',
+    };
+    const zhiWx = {
+      '子': '水', '丑': '土', '寅': '木', '卯': '木', '辰': '土', '巳': '火',
+      '午': '火', '未': '土', '申': '金', '酉': '金', '戌': '土', '亥': '水',
+    };
+    const sheng = {'木': '火', '火': '土', '土': '金', '金': '水', '水': '木'};
+    const ke = {'木': '土', '土': '水', '水': '火', '火': '金', '金': '木'};
+
+    String expectLiuQin(String gan, String zhi) {
+      final wo = ganWx[gan]!;
+      final bi = zhiWx[zhi]!;
+      if (wo == bi) return '兄弟';
+      if (sheng[wo] == bi) return '子孙';
+      if (sheng[bi] == wo) return '父母';
+      if (ke[wo] == bi) return '妻财';
+      return '官鬼';
+    }
+
+    test('10 日干 × 12 地支 = 120 组合六亲正确', () {
+      final wrong = <String>[];
+      for (final g in ganWx.keys) {
+        for (final z in zhiWx.keys) {
+          final actual = DaLiuRenEngine.liuQinOf(g, z);
+          final expected = expectLiuQin(g, z);
+          if (actual != expected) {
+            wrong.add('$g日 $z：期望 $expected 实际 $actual');
+          }
+        }
+      }
+      expect(wrong, isEmpty, reason: wrong.join('\n'));
+    });
+
+    test('排盘结果按日干给出四课/三传六亲', () {
+      final r = DaLiuRenEngine.byHour(3, 1,
+          dayGan: '甲', dayZhi: '子', monthZhiIdx: 2);
+      expect(r.keLiuQin.length, 4);
+      expect(r.chuanLiuQin.length, 3);
+      for (var i = 0; i < 4; i++) {
+        expect(r.keLiuQin[i], DaLiuRenEngine.liuQinOf('甲', r.siKeShang[i]));
+      }
+      for (var i = 0; i < 3; i++) {
+        expect(r.chuanLiuQin[i],
+            DaLiuRenEngine.liuQinOf('甲', r.shiYong[i]));
+      }
+    });
+
+    test('天将反查：天盘支所临天将', () {
+      final r = DaLiuRenEngine.byHour(3, 1,
+          dayGan: '甲', dayZhi: '子', monthZhiIdx: 2);
+      for (final z in r.siKeShang) {
+        final jiang = DaLiuRenEngine.tianJiangOf(r, z);
+        final pos = r.tianPan.indexOf(z);
+        expect(jiang, r.tianJiang[pos]);
+      }
+    });
+  });
+
   group('月将（中气换将）', () {
     test('按最近已过中气定月将', () {
       expect(DaLiuRenEngine.yueJiangOf(DateTime(2024, 2, 20)), 0,

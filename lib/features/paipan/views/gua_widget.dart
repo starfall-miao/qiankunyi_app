@@ -623,6 +623,23 @@ class GuaWidget extends StatelessWidget {
                 ], cardColor, textColor, theme.colorScheme.primary),
               ],
 
+              // ── 7之2. 纳音 ──
+              if (yao.naYin != null) ...[
+                const SizedBox(height: 12),
+                _refSection('纳音', [
+                  _refRow('纳音', yao.naYin!, naYinDesc, textColor),
+                ], cardColor, textColor, theme.colorScheme.primary),
+              ],
+
+              // ── 7之3. 神煞（按日辰推算） ──
+              if (yao.shenSha.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _refSection('神煞（按日辰推算）', [
+                  for (final sha in yao.shenSha)
+                    _refRow(sha, '✅ 此爻带$sha', shenShaDesc(sha), textColor),
+                ], cardColor, textColor, theme.colorScheme.primary),
+              ],
+
               // ── 8. 刑冲合害 ──
               if (yao.isXing || yao.isChong || yao.isHe || yao.isHai || yao.sanHeJu.isNotEmpty) ...[
                 const SizedBox(height: 12),
