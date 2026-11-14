@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'app.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/utils/logger.dart';
+import 'core/services/ai_solve_manager.dart';
 import 'features/paipan/providers/paipan_provider.dart';
 import 'features/cases/providers/case_provider.dart';
 import 'features/settings/settings_provider.dart';
@@ -68,12 +69,16 @@ void main() {
     return false;
   };
 
+  // AI 后台解卦管理器需要 CaseProvider 才能把结果落盘（弹窗关闭也继续跑）
+  final caseProvider = CaseProvider();
+  AiSolveManager.instance.attachCases(caseProvider);
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => PaipanProvider()),
-        ChangeNotifierProvider(create: (_) => CaseProvider()),
+        ChangeNotifierProvider.value(value: caseProvider),
         ChangeNotifierProvider(create: (_) => SettingsProvider()..init()),
         ChangeNotifierProvider(create: (_) => BaziProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()..init()),

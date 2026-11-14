@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
+import '../../../shared/widgets/liuren_screenshot_templates.dart';
+import '../../../shared/widgets/gua_screenshot_template.dart' show ScreenshotSource;
 import '../../../shared/widgets/save_image_dialog.dart';
 
 import '../../calendar/views/calendar_picker_dialog.dart';
@@ -30,6 +32,8 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
   final _n3 = TextEditingController();
   XiaoLiuRenResult? _result;
   final _shotKey = GlobalKey();
+  /// 保存图片专用模板 key（屏幕外渲染，固定 400 宽国风浅色）
+  final _templateKey = GlobalKey();
 
   static const _hours = ['子时', '丑时', '寅时', '卯时', '辰时', '巳时',
     '午时', '未时', '申时', '酉时', '戌时', '亥时'];
@@ -145,7 +149,7 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
                 askObject: askObjectCtrl.text.trim().isEmpty ? null : askObjectCtrl.text.trim(),
                 askEvent: askEventCtrl.text.trim().isEmpty ? null : askEventCtrl.text.trim(),
                 notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
-                caseType: CaseType.liuyao,
+                caseType: CaseType.xiaoliuren,
               );
               context.read<CaseProvider>().addCase(cm);
               Navigator.pop(ctx);
@@ -164,7 +168,7 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
   Future<void> _saveImage() async {
     try {
       final boundary =
-          _shotKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+          _templateKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 3.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) return;
@@ -370,6 +374,17 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
                 RepaintBoundary(
                   key: _shotKey,
                   child: _resultCard(_result!, p, t, b, isDark),
+                ),
+                // 保存图片专用模板（屏幕外，信息更全、版式更紧凑）
+                ScreenshotSource(
+                  boundaryKey: _templateKey,
+                  child: XiaoLiuRenScreenshotTemplate(
+                    timeText: '$_year-${_month.toString().padLeft(2, '0')}-'
+                        '${_day.toString().padLeft(2, '0')} '
+                        '${const ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][_hour]}时',
+                    lunarText: '农历${_result!.month}月${_result!.day}日',
+                    result: _result!,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Row(children: [
