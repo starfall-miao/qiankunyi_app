@@ -887,6 +887,9 @@ List<String> _yaoPlainDescs(YaoModel yao) {
     if (yao.isShi) '世爻：$shiYaoDesc',
     if (yao.isYing) '应爻：$yingYaoDesc',
     if (yao.isKongWang) '旬空：$kongWangDesc',
+    if (yao.naYin != null) '纳音：${yao.naYin} — $naYinDesc',
+    if (yao.shenSha.isNotEmpty)
+      '神煞：${yao.shenSha.join('、')} — ${yao.shenSha.map(shenShaDesc).join('；')}',
     if (yao.isYuePo) '月破：$yuePoDesc',
     if (yao.isRiPo) '日破：$riPoDesc',
     if (yao.isAnDong) '暗动：$anDongDesc',

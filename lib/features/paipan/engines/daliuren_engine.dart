@@ -90,6 +90,13 @@ class DaLiuRenResult {
   /// 取传说明（如「三课下贼上，以三课上神为初传」）
   final String quChuanNote;
 
+  /// 四课上神的六亲（以**日干**为「我」：生我父母、我生子孙、我克妻财、
+  /// 克我官鬼、同我兄弟）
+  final List<String> keLiuQin;
+
+  /// 三传的六亲（同上，以日干为「我」）
+  final List<String> chuanLiuQin;
+
   final String method;
 
   DaLiuRenResult({
@@ -111,6 +118,8 @@ class DaLiuRenResult {
     required this.method,
     this.keRelation = const [],
     this.quChuanNote = '',
+    this.keLiuQin = const [],
+    this.chuanLiuQin = const [],
   });
 
   /// 兼容旧字段：四课（上神/下神交替，旧版顺序 [一课, 二课, 三课, 四课] 的上神）
@@ -135,6 +144,8 @@ class DaLiuRenResult {
         'chuanFa': chuanFa,
         'keRelation': keRelation,
         'quChuanNote': quChuanNote,
+        'keLiuQin': keLiuQin,
+        'chuanLiuQin': chuanLiuQin,
         'method': method,
       };
 }
@@ -219,6 +230,26 @@ class DaLiuRenEngine {
 
   /// 地支索引
   static int _z(String zhi) => daliurenZhi.indexOf(zhi);
+
+  /// 六亲：以日干五行为「我」，地支五行为对方
+  static String liuQinOf(String dayGan, String zhi) {
+    final wo = _ganWx[dayGan] ?? '土';
+    final bi = _zhiWx[zhi] ?? '土';
+    if (wo == bi) return '兄弟';
+    // 相生
+    const sheng = {'木': '火', '火': '土', '土': '金', '金': '水', '水': '木'};
+    if (sheng[wo] == bi) return '子孙'; // 我生
+    if (sheng[bi] == wo) return '父母'; // 生我
+    if (_ke[wo] == bi) return '妻财'; // 我克
+    return '官鬼'; // 克我
+  }
+
+  /// 天将：某天盘支所临天将（内部按天盘位反查）
+  static String tianJiangOf(DaLiuRenResult r, String tianPanZhi) {
+    final pos = r.tianPan.indexOf(tianPanZhi);
+    if (pos < 0) return '';
+    return r.tianJiang[pos];
+  }
 
   /// 起课
   static DaLiuRenResult byHour(int hourIndex, int month,
@@ -310,6 +341,10 @@ class DaLiuRenEngine {
       chuanFa: chuan.fa,
       keRelation: keRelation,
       quChuanNote: chuan.note,
+      keLiuQin: [for (final z in keShang) liuQinOf(dayGan, z)],
+      chuanLiuQin: [
+        for (final z in [chuan.chu, chuan.zhong, chuan.mo]) liuQinOf(dayGan, z)
+      ],
       guiRen: guiRen,
       guiRenGong: daliurenZhi[gong],
       shunBu: shunBu,
