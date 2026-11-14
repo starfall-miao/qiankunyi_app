@@ -14,11 +14,15 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/services/ai_service.dart';
+import '../../../core/services/ai_solve_manager.dart';
 import '../../../shared/widgets/gua_screenshot_template.dart';
 import '../../../shared/widgets/save_image_dialog.dart';
 import '../../paipan/models/bazi_models.dart';
 import '../../paipan/models/gua_model.dart';
 import '../../paipan/engines/meihua_engine.dart';
+import '../../paipan/engines/daliuren_engine.dart';
+import '../../paipan/engines/xiaoliuren_engine.dart';
+import '../../../shared/widgets/liuren_screenshot_templates.dart';
 import '../../paipan/models/paipan_result.dart';
 import '../../paipan/models/yao_model.dart';
 import '../../paipan/views/gua_widget.dart';
@@ -37,12 +41,18 @@ class CasePage extends StatefulWidget {
 }
 
 class _CasePageState extends State<CasePage> {
+  /// 后台解卦状态变化时刷新列表（「解卦中」标识）
+  void _onAiSolveChanged() {
+    if (mounted) setState(() {});
+  }
+
   // 大运横向滚动控制器（供 Scrollbar 显示/拖拽滚动条，与排盘页 paipan_page.dart 一致）
   final _daYunScrollCtrl = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    AiSolveManager.instance.addListener(_onAiSolveChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<CaseProvider>().loadCases();
     });
@@ -50,6 +60,7 @@ class _CasePageState extends State<CasePage> {
 
   @override
   void dispose() {
+    AiSolveManager.instance.removeListener(_onAiSolveChanged);
     _daYunScrollCtrl.dispose();
     super.dispose();
   }
@@ -132,6 +143,8 @@ class _CasePageState extends State<CasePage> {
 
   Widget _buildCaseCard(BuildContext context, CaseModel c, ThemeData theme) {
     final isDark = theme.brightness == Brightness.dark;
+    // 后台解卦中标识（由 AiSolveManager 驱动，弹窗关闭也在跑）
+    final solving = AiSolveManager.instance.isSolving(c.id);
     final t = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
     final ago = _timeAgo(c.createdAt);
     return Card(
@@ -165,6 +178,34 @@ class _CasePageState extends State<CasePage> {
                   const SizedBox(width: 4),
                   Text(ago,
                       style: TextStyle(fontSize: 11, color: t.withAlpha(120))),
+                  if (solving) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withAlpha(24),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                            color: theme.colorScheme.primary.withAlpha(80)),
+                      ),
+                      child: Row(children: [
+                        SizedBox(
+                          width: 8,
+                          height: 8,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.4,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text('解卦中',
+                            style: TextStyle(
+                                fontSize: 9.5,
+                                color: theme.colorScheme.primary)),
+                      ]),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 10),
@@ -541,6 +582,52 @@ class _CasePageState extends State<CasePage> {
     return null;
   }
 
+  /// 解析小六壬 / 大六壬结构化结果（详情页保存图片等场景）
+  ({XiaoLiuRenResult? xiao, DaLiuRenResult? da}) _parseCustomTyped(
+      String? paipanData) {
+    if (paipanData == null || paipanData.isEmpty) {
+      return (xiao: null, da: null);
+    }
+    try {
+      final map = jsonDecode(paipanData) as Map<String, dynamic>;
+      if (map.containsKey('xiaoLiuRen')) {
+        final raw = map['xiaoLiuRen'];
+        if (raw is Map) {
+          return (
+            xiao: XiaoLiuRenResult.fromJson(raw.cast<String, dynamic>()),
+            da: null
+          );
+        }
+      }
+      if (map.containsKey('daLiuRen')) {
+        final raw = map['daLiuRen'];
+        if (raw is Map) {
+          return (
+            xiao: null,
+            da: DaLiuRenResult.fromJson(raw.cast<String, dynamic>())
+          );
+        }
+      }
+    } catch (_) {}
+    return (xiao: null, da: null);
+  }
+
+  /// 大六壬断课要点（详情页保存图片用，规则化提示）
+  List<String> _daHints(DaLiuRenResult r) {
+    final hints = <String>[];
+    if (r.keTi.isNotEmpty) hints.add('课体：${r.keTi}（${r.chuanFa}）');
+    if (r.chuanRelation.isNotEmpty) {
+      hints.add('传间：初→中 ${r.chuanRelation[0]}，中→末 ${r.chuanRelation[1]}');
+    }
+    if (r.shiYong.length == 3) {
+      hints.add('三传：${r.shiYong[0]} → ${r.shiYong[1]} → ${r.shiYong[2]}；'
+          '初为事始、中为过程、末为归宿');
+    }
+    if (r.shenSha.isNotEmpty) hints.add('神煞：${r.shenSha.join('、')}');
+    if (r.xunKong.isNotEmpty) hints.add('旬空：${r.xunKong.join('、')}');
+    return hints;
+  }
+
   /// 地支索引 → 时辰中文名（小六壬 hour 字段）
   String _diZhiHourCN(dynamic hour) {
     if (hour is! int || hour < 0 || hour >= 12) return '?';
@@ -563,6 +650,8 @@ class _CasePageState extends State<CasePage> {
     final t = isDark ? const Color(0xFFE0D5C8) : const Color(0xFF4A3728);
     // 小六壬/大六壬自定义排盘摘要（PaipanResult/BaziResult 无法解析时兜底展示）
     final customSummary = _tryParseCustomPaipan(c.paipanData);
+    // 小六壬 / 大六壬 结构化结果（详情页保存图片用）
+    final customTyped = _parseCustomTyped(c.paipanData);
 
     // 全屏/还原：控制 DraggableScrollableSheet 的高度（桌面端无触摸上滑手势，提供显式按钮）
     final sheetCtrl = DraggableScrollableController();
@@ -859,6 +948,19 @@ class _CasePageState extends State<CasePage> {
                             explanationJiXiong:
                                 getGuaCi(result.benGua.name)?.jiXiong,
                           )
+                        : (customTyped.xiao != null)
+                            ? XiaoLiuRenScreenshotTemplate(
+                                timeText: c.createdAt.toString().substring(0, 16),
+                                lunarText:
+                                    '农历${customTyped.xiao!.month}月${customTyped.xiao!.day}日',
+                                result: customTyped.xiao!,
+                              )
+                        : (customTyped.da != null)
+                            ? DaLiuRenScreenshotTemplate(
+                                timeText: c.createdAt.toString().substring(0, 16),
+                                result: customTyped.da!,
+                                hints: _daHints(customTyped.da!),
+                              )
                         : (result != null)
                             ? LiuyaoScreenshotTemplate(
                                 timeText: formatCnTime(result.paipanTime),
@@ -1857,6 +1959,17 @@ class _AiChatSection extends StatefulWidget {
 
 class _AiChatSectionState extends State<_AiChatSection> {
   final TextEditingController _questionCtrl = TextEditingController();
+
+  // ── 后台解卦（关闭弹窗后继续跑）──
+  AiSolveManager get _solver => AiSolveManager.instance;
+  /// 最近一次请求的上下文（用于关闭弹窗时转交后台）
+  List<Map<String, String>>? _lastMessages;
+  String _lastLogTag = 'AI解卦';
+  // 发起时的 AI 配置快照（dispose 中无法再读 context）
+  String _aiEndpoint = '';
+  String _aiApiKey = '';
+  String _aiModel = '';
+  bool _aiRetryOn429 = true;
   /// 首个 chunk 到达前为 true：头部显示转圈（AC4：转圈只在首个 chunk 前显示）
   bool _loading = false;
   /// 流式请求进行中：首个 chunk 到达后 _loading=false（转圈关闭），但 _streaming
@@ -1920,6 +2033,50 @@ class _AiChatSectionState extends State<_AiChatSection> {
   void initState() {
     super.initState();
     _localMessages = List.from(widget.caseModel.aiMessages);
+    _solver.addListener(_onSolveJobChanged);
+    // 打开时若该卦例有后台解卦在跑，直接接管显示
+    final job = _solver.jobOf(widget.caseModel.id);
+    if (job != null && job.running) {
+      _streaming = true;
+      _retryNote = job.retryNote;
+      _thinking = job.thinking;
+      _streamingMsg = AiMessage(role: 'assistant', content: job.content);
+      _localMessages = [..._localMessages, _streamingMsg!];
+    }
+  }
+
+  /// 后台解卦状态变化 → 同步到界面
+  void _onSolveJobChanged() {
+    if (!mounted) return;
+    final job = _solver.jobOf(widget.caseModel.id);
+    if (job == null) return;
+    if (job.running) {
+      setState(() {
+        _loading = false;
+        _streaming = true;
+        _retryNote = job.retryNote;
+        _thinking = job.thinking;
+        if (_streamingMsg == null) {
+          _streamingMsg = AiMessage(role: 'assistant', content: job.content);
+          _localMessages = [..._localMessages, _streamingMsg!];
+        }
+      });
+      if (job.content.isNotEmpty && _streamingMsg != null) {
+        _replaceAssistantContent(_streamingMsg!,
+            _extractAiResult(job.content), thinking: job.thinking);
+      }
+    } else {
+      // 结束：从 provider 同步最终消息并复位
+      setState(() {
+        _streaming = false;
+        _loading = false;
+        _streamingMsg = null;
+        _thinking = '';
+        _retryNote = '';
+        _localMessages = List.from(widget.caseModel.aiMessages);
+      });
+      _solver.clearFinished(widget.caseModel.id ?? -1);
+    }
   }
 
   @override
@@ -1933,13 +2090,35 @@ class _AiChatSectionState extends State<_AiChatSection> {
 
   @override
   void dispose() {
-    // 停止流式订阅，避免对已 dispose 的 State 继续 setState（cancel 后不再派发事件）
+    _solver.removeListener(_onSolveJobChanged);
+    // 关掉弹窗时若仍在流式中：把请求转交后台继续跑（结果照常写回卦例，
+    // 卦例列表会显示「解卦中」标识），避免用户一关弹窗就白等一场。
+    _handOffToBackground();
+    // 停止本地流式订阅，避免对已 dispose 的 State 继续 setState
     _streamSub?.cancel();
     _streamSub = null;
     // 代际号自增：使任何残留回调（cancel 与事件派发竞争窗口内）失效
     _streamGen++;
     _questionCtrl.dispose();
     super.dispose();
+  }
+
+  /// 关闭弹窗时的后台转交：同一请求重新在后台发起并落盘
+  void _handOffToBackground() {
+    final caseId = widget.caseModel.id;
+    final messages = _lastMessages;
+    if (caseId == null || messages == null) return;
+    if (!_streaming && !_loading) return;
+    if (_solver.isSolving(caseId)) return;
+    _solver.start(
+      caseId: caseId,
+      messages: messages,
+      logTag: _lastLogTag,
+      endpoint: _aiEndpoint,
+      apiKey: _aiApiKey,
+      model: _aiModel,
+      retryOn429: _aiRetryOn429,
+    );
   }
 
   Future<void> _requestJieGua() async {
@@ -2305,6 +2484,13 @@ class _AiChatSectionState extends State<_AiChatSection> {
     // 防御：已有流式请求进行中时忽略并发触发（按钮/追问区已隐藏，双保险）
     if (_streaming || _streamSub != null) return;
     final sp = context.read<SettingsProvider>();
+    // 记录上下文与配置快照：弹窗被关闭时用于转交后台继续（dispose 中读不到 context）
+    _lastMessages = messages;
+    _lastLogTag = logTag;
+    _aiEndpoint = sp.aiEndpoint;
+    _aiApiKey = sp.aiApiKey;
+    _aiModel = sp.effectiveAiModel;
+    _aiRetryOn429 = sp.aiRetryOn429;
     _streamStartTime = DateTime.now();
     setState(() {
       _loading = true;

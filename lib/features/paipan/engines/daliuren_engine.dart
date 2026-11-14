@@ -97,6 +97,24 @@ class DaLiuRenResult {
   /// 三传的六亲（同上，以日干为「我」）
   final List<String> chuanLiuQin;
 
+  /// 四柱（年柱/月柱/日柱/时柱）
+  final List<String> siZhu;
+
+  /// 旬空（日柱所在旬缺的两支）
+  final List<String> xunKong;
+
+  /// 课体（重审/元首/知一/涉害/遥克/昴星/别责/八专/伏吟/返吟）
+  final String keTi;
+
+  /// 三传遁干（旬遁；空亡之支无遁干，记 '空'）
+  final List<String> chuanDunGan;
+
+  /// 神煞（大六壬常用：驿马/桃花/华盖/天乙贵人/月德/天德）
+  final List<String> shenSha;
+
+  /// 传间关系（初→中、中→末 的五行生克）
+  final List<String> chuanRelation;
+
   final String method;
 
   DaLiuRenResult({
@@ -120,10 +138,51 @@ class DaLiuRenResult {
     this.quChuanNote = '',
     this.keLiuQin = const [],
     this.chuanLiuQin = const [],
+    this.siZhu = const [],
+    this.xunKong = const [],
+    this.keTi = '',
+    this.chuanDunGan = const [],
+    this.shenSha = const [],
+    this.chuanRelation = const [],
   });
 
   /// 兼容旧字段：四课（上神/下神交替，旧版顺序 [一课, 二课, 三课, 四课] 的上神）
   List<String> get siKe => siKeShang;
+
+  /// 反序列化（兼容旧数据：新字段缺失时给空值）
+  factory DaLiuRenResult.fromJson(Map<String, dynamic> j) {
+    List<String> strList(Object? v) =>
+        (v as List?)?.map((e) => e.toString()).toList() ?? const [];
+    final siKeShang = strList(j['siKeShang'] ?? j['siKe']);
+    return DaLiuRenResult(
+      hourIndex: (j['hourIndex'] as int?) ?? 0,
+      yueJiang: (j['yueJiang'] as int?) ?? 0,
+      yueJiangZhi: j['yueJiangZhi'] as String? ?? '',
+      tianPan: strList(j['tianPan']),
+      siKeShang: siKeShang,
+      siKeXia: strList(j['siKeXia']),
+      shiYong: strList(j['shiYong']),
+      chuChuan: j['chuChuan'] as String? ?? '',
+      zhongChuan: j['zhongChuan'] as String? ?? '',
+      moChuan: j['moChuan'] as String? ?? '',
+      chuanFa: j['chuanFa'] as String? ?? '',
+      guiRen: j['guiRen'] as String? ?? '',
+      guiRenGong: j['guiRenGong'] as String? ?? '',
+      shunBu: j['shunBu'] as bool? ?? true,
+      tianJiang: strList(j['tianJiang']),
+      method: j['method'] as String? ?? '',
+      keRelation: strList(j['keRelation']),
+      quChuanNote: j['quChuanNote'] as String? ?? '',
+      keLiuQin: strList(j['keLiuQin']),
+      chuanLiuQin: strList(j['chuanLiuQin']),
+      siZhu: strList(j['siZhu']),
+      xunKong: strList(j['xunKong']),
+      keTi: j['keTi'] as String? ?? '',
+      chuanDunGan: strList(j['chuanDunGan']),
+      shenSha: strList(j['shenSha']),
+      chuanRelation: strList(j['chuanRelation']),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'hourIndex': hourIndex,
@@ -146,6 +205,12 @@ class DaLiuRenResult {
         'quChuanNote': quChuanNote,
         'keLiuQin': keLiuQin,
         'chuanLiuQin': chuanLiuQin,
+        'siZhu': siZhu,
+        'xunKong': xunKong,
+        'keTi': keTi,
+        'chuanDunGan': chuanDunGan,
+        'shenSha': shenSha,
+        'chuanRelation': chuanRelation,
         'method': method,
       };
 }
@@ -231,6 +296,106 @@ class DaLiuRenEngine {
   /// 地支索引
   static int _z(String zhi) => daliurenZhi.indexOf(zhi);
 
+  /// 五鼠遁：日干支 + 时辰索引 → 时柱干支（供界面/测试复用）
+  static String hourGanZhiOf(String dayGanZhi, int hourIndex) =>
+      _wuShuDun(dayGanZhi.isEmpty ? '甲' : dayGanZhi[0], hourIndex);
+
+  /// 五鼠遁：日干 + 时辰索引 → 时柱干支
+  static String _wuShuDun(String dayGan, int hourIndex) {
+    const gans = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+    final idx = gans.indexOf(dayGan);
+    if (idx < 0) return '';
+    final start = (idx % 5) * 2;
+    return '${gans[(start + hourIndex) % 10]}${daliurenZhi[hourIndex]}';
+  }
+
+  /// 六十甲子序号
+  static int _jiaZiIndex(String ganZhi) {
+    if (ganZhi.length < 2) return -1;
+    const gans = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+    final g = gans.indexOf(ganZhi[0]);
+    final z = daliurenZhi.indexOf(ganZhi[1]);
+    if (g < 0 || z < 0) return -1;
+    for (var i = 0; i < 60; i++) {
+      if (i % 10 == g && i % 12 == z) return i;
+    }
+    return -1;
+  }
+
+  /// 旬空：日柱所在旬缺的两支
+  static List<String> xunKongOf(String dayGanZhi) {
+    final idx = _jiaZiIndex(dayGanZhi);
+    if (idx < 0) return const [];
+    final shou = idx - (idx % 10); // 旬首
+    final shouZhi = daliurenZhi[shou % 12];
+    final z = daliurenZhi.indexOf(shouZhi);
+    return [daliurenZhi[(z + 10) % 12], daliurenZhi[(z + 11) % 12]];
+  }
+
+  /// 遁干（旬遁）：该支在本旬内所配天干；空亡之支返回 '空'
+  static String dunGanOf(String zhi, String dayGanZhi) {
+    const gans = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+    final idx = _jiaZiIndex(dayGanZhi);
+    if (idx < 0) return '';
+    final shou = idx - (idx % 10);
+    for (var k = 0; k < 10; k++) {
+      final i = shou + k;
+      if (daliurenZhi[i % 12] == zhi) return gans[i % 10];
+    }
+    return '空';
+  }
+
+  /// 大六壬常用神煞（以日干/日支/月建推）
+  static List<String> _shenShaOf(
+      String dayGan, String dayZhi, String monthZhi, int hourIndex) {
+    final out = <String>[];
+    // 三合神煞：驿马/桃花/华盖
+    const groups = <String, List<String>>{
+      '申子辰': ['寅', '酉', '辰'],
+      '寅午戌': ['申', '卯', '戌'],
+      '巳酉丑': ['亥', '午', '丑'],
+      '亥卯未': ['巳', '子', '未'],
+    };
+    const names = ['驿马', '桃花', '华盖'];
+    for (final e in groups.entries) {
+      if (!e.key.contains(dayZhi)) continue;
+      for (var i = 0; i < 3; i++) {
+        out.add('${names[i]}${e.value[i]}');
+      }
+      break;
+    }
+    // 天乙贵人（昼用阳贵、夜用阴贵）
+    final gui = calcGuiRen(dayGan, hourIndex);
+    out.add('天乙贵人$gui');
+    // 月德：寅午戌月丙、申子辰月壬、亥卯未月甲、巳酉丑月庚
+    const yueDe = <String, String>{
+      '寅': '丙', '午': '丙', '戌': '丙',
+      '申': '壬', '子': '壬', '辰': '壬',
+      '亥': '甲', '卯': '甲', '未': '甲',
+      '巳': '庚', '酉': '庚', '丑': '庚',
+    };
+    if (monthZhi.isNotEmpty && yueDe[monthZhi] != null) {
+      out.add('月德${yueDe[monthZhi]}');
+    }
+    return out;
+  }
+
+  /// 传间生克关系（初→中、中→末）
+  static List<String> _chuanRelation(String chu, String zhong, String mo) {
+    const sheng = {'木': '火', '火': '土', '土': '金', '金': '水', '水': '木'};
+    final ke = _ke;
+    String rel(String a, String b) {
+      final wa = _zhiWx[a] ?? '土';
+      final wb = _zhiWx[b] ?? '土';
+      if (wa == wb) return '比和';
+      if (sheng[wa] == wb) return '$wa生$wb';
+      if (sheng[wb] == wa) return '$wb生$wa';
+      if (ke[wa] == wb) return '$wa克$wb';
+      return '$wb克$wa';
+    }
+    return [rel(chu, zhong), rel(zhong, mo)];
+  }
+
   /// 六亲：以日干五行为「我」，地支五行为对方
   static String liuQinOf(String dayGan, String zhi) {
     final wo = _ganWx[dayGan] ?? '土';
@@ -254,7 +419,13 @@ class DaLiuRenEngine {
   /// 起课
   static DaLiuRenResult byHour(int hourIndex, int month,
       {String dayGan = '甲', String dayZhi = '子', int? monthZhiIdx,
-      int? yueJiangIdx}) {
+      int? yueJiangIdx,
+      /// 年柱（如「丙午」），可选；缺失时留空
+      String? yearGanZhi,
+      /// 月柱干支（如「己亥」），可选
+      String? monthGanZhi,
+      /// 时柱干支（如「壬子」），可选；缺失则按五鼠遁由日干推算
+      String? hourGanZhi}) {
     final int yueJiang;
     if (yueJiangIdx != null && yueJiangIdx >= 0 && yueJiangIdx < 12) {
       yueJiang = yueJiangIdx;
@@ -345,6 +516,20 @@ class DaLiuRenEngine {
       chuanLiuQin: [
         for (final z in [chuan.chu, chuan.zhong, chuan.mo]) liuQinOf(dayGan, z)
       ],
+      // 四柱：年/月/时柱由调用方提供；日柱由日干支拼接
+      siZhu: [
+        yearGanZhi ?? '',
+        monthGanZhi ?? '',
+        '$dayGan$dayZhi',
+        hourGanZhi ?? _wuShuDun(dayGan, hourIndex),
+      ],
+      xunKong: xunKongOf('$dayGan$dayZhi'),
+      keTi: chuan.keTi,
+      chuanDunGan: [
+        for (final z in [chuan.chu, chuan.zhong, chuan.mo]) dunGanOf(z, '$dayGan$dayZhi'),
+      ],
+      shenSha: _shenShaOf(dayGan, dayZhi, monthZhiIdx == null ? '' : daliurenZhi[monthZhiIdx], hourIndex),
+      chuanRelation: _chuanRelation(chuan.chu, chuan.zhong, chuan.mo),
       guiRen: guiRen,
       guiRenGong: daliurenZhi[gong],
       shunBu: shunBu,
@@ -371,9 +556,10 @@ class DaLiuRenEngine {
     bool ke(String a, String b) => _ke[_zhiWx[a]] == _zhiWx[b]; // a 克 b
 
     // 常规传法：中传取初传上神、末传取中传上神
-    _ChuanFa normal(String chu, String fa) =>
+    _ChuanFa normal(String chu, String fa, {String keTi = ''}) =>
         _ChuanFa(fa, chu, tian(chu), tian(tian(chu)),
-            '$fa：以所取之神为初传，中传取其地盘上神，末传再取中传上神');
+            '$fa：以所取之神为初传，中传取其地盘上神，末传再取中传上神',
+            keTi);
 
     // ── 伏吟：天盘与地盘完全重合（月将加时后月将仍在本位）──
     final isFuYin =
@@ -384,7 +570,9 @@ class DaLiuRenEngine {
       final mo = _xing(zhong);
       return _ChuanFa('伏吟法', chu, zhong, mo,
           '伏吟（天地盘重合）：${ganYang ? '阳日取干上神' : '阴日取支上神'}为初传，'
-          '中传取初传之刑，末传取中传之刑（自刑者取冲）');
+          '中传取初传之刑，末传取中传之刑（自刑者取冲）',
+          '伏吟');
+
     }
 
     // ── 返吟：天盘与地盘全冲 ──
@@ -413,7 +601,8 @@ class DaLiuRenEngine {
       // 无克：井栏射（驿马为初传）
       final ma = _yiMa(dayZhi);
       return _ChuanFa('返吟法（井栏射·驿马）', ma, keShang[2], keShang[0],
-          '返吟无克：取日支驿马（$ma）为初传（井栏射），中传支上神、末传干上神');
+          '返吟无克：取日支驿马（$ma）为初传（井栏射），中传支上神、末传干上神',
+          '返吟');
     }
 
     // ── 贼克（含比用、涉害）──
@@ -426,20 +615,26 @@ class DaLiuRenEngine {
       }
     }
     if (zei.length == 1) {
-      return normal(keShang[zei.first], '贼克法（${_keName(zei.first)}贼）');
+      // 下贼上为用：课体「重审」
+      return normal(keShang[zei.first], '贼克法（${_keName(zei.first)}贼）',
+          keTi: '重审');
     }
     if (zei.length > 1) {
       final pick = _biYong(zei, keShang, ganYang);
       return normal(keShang[pick.index],
-          pick.fa == '比用' ? '比用法（贼）' : '涉害法（贼）');
+          pick.fa == '比用' ? '比用法（贼）' : '涉害法（贼）',
+          keTi: pick.fa == '比用' ? '知一' : '涉害');
     }
     if (keList.length == 1) {
-      return normal(keShang[keList.first], '${_keName(keList.first)}克');
+      // 上克下为用：课体「元首」
+      return normal(keShang[keList.first], '${_keName(keList.first)}克',
+          keTi: '元首');
     }
     if (keList.length > 1) {
       final pick = _biYong(keList, keShang, ganYang);
       return normal(keShang[pick.index],
-          pick.fa == '比用' ? '比用法（克）' : '涉害法（克）');
+          pick.fa == '比用' ? '比用法（克）' : '涉害法（克）',
+          keTi: pick.fa == '比用' ? '知一' : '涉害');
     }
 
     // ── 遥克：上神克日干，或日干克上神（克我者优先）──
@@ -454,13 +649,14 @@ class DaLiuRenEngine {
           ? _Pick(yaoZei.first, '')
           : _biYong(yaoZei, keShang, ganYang);
       return normal(keShang[pick.index],
-          yaoZei.length == 1 || pick.fa == '比用' ? '遥克法（神克日）' : '遥克法（神克日·涉害）');
+          yaoZei.length == 1 || pick.fa == '比用' ? '遥克法（神克日）' : '遥克法（神克日·涉害）',
+          keTi: '遥克');
     }
     if (yaoKe.isNotEmpty) {
       final pick = yaoKe.length == 1
           ? _Pick(yaoKe.first, '')
           : _biYong(yaoKe, keShang, ganYang);
-      return normal(keShang[pick.index], '遥克法（日克神）');
+      return normal(keShang[pick.index], '遥克法（日克神）', keTi: '遥克');
     }
 
     // ── 四课不全 ──
@@ -471,7 +667,8 @@ class DaLiuRenEngine {
           ? tian(tianPan[_z(keShang[0])]) // 阳日：干上神顺行三位
           : daliurenZhi[((_z(keShang[2]) - 2) + 12) % 12]; // 阴日：支上神逆数三位
       return _ChuanFa('八专法', chu, keShang[0], keShang[0],
-          '八专（日干寄宫与日支同位，仅两课）：${ganYang ? '阳日自干上神顺数三位' : '阴日自支上神逆数三位'}为初传，中末传皆取干上神');
+          '八专（日干寄宫与日支同位，仅两课）：${ganYang ? '阳日自干上神顺数三位' : '阴日自支上神逆数三位'}为初传，中末传皆取干上神',
+          '八专');
     }
     if (distinctXia.length == 3) {
       // 别责：四课不全（三课）
@@ -479,17 +676,20 @@ class DaLiuRenEngine {
           ? tian(_heGanJiGong(dayGan)) // 阳日：干合之寄宫上神
           : tian(_liuHe(dayZhi)); // 阴日：日支六合之上神
       return _ChuanFa('别责法', chu, keShang[0], keShang[0],
-          '别责（四课不全三课，无克无遥）：${ganYang ? '阳日取日干五合之寄宫上神' : '阴日取日支六合之上神'}为初传，中末传皆取干上神');
+          '别责（四课不全三课，无克无遥）：${ganYang ? '阳日取日干五合之寄宫上神' : '阴日取日支六合之上神'}为初传，中末传皆取干上神',
+          '别责');
     }
 
     // ── 昴星 ──
     final chu = ganYang ? tian('酉') : tian('卯');
     if (ganYang) {
       return _ChuanFa('昴星法（虎视）', chu, keShang[2], keShang[0],
-          '昴星（无克无遥，阳日）：取酉上神为初传，中传取支上神、末传取干上神（虎视格）');
+          '昴星（无克无遥，阳日）：取酉上神为初传，中传取支上神、末传取干上神（虎视格）',
+          '昴星');
     }
     return _ChuanFa('昴星法（冬蛇掩目）', chu, keShang[0], keShang[2],
-        '昴星（无克无遥，阴日）：取卯上神为初传，中传取干上神、末传取支上神（冬蛇掩目格）');
+        '昴星（无克无遥，阴日）：取卯上神为初传，中传取干上神、末传取支上神（冬蛇掩目格）',
+        '昴星');
   }
 
   /// 比用/涉害：多个候选课时取与日干同阴阳者；仍多个则取涉害深者
@@ -561,7 +761,11 @@ class _ChuanFa {
   final String mo;
   final String note;
 
-  const _ChuanFa(this.fa, this.chu, this.zhong, this.mo, [this.note = '']);
+  /// 课体名（重审/元首/知一/涉害/遥克/昴星/别责/八专/伏吟/返吟）
+  final String keTi;
+
+  const _ChuanFa(this.fa, this.chu, this.zhong, this.mo,
+      [this.note = '', this.keTi = '']);
 }
 
 /// 比用/涉害选择结果

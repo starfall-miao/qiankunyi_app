@@ -79,7 +79,11 @@ class AiMessage {
 }
 
 /// 卦例类型
-enum CaseType { liuyao, meihua, bazi }
+///
+/// 六爻 / 梅花 / 八字走 PaipanResult / BaziResult 结构；
+/// 小六壬 / 大六壬 为自定义 JSON（paipanData 内为 {"xiaoLiuRen":…} /
+/// {"daLiuRen":…}），用于列表归类、详情与导出时区分术数。
+enum CaseType { liuyao, meihua, bazi, xiaoliuren, daliuren }
 
 /// 卦例数据模型
 class CaseModel {
