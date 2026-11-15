@@ -69,7 +69,7 @@ Widget _shell({
         const Divider(height: 1, thickness: 0.5, color: _border),
         const SizedBox(height: 4),
         const Center(
-          child: Text('—— 来自「落·乾坤」（仅供学习参考）——',
+          child: Text('—— 来自「落·乾坤」——',
               style: TextStyle(fontSize: 8.5, color: _sub)),
         ),
       ],
