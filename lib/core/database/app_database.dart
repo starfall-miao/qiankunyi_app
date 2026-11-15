@@ -40,6 +40,47 @@ class AppDatabase extends _$AppDatabase {
   @override
   int get schemaVersion => 1;
 
+  /// 列名兼容：drift 生成的列名为下划线风格（gua_name / created_at …），
+  /// 而历史版本（drift 2.23 时代）建的表是驼峰列（guaName / createdAt …）。
+  /// 打开数据库时把旧驼峰列统一重命名为下划线，避免"新建库写不进去、
+  /// 旧库碰巧能写"的分裂状态。
+  static const _legacyColumnRenames = <String, String>{
+    'guaName': 'gua_name',
+    'guaGong': 'gua_gong',
+    'paipanData': 'paipan_data',
+    'duanYu': 'duan_yu',
+    'askObject': 'ask_object',
+    'askEvent': 'ask_event',
+    'aiMessages': 'ai_messages',
+    'caseType': 'case_type',
+    'createdAt': 'created_at',
+    'updatedAt': 'updated_at',
+  };
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        beforeOpen: (details) async {
+          try {
+            final info =
+                await customSelect('PRAGMA table_info(case_table)').get();
+            final cols = info
+                .map((r) => r.data['name']?.toString() ?? '')
+                .where((e) => e.isNotEmpty)
+                .toSet();
+            if (cols.isEmpty) return; // 表尚未创建（首次打开由 onCreate 负责）
+            for (final e in _legacyColumnRenames.entries) {
+              if (cols.contains(e.key) && !cols.contains(e.value)) {
+                await customStatement(
+                    'ALTER TABLE case_table RENAME COLUMN "${e.key}" TO "${e.value}"');
+              }
+            }
+          } catch (_) {
+            // 迁移失败不阻塞启动（后续读写会走兼容读取）
+          }
+        },
+      );
+
   static QueryExecutor _openConnection() {
     return LazyDatabase(() async {
       final dir = await getApplicationDocumentsDirectory();

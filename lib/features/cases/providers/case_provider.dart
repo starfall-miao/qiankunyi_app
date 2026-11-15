@@ -53,7 +53,7 @@ class CaseProvider extends ChangeNotifier {
 
       // 1) 尝试从 SQLite 读取
       final rows =
-          await _db!.customSelect('SELECT * FROM case_table ORDER BY createdAt DESC').get();
+          await _db!.customSelect('SELECT * FROM case_table ORDER BY created_at DESC').get();
       if (rows.isNotEmpty) {
         _cases = rows.map((r) => _fromRow(r.data)).toList();
       } else {
@@ -105,8 +105,8 @@ class CaseProvider extends ChangeNotifier {
 
   Future<void> _insertRow(CaseModel c) async {
     await _db!.customStatement(
-      'INSERT INTO case_table (id, title, guaName, guaGong, method, paipanData, '
-      'notes, duanYu, askObject, askEvent, tags, aiMessages, caseType, createdAt, updatedAt) '
+      'INSERT INTO case_table (id, title, gua_name, gua_gong, method, paipan_data, '
+      'notes, duan_yu, ask_object, ask_event, tags, ai_messages, case_type, created_at, updated_at) '
       'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
       [
         c.id ?? DateTime.now().millisecondsSinceEpoch,
@@ -160,21 +160,24 @@ class CaseProvider extends ChangeNotifier {
     return CaseModel(
       id: d['id'] as int?,
       title: d['title']?.toString() ?? '',
-      guaName: d['guaName']?.toString() ?? '',
-      guaGong: d['guaGong']?.toString() ?? '',
+      // 兼容旧库（驼峰列）与新库（下划线列）
+      guaName: (d['gua_name'] ?? d['guaName'])?.toString() ?? '',
+      guaGong: (d['gua_gong'] ?? d['guaGong'])?.toString() ?? '',
       method: d['method']?.toString() ?? '',
-      paipanData: d['paipanData']?.toString() ?? '',
+      paipanData: (d['paipan_data'] ?? d['paipanData'])?.toString() ?? '',
       notes: d['notes']?.toString(),
-      duanYu: d['duanYu']?.toString(),
-      askObject: d['askObject']?.toString(),
-      askEvent: d['askEvent']?.toString(),
+      duanYu: (d['duan_yu'] ?? d['duanYu'])?.toString(),
+      askObject: (d['ask_object'] ?? d['askObject'])?.toString(),
+      askEvent: (d['ask_event'] ?? d['askEvent'])?.toString(),
       tags: parseTags(d['tags']),
-      aiMessages: parseMessages(d['aiMessages']),
+      aiMessages: parseMessages(d['ai_messages'] ?? d['aiMessages']),
       caseType: CaseType.values.firstWhere(
-          (e) => e.name == d['caseType']?.toString(),
+          (e) => e.name == (d['case_type'] ?? d['caseType'])?.toString(),
           orElse: () => CaseType.liuyao),
-      createdAt: parseDate(d['createdAt']) ?? DateTime.now(),
-      updatedAt: parseDate(d['updatedAt']) ?? DateTime.now(),
+      createdAt:
+          parseDate(d['created_at'] ?? d['createdAt']) ?? DateTime.now(),
+      updatedAt:
+          parseDate(d['updated_at'] ?? d['updatedAt']) ?? DateTime.now(),
     );
   }
 
@@ -246,9 +249,9 @@ class CaseProvider extends ChangeNotifier {
       try {
         _db ??= AppDatabase();
         await _db!.customStatement(
-          'UPDATE case_table SET title=?, guaName=?, guaGong=?, method=?, '
-          'paipanData=?, notes=?, duanYu=?, askObject=?, askEvent=?, tags=?, '
-          'aiMessages=?, caseType=?, updatedAt=? WHERE id=?',
+          'UPDATE case_table SET title=?, gua_name=?, gua_gong=?, method=?, '
+          'paipan_data=?, notes=?, duan_yu=?, ask_object=?, ask_event=?, tags=?, '
+          'ai_messages=?, case_type=?, updated_at=? WHERE id=?',
           [
             merged.title,
             merged.guaName,
