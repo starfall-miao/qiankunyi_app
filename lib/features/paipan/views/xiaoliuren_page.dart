@@ -145,7 +145,9 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
                 guaName: r.resultPalm.name,
                 guaGong: r.resultPalm.element,
                 method: '小六壬（${r.method}）',
-                paipanData: '{"xiaoLiuRen":${_jsonEncode(r)}}',
+                // 注意：必须用 jsonEncode 生成完整对象（旧实现手拼 "key":value 少了
+                // 外层 {}，导致 {"xiaoLiuRen":"month":5,…} 非法 JSON，详情页解析失败）
+                paipanData: jsonEncode({'xiaoLiuRen': r.toJson()}),
                 askObject: askObjectCtrl.text.trim().isEmpty ? null : askObjectCtrl.text.trim(),
                 askEvent: askEventCtrl.text.trim().isEmpty ? null : askEventCtrl.text.trim(),
                 notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
@@ -192,11 +194,6 @@ class _XiaoLiuRenPageState extends State<XiaoLiuRenPage> {
         );
       }
     }
-  }
-
-  String _jsonEncode(XiaoLiuRenResult r) {
-    final m = r.toJson();
-    return m.entries.map((e) => '"${e.key}":${jsonEncode(e.value)}').join(',');
   }
 
   /// 分享结果到剪贴板
