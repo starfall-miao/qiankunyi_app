@@ -467,7 +467,8 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
                 guaName: '大六壬',
                 guaGong: r.chuChuan,
                 method: '大六壬（${r.method}）',
-                paipanData: '{"daLiuRen":${_jsonEncode(r)}}',
+                // 完整 JSON（旧实现手拼少外层 {}，详情页解析失败）
+                paipanData: jsonEncode({'daLiuRen': r.toJson()}),
                 askObject: askObjectCtrl.text.trim().isEmpty ? null : askObjectCtrl.text.trim(),
                 askEvent: askEventCtrl.text.trim().isEmpty ? null : askEventCtrl.text.trim(),
                 notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
@@ -511,11 +512,6 @@ class _DaLiuRenPageState extends State<DaLiuRenPage> {
         const SnackBar(content: Text('排盘结果已复制到剪贴板'), duration: Duration(seconds: 2)),
       );
     }
-  }
-
-  String _jsonEncode(DaLiuRenResult r) {
-    final m = r.toJson();
-    return m.entries.map((e) => '"${e.key}":${jsonEncode(e.value)}').join(',');
   }
 
   /// 农历文本（截图用）：农历 X月X日

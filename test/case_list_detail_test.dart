@@ -13,20 +13,10 @@ import 'package:qiankunyi_app/features/cases/models/case_models.dart';
 import 'package:qiankunyi_app/features/cases/providers/case_provider.dart';
 import 'package:qiankunyi_app/features/cases/views/case_page.dart';
 import 'package:qiankunyi_app/features/paipan/engines/daliuren_engine.dart';
+import 'dart:convert';
 import 'package:qiankunyi_app/features/paipan/engines/xiaoliuren_engine.dart';
 import 'package:qiankunyi_app/features/settings/settings_provider.dart';
 import 'package:qiankunyi_app/features/users/providers/user_provider.dart';
-
-String _enc(Map<String, dynamic> m) =>
-    m.entries.map((e) => '"${e.key}":${_json(e.value)}').join(',');
-String _json(dynamic v) {
-  if (v == null) return 'null';
-  if (v is num || v is bool) return '$v';
-  if (v is String) return '"$v"';
-  if (v is List) return '[${v.map(_json).join(',')}]';
-  if (v is Map) return '{${_enc(v.cast<String, dynamic>())}}';
-  return '"$v"';
-}
 
 void main() {
   testWidgets('小六壬/大六壬卦例：列表可见、详情可打开不抛异常', (tester) async {
@@ -46,7 +36,7 @@ void main() {
       guaName: xlr.resultPalm.name,
       guaGong: xlr.resultPalm.element,
       method: '小六壬（${xlr.method}）',
-      paipanData: '{"xiaoLiuRen":${_enc(xlr.toJson())}}',
+      paipanData: jsonEncode({'xiaoLiuRen': xlr.toJson()}),
       caseType: CaseType.xiaoliuren,
     ));
     final dlr = DaLiuRenEngine.byHour(3, 1,
@@ -58,7 +48,7 @@ void main() {
       guaName: '大六壬',
       guaGong: dlr.chuChuan,
       method: '大六壬（${dlr.method}）',
-      paipanData: '{"daLiuRen":${_enc(dlr.toJson())}}',
+      paipanData: jsonEncode({'daLiuRen': dlr.toJson()}),
       caseType: CaseType.daliuren,
     ));
 
@@ -79,20 +69,29 @@ void main() {
     expect(find.textContaining('小六壬'), findsWidgets);
     expect(find.textContaining('大六壬'), findsWidgets);
 
-    // 打开小六壬详情
-    await tester.tap(find.textContaining('小六壬').first);
+    // 打开小六壬详情（点标题，命中卡片 InkWell）
+    await tester.tap(find.textContaining('小六壬 ·').first);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull, reason: '小六壬详情不应抛异常');
-    // 关闭详情（点击关闭按钮）
+    // 详情应展示结构化摘要，而不是兜底「排盘数据较早」文案
+    expect(find.textContaining('小六壬排盘'), findsWidgets,
+        reason: '应显示小六壬排盘摘要');
+    expect(find.textContaining('排盘数据较早'), findsNothing,
+        reason: '不应走兜底文案');
+    // 关闭详情（点右上角关闭按钮）
     final closeBtn = find.byIcon(Icons.close);
-    if (closeBtn.evaluate().isNotEmpty) {
-      await tester.tap(closeBtn.first);
-      await tester.pumpAndSettle();
-    }
+    expect(closeBtn, findsWidgets, reason: '详情应有关闭按钮');
+    await tester.tap(closeBtn.first);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('小六壬排盘'), findsNothing,
+        reason: '关闭后详情应消失');
 
-    // 打开大六壬详情
-    await tester.tap(find.textContaining('大六壬').first);
+    // 打开大六壬详情（点标题，命中卡片 InkWell）
+    await tester.tap(find.textContaining('大六壬 ·').first);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull, reason: '大六壬详情不应抛异常');
+    expect(find.textContaining('大六壬排盘'), findsWidgets,
+        reason: '应显示大六壬排盘摘要');
+    expect(find.textContaining('排盘数据较早'), findsNothing);
   });
 }

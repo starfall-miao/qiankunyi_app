@@ -7,6 +7,7 @@ import '../data/reference_data.dart';
 import '../data/xiangyi_data.dart';
 import '../data/qinxing_data.dart';
 import '../data/shensha_dictionary.dart';
+import '../data/liuren_reference_data.dart';
 import '../data/dongbian_dictionary.dart';
 import '../data/yaoci_data.dart';
 import '../../paipan/models/gua_model.dart';
@@ -65,7 +66,7 @@ class ReferencePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return DefaultTabController(
-      length: 7,
+      length: 9,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('参考资料'),
@@ -93,6 +94,8 @@ class ReferencePage extends StatelessWidget {
               Tab(text: '禽星关系'),
               Tab(text: '神煞象义'),
               Tab(text: '动变含义'),
+              Tab(text: '大六壬'),
+              Tab(text: '小六壬'),
             ],
           ),
         ),
@@ -107,6 +110,8 @@ class ReferencePage extends StatelessWidget {
                 _QinXingTab(),
                 _ShenShaTab(),
                 _DongBianTab(),
+                _DaLiuRenTab(),
+                _XiaoLiuRenTab(),
               ],
             );
             if (constraints.maxWidth > 1100) {
@@ -1163,4 +1168,189 @@ class _DongBianTabState extends State<_DongBianTab> {
       ],
     );
   }
+}
+
+/// ──────────────── 大六壬（课体 / 天将 / 概念） ────────────────
+
+class _DaLiuRenTab extends StatelessWidget {
+  const _DaLiuRenTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        _refSectionTitle('入门概念', theme),
+        for (final c in daliurenConcepts)
+          Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ExpansionTile(
+              title: Text(c.title,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Text(c.content,
+                      style: const TextStyle(fontSize: 13, height: 1.7)),
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: 8),
+        _refSectionTitle('九宗门课体（取三传之法）', theme),
+        for (final k in daliurenKeTiDetails)
+          Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: CircleAvatar(
+                radius: 16,
+                backgroundColor: k.goodBad == '吉'
+                    ? Colors.green.shade100
+                    : k.goodBad == '凶'
+                        ? Colors.red.shade100
+                        : Colors.amber.shade100,
+                child: Text(k.goodBad,
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: k.goodBad == '吉'
+                            ? Colors.green.shade800
+                            : k.goodBad == '凶'
+                                ? Colors.red.shade800
+                                : Colors.amber.shade800)),
+              ),
+              title: Text(k.name,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text('${k.rule}\n${k.desc}',
+                  style: const TextStyle(fontSize: 12, height: 1.5)),
+              isThreeLine: true,
+            ),
+          ),
+        const SizedBox(height: 8),
+        _refSectionTitle('十二天将详解', theme),
+        for (final g in daliurenGeneralDetails)
+          Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ExpansionTile(
+              leading: CircleAvatar(
+                radius: 16,
+                backgroundColor:
+                    g.goodBad == '吉' ? Colors.green.shade100 : Colors.red.shade100,
+                child: Text(g.goodBad,
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: g.goodBad == '吉'
+                            ? Colors.green.shade800
+                            : Colors.red.shade800)),
+              ),
+              title: Text('${g.name}（${g.wuxing}）',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text(g.xiang,
+                  style: const TextStyle(fontSize: 12, height: 1.4)),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('主事：${g.zhu}',
+                          style: const TextStyle(fontSize: 13, height: 1.6)),
+                      const SizedBox(height: 4),
+                      Text('断法：${g.duan}',
+                          style: const TextStyle(fontSize: 13, height: 1.6)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+}
+
+/// ──────────────── 小六壬（六掌诀详解） ────────────────
+
+class _XiaoLiuRenTab extends StatelessWidget {
+  const _XiaoLiuRenTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(
+              '起课法：以农历月、日、时（或三个数字）依次顺数六掌诀——'
+              '正月起大安 → 月上起日 → 日上起时，最终落位即为断事之课。'
+              '六掌诀按「大安→留连→速喜→赤口→小吉→空亡」循环。',
+              style: const TextStyle(fontSize: 13, height: 1.7),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _refSectionTitle('六掌诀详解', theme),
+        for (final p in xiaoliurenPalmDetails)
+          Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ExpansionTile(
+              leading: CircleAvatar(
+                radius: 16,
+                backgroundColor:
+                    p.goodBad == '吉' ? Colors.green.shade100 : Colors.red.shade100,
+                child: Text(p.goodBad,
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: p.goodBad == '吉'
+                            ? Colors.green.shade800
+                            : Colors.red.shade800)),
+              ),
+              title: Text('${p.name}（${p.wuxing} · ${p.direction}）',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text(p.xiang,
+                  style: const TextStyle(fontSize: 12, height: 1.4)),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('断语：${p.duan}',
+                          style: const TextStyle(fontSize: 13, height: 1.7)),
+                      const SizedBox(height: 4),
+                      Text('应期：${p.yingQi}',
+                          style: const TextStyle(fontSize: 13, height: 1.6)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+}
+
+/// 参考页内的分组小标题
+Widget _refSectionTitle(String text, ThemeData theme) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 6, top: 2),
+    child: Row(children: [
+      Container(width: 3, height: 14, color: theme.colorScheme.primary),
+      const SizedBox(width: 6),
+      Text(text,
+          style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.primary)),
+    ]),
+  );
 }
